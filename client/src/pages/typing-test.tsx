@@ -50,7 +50,6 @@ export default function TypingTestPage() {
         accuracy: stats.accuracy,
         language,
         mode: mode.toString(),
-        userId: user.id,
       });
     }
   }, [user, language, mode, resultMutation]);
@@ -63,6 +62,7 @@ export default function TypingTestPage() {
     isActive,
     isFinished,
     stats,
+    wordStatuses,
     handleInputChange,
     reset,
   } = useTypingTest({
@@ -103,6 +103,7 @@ export default function TypingTestPage() {
             onComplete={reset}
             isActive={true}
             currentIndex={currentIndex}
+            wordStatuses={wordStatuses}
           />
 
           {!isActive && (

@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import type { WordStatus } from "@/hooks/use-typing-test";
 
 interface TypingAreaProps {
   words: string[];
@@ -8,6 +9,7 @@ interface TypingAreaProps {
   onComplete: () => void;
   isActive: boolean;
   currentIndex: number;
+  wordStatuses?: WordStatus[];
 }
 
 export function TypingArea({
@@ -17,6 +19,7 @@ export function TypingArea({
   onComplete,
   isActive,
   currentIndex,
+  wordStatuses,
 }: TypingAreaProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,7 +48,7 @@ export function TypingArea({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Tab") {
       e.preventDefault();
-      onComplete(); // Use as reset for now or handle separately
+      onComplete();
     }
   };
 
@@ -55,7 +58,8 @@ export function TypingArea({
     const isPastWord = wordIdx < currentIndex;
 
     if (isPastWord) {
-      colorClass = "text-correct";
+      const status = wordStatuses?.[wordIdx] ?? "correct";
+      colorClass = status === "correct" ? "text-correct" : "text-error";
     } else if (isCurrentWord) {
       if (charIdx < userInput.length) {
         colorClass = userInput[charIdx] === char ? "text-correct" : "text-error underline decoration-error/50";
@@ -99,19 +103,26 @@ export function TypingArea({
         data-testid="input-typing"
       />
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-2xl font-mono leading-relaxed select-none">
-        {words.map((word, wordIdx) => (
-          <span
-            key={wordIdx}
-            ref={wordIdx === currentIndex ? activeWordRef : null}
-            className={cn(
-              "relative whitespace-nowrap",
-              wordIdx === currentIndex && "bg-muted/20 rounded-sm"
-            )}
-            data-testid={`word-${wordIdx}`}
-          >
-            {word.split("").map((char, charIdx) => renderChar(char, wordIdx, charIdx))}
-          </span>
-        ))}
+        {words.map((word, wordIdx) => {
+          const isPast = wordIdx < currentIndex;
+          const isCurrent = wordIdx === currentIndex;
+          const status = wordStatuses?.[wordIdx];
+
+          return (
+            <span
+              key={wordIdx}
+              ref={isCurrent ? activeWordRef : null}
+              className={cn(
+                "relative whitespace-nowrap",
+                isCurrent && "bg-muted/20 rounded-sm",
+                isPast && status === "incorrect" && "underline decoration-error/40 decoration-2 underline-offset-4"
+              )}
+              data-testid={`word-${wordIdx}`}
+            >
+              {word.split("").map((char, charIdx) => renderChar(char, wordIdx, charIdx))}
+            </span>
+          );
+        })}
       </div>
     </div>
   );

@@ -9,6 +9,8 @@ interface UseTypingTestProps {
   onComplete: (stats: { wpm: number; accuracy: number; correctChars: number; incorrectChars: number }) => void;
 }
 
+export type WordStatus = "correct" | "incorrect" | "pending";
+
 export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps) {
   const [words, setWords] = useState<string[]>([]);
   const [userInput, setUserInput] = useState("");
@@ -16,22 +18,22 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
   const [timeLeft, setTimeLeft] = useState<number>(mode);
   const [isActive, setIsActive] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
-  const [stats, setStats] = useState({
-    wpm: 0,
-    accuracy: 0,
-    correctChars: 0,
-    incorrectChars: 0,
-  });
+  const [wordStatuses, setWordStatuses] = useState<WordStatus[]>([]);
 
+  const correctCharsRef = useRef(0);
+  const incorrectCharsRef = useRef(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
+  const wpmRef = useRef(0);
+  const accuracyRef = useRef(100);
+  const [displayStats, setDisplayStats] = useState({ wpm: 0, accuracy: 100 });
 
   const generateWords = useCallback(() => {
     const list = wordLists[language];
     const shuffled = [...list].sort(() => Math.random() - 0.5);
-    // Generate enough words for the duration
     const repeated = Array(5).fill(shuffled).flat();
     setWords(repeated);
+    setWordStatuses(new Array(repeated.length).fill("pending"));
   }, [language]);
 
   const reset = useCallback(() => {
@@ -42,15 +44,48 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     setTimeLeft(mode);
     setIsActive(false);
     setIsFinished(false);
-    setStats({ wpm: 0, accuracy: 0, correctChars: 0, incorrectChars: 0 });
+    correctCharsRef.current = 0;
+    incorrectCharsRef.current = 0;
+    wpmRef.current = 0;
+    accuracyRef.current = 100;
     startTimeRef.current = null;
+    setDisplayStats({ wpm: 0, accuracy: 100 });
   }, [generateWords, mode]);
 
   useEffect(() => {
     reset();
   }, [reset]);
 
-  const startTest = () => {
+  const updateLiveStats = useCallback(() => {
+    if (!startTimeRef.current) return;
+    const elapsedMinutes = (Date.now() - startTimeRef.current) / 60000;
+    if (elapsedMinutes <= 0) return;
+
+    const currentWpm = Math.round((correctCharsRef.current / 5) / elapsedMinutes);
+    const total = correctCharsRef.current + incorrectCharsRef.current;
+    const currentAccuracy = total === 0 ? 100 : Math.round((correctCharsRef.current / total) * 100);
+
+    wpmRef.current = currentWpm;
+    accuracyRef.current = currentAccuracy;
+    setDisplayStats({ wpm: currentWpm, accuracy: currentAccuracy });
+  }, []);
+
+  const finishTest = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setIsActive(false);
+    setIsFinished(true);
+
+    updateLiveStats();
+
+    onComplete({
+      wpm: wpmRef.current,
+      accuracy: accuracyRef.current,
+      correctChars: correctCharsRef.current,
+      incorrectChars: incorrectCharsRef.current,
+    });
+  }, [onComplete, updateLiveStats]);
+
+  const startTest = useCallback(() => {
     setIsActive(true);
     startTimeRef.current = Date.now();
     timerRef.current = setInterval(() => {
@@ -59,89 +94,53 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
           finishTest();
           return 0;
         }
-        return (prev - 1) as TimerMode;
+        return prev - 1;
       });
     }, 1000);
-  };
+  }, [finishTest]);
 
-  const finishTest = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setIsActive(false);
-    setIsFinished(true);
-    
-    // Final calculation is already being updated by live stats, 
-    // but we ensure onComplete gets the latest
-    setStats(prev => {
-      onComplete(prev);
-      return prev;
-    });
-  }, [onComplete]);
-
-  const handleInputChange = (value: string) => {
+  const handleInputChange = useCallback((value: string) => {
     if (isFinished) return;
     if (!isActive && value.length > 0) {
       startTest();
     }
 
     if (value.endsWith(" ")) {
-      // Word completed
       const word = words[currentIndex];
-      const typedWord = value.trim();
-      
-      let newCorrect = stats.correctChars;
-      let newIncorrect = stats.incorrectChars;
+      const typedWord = value.trimEnd();
 
-      // Compare typed word with actual word
-      for (let i = 0; i < word.length; i++) {
-        if (i < typedWord.length) {
-          if (typedWord[i] === word[i]) newCorrect++;
-          else newIncorrect++;
-        } else {
-          // Missed characters in the word are counted as incorrect
-          newIncorrect++;
+      const isWordCorrect = typedWord === word;
+
+      if (isWordCorrect) {
+        correctCharsRef.current += word.length + 1;
+      } else {
+        let charCorrect = 0;
+        let charIncorrect = 0;
+        for (let i = 0; i < Math.max(word.length, typedWord.length); i++) {
+          if (i < word.length && i < typedWord.length) {
+            if (typedWord[i] === word[i]) charCorrect++;
+            else charIncorrect++;
+          } else {
+            charIncorrect++;
+          }
         }
+        correctCharsRef.current += charCorrect;
+        incorrectCharsRef.current += charIncorrect;
       }
-      
-      // Also count extra characters typed as incorrect
-      if (typedWord.length > word.length) {
-        newIncorrect += typedWord.length - word.length;
-      }
-      
-      // Count the space as a correct char if the word was mostly correct? 
-      // Monkeytype usually counts spaces too.
-      newCorrect++; 
 
-      setStats(prev => ({
-        ...prev,
-        correctChars: newCorrect,
-        incorrectChars: newIncorrect
-      }));
+      setWordStatuses(prev => {
+        const next = [...prev];
+        next[currentIndex] = isWordCorrect ? "correct" : "incorrect";
+        return next;
+      });
 
       setCurrentIndex(prev => prev + 1);
       setUserInput("");
+      updateLiveStats();
     } else {
       setUserInput(value);
     }
-  };
-
-  // Live WPM and Accuracy calculation
-  useEffect(() => {
-    if (!isActive || !startTimeRef.current) return;
-
-    const elapsedMinutes = (Date.now() - startTimeRef.current) / 60000;
-    if (elapsedMinutes === 0) return;
-
-    // WPM = (correct chars / 5) / minutes
-    const currentWpm = Math.round((stats.correctChars / 5) / elapsedMinutes);
-    const totalAttempted = stats.correctChars + stats.incorrectChars;
-    const currentAccuracy = totalAttempted === 0 ? 100 : Math.round((stats.correctChars / totalAttempted) * 100);
-
-    setStats(prev => ({
-      ...prev,
-      wpm: currentWpm,
-      accuracy: currentAccuracy
-    }));
-  }, [isActive, stats.correctChars, stats.incorrectChars]);
+  }, [isFinished, isActive, words, currentIndex, startTest, updateLiveStats]);
 
   return {
     words,
@@ -150,7 +149,13 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     timeLeft,
     isActive,
     isFinished,
-    stats,
+    stats: {
+      wpm: displayStats.wpm,
+      accuracy: displayStats.accuracy,
+      correctChars: correctCharsRef.current,
+      incorrectChars: incorrectCharsRef.current,
+    },
+    wordStatuses,
     handleInputChange,
     reset,
   };

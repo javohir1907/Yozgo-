@@ -31,22 +31,21 @@ export async function registerRoutes(
     }
   });
 
-  // Test results API
-  app.post("/api/results", async (req, res) => {
+  app.post("/api/results", isAuthenticated, async (req, res) => {
     try {
-      const data = insertTestResultSchema.parse(req.body);
+      const user = (req as any).user;
+      const userId = user.claims.sub;
+
+      const data = insertTestResultSchema.parse({ ...req.body, userId });
       const result = await storage.createTestResult(data);
 
-      if (data.userId) {
-        // Simple leaderboard logic - only keeping "alltime" updated for now
-        await storage.updateLeaderboardEntry({
-          userId: data.userId,
-          wpm: data.wpm,
-          accuracy: data.accuracy,
-          language: data.language,
-          period: "alltime",
-        });
-      }
+      await storage.updateLeaderboardEntry({
+        userId,
+        wpm: data.wpm,
+        accuracy: data.accuracy,
+        language: data.language,
+        period: "alltime",
+      });
 
       res.status(201).json(result);
     } catch (error) {
