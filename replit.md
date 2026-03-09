@@ -77,9 +77,20 @@ Tables:
 Start dev server: `npm run dev`
 Push DB schema: `npm run db:push`
 
+## Multilingual UI (i18n)
+
+- UI language (interface text) is separate from typing test language (word vocabulary)
+- i18n system: `client/src/lib/i18n.tsx` with `I18nProvider` and `useI18n()` hook
+- Supported UI languages: English, Russian, Uzbek
+- UI language stored in `localStorage["yozgo-ui-lang"]`
+- Language switcher: globe icon in nav header dropdown (EN/RU/UZ)
+- Also configurable via Settings page under "Interface Language"
+
 ## Design System
 
-- Dark theme default (Monkeytype-inspired)
+- Dark theme default (Monkeytype-inspired), light theme also supported
 - Primary accent: orange/warm color
 - Monospace font for typing area
 - Semantic tokens: `--color-correct`, `--color-error`, `--color-caret`
+- Light mode: `.light` CSS class in `index.css` with full color token overrides
+- Theme toggled via Settings page (dark mode switch)

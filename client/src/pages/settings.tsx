@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/lib/theme";
+import { useI18n, type UILanguage } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 
 type UserSettings = {
@@ -21,14 +22,10 @@ const FONTS = [
 ];
 
 const TIMERS = ["15", "30", "60"];
-const LANGUAGES = [
-  { id: "en", name: "English" },
-  { id: "ru", name: "Russian" },
-  { id: "uz", name: "Uzbek" },
-];
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { t, uiLang, setUILang } = useI18n();
   const { toast } = useToast();
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem("yozgo-user-settings");
@@ -42,7 +39,6 @@ export default function SettingsPage() {
   useEffect(() => {
     localStorage.setItem("yozgo-user-settings", JSON.stringify(settings));
     
-    // Apply font family to document
     const root = window.document.documentElement;
     FONTS.forEach(f => root.classList.remove(f.id));
     root.classList.add(settings.fontFamily);
@@ -51,27 +47,38 @@ export default function SettingsPage() {
   const updateSetting = (key: keyof UserSettings, value: string) => {
     setSettings(prev => ({ ...prev, [key]: value }));
     toast({
-      title: "Settings updated",
-      description: "Your preferences have been saved locally.",
+      title: t.settings.updated,
+      description: t.settings.updatedDesc,
     });
   };
 
+  const LANGUAGES = [
+    { id: "en", name: t.settings.english },
+    { id: "ru", name: t.settings.russian },
+    { id: "uz", name: t.settings.uzbek },
+  ];
+
+  const UI_LANGUAGES: { id: UILanguage; name: string }[] = [
+    { id: "en", name: t.settings.english },
+    { id: "ru", name: t.settings.russian },
+    { id: "uz", name: t.settings.uzbek },
+  ];
+
   return (
     <div className="container max-w-2xl py-12 px-4">
-      <h1 className="text-3xl font-bold mb-8">Settings</h1>
+      <h1 className="text-3xl font-bold mb-8">{t.settings.title}</h1>
 
       <div className="space-y-6">
-        {/* Appearance */}
         <Card>
           <CardHeader>
-            <CardTitle>Appearance</CardTitle>
-            <CardDescription>Customize how the application looks and feels.</CardDescription>
+            <CardTitle>{t.settings.appearance}</CardTitle>
+            <CardDescription>{t.settings.appearanceDesc}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <Label>Dark Mode</Label>
-                <p className="text-sm text-muted-foreground">Switch between dark and light themes.</p>
+                <Label>{t.settings.darkMode}</Label>
+                <p className="text-sm text-muted-foreground">{t.settings.darkModeDesc}</p>
               </div>
               <Switch 
                 checked={theme === "dark"} 
@@ -81,13 +88,13 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="font-family">Font Family</Label>
+              <Label htmlFor="font-family">{t.settings.fontFamily}</Label>
               <Select 
                 value={settings.fontFamily} 
                 onValueChange={(v) => updateSetting("fontFamily", v)}
               >
                 <SelectTrigger id="font-family" data-testid="select-font-family">
-                  <SelectValue placeholder="Select font" />
+                  <SelectValue placeholder={t.settings.selectFont} />
                 </SelectTrigger>
                 <SelectContent>
                   {FONTS.map(font => (
@@ -98,24 +105,43 @@ export default function SettingsPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ui-language">{t.settings.interfaceLanguage}</Label>
+              <p className="text-sm text-muted-foreground">{t.settings.interfaceLanguageDesc}</p>
+              <Select 
+                value={uiLang} 
+                onValueChange={(v) => setUILang(v as UILanguage)}
+              >
+                <SelectTrigger id="ui-language" data-testid="select-ui-language">
+                  <SelectValue placeholder={t.settings.selectLanguage} />
+                </SelectTrigger>
+                <SelectContent>
+                  {UI_LANGUAGES.map(lang => (
+                    <SelectItem key={lang.id} value={lang.id} data-testid={`select-item-ui-lang-${lang.id}`}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Typing Preferences */}
         <Card>
           <CardHeader>
-            <CardTitle>Typing Preferences</CardTitle>
-            <CardDescription>Default settings for your typing tests.</CardDescription>
+            <CardTitle>{t.settings.typingPrefs}</CardTitle>
+            <CardDescription>{t.settings.typingPrefsDesc}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="default-timer">Default Timer (seconds)</Label>
+              <Label htmlFor="default-timer">{t.settings.defaultTimer}</Label>
               <Select 
                 value={settings.defaultTimer} 
                 onValueChange={(v) => updateSetting("defaultTimer", v)}
               >
                 <SelectTrigger id="default-timer" data-testid="select-default-timer">
-                  <SelectValue placeholder="Select time" />
+                  <SelectValue placeholder={t.settings.selectTime} />
                 </SelectTrigger>
                 <SelectContent>
                   {TIMERS.map(time => (
@@ -128,13 +154,13 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="default-language">Default Language</Label>
+              <Label htmlFor="default-language">{t.settings.defaultLanguage}</Label>
               <Select 
                 value={settings.defaultLanguage} 
                 onValueChange={(v) => updateSetting("defaultLanguage", v)}
               >
                 <SelectTrigger id="default-language" data-testid="select-default-language">
-                  <SelectValue placeholder="Select language" />
+                  <SelectValue placeholder={t.settings.selectLanguage} />
                 </SelectTrigger>
                 <SelectContent>
                   {LANGUAGES.map(lang => (

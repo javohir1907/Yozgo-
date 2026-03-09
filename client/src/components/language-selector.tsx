@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 export type Language = "en" | "ru" | "uz";
 
@@ -9,10 +10,12 @@ interface LanguageSelectorProps {
 }
 
 export function LanguageSelector({ currentLanguage, onLanguageChange }: LanguageSelectorProps) {
+  const { t } = useI18n();
+
   const languages: { code: Language; label: string }[] = [
-    { code: "en", label: "English" },
-    { code: "ru", label: "Russian" },
-    { code: "uz", label: "Uzbek" },
+    { code: "en", label: t.languages.english },
+    { code: "ru", label: t.languages.russian },
+    { code: "uz", label: t.languages.uzbek },
   ];
 
   return (

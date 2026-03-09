@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme";
+import { I18nProvider } from "@/lib/i18n";
 import { NavHeader } from "@/components/nav-header";
 import LandingPage from "@/pages/landing";
 import SettingsPage from "@/pages/settings";
@@ -22,7 +23,6 @@ function Router() {
       <Route path="/battle" component={BattlePage} />
       <Route path="/typing-test" component={TypingTestPage} />
       <Route path="/profile" component={ProfilePage} />
-      {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>
   );
@@ -32,15 +32,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
-        <TooltipProvider>
-          <div className="flex flex-col min-h-screen bg-background text-foreground">
-            <NavHeader />
-            <main className="flex-1">
-              <Router />
-            </main>
-          </div>
-          <Toaster />
-        </TooltipProvider>
+        <I18nProvider>
+          <TooltipProvider>
+            <div className="flex flex-col min-h-screen bg-background text-foreground">
+              <NavHeader />
+              <main className="flex-1">
+                <Router />
+              </main>
+            </div>
+            <Toaster />
+          </TooltipProvider>
+        </I18nProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

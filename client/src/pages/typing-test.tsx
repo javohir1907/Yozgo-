@@ -9,10 +9,12 @@ import { ResultCard } from "@/components/result-card";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useI18n } from "@/lib/i18n";
 
 export default function TypingTestPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [language, setLanguage] = useState<Language>("en");
   const [mode, setMode] = useState<TimerMode>(30);
@@ -34,7 +36,7 @@ export default function TypingTestPage() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error saving result",
+        title: t.typing.errorSaving,
         description: error.message,
         variant: "destructive",
       });
@@ -105,7 +107,7 @@ export default function TypingTestPage() {
 
           {!isActive && (
             <p className="mt-8 text-muted-foreground font-mono animate-pulse">
-              Type to start...
+              {t.typing.typeToStart}
             </p>
           )}
         </>

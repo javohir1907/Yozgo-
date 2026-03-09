@@ -91,6 +91,67 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
+.light {
+  --button-outline: rgba(0,0,0, .10);
+  --badge-outline: rgba(0,0,0, .05);
+  --opaque-button-border-intensity: -8;
+  --elevate-1: rgba(0,0,0, .03);
+  --elevate-2: rgba(0,0,0, .08);
+  --background: 40 20% 97%;
+  --foreground: 20 14% 10%;
+  --border: 30 15% 85%;
+  --card: 40 20% 100%;
+  --card-foreground: 20 14% 10%;
+  --card-border: 30 15% 90%;
+  --sidebar: 40 20% 97%;
+  --sidebar-foreground: 20 14% 17%;
+  --sidebar-border: 30 15% 85%;
+  --sidebar-primary: 9 75% 55%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 25 45% 90%;
+  --sidebar-accent-foreground: 20 14% 17%;
+  --sidebar-ring: 9 75% 55%;
+  --popover: 40 20% 100%;
+  --popover-foreground: 20 14% 10%;
+  --popover-border: 30 15% 88%;
+  --primary: 9 75% 55%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 30 15% 52%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 30 15% 92%;
+  --muted-foreground: 20 14% 45%;
+  --accent: 25 25% 92%;
+  --accent-foreground: 20 14% 10%;
+  --destructive: 356 90% 54%;
+  --destructive-foreground: 0 0% 100%;
+  --input: 30 15% 85%;
+  --ring: 9 75% 55%;
+  --caret: 9 75% 55%;
+  --correct: 142 76% 30%;
+  --error: 0 84% 50%;
+  --pending: 0 0% 55%;
+  --chart-1: 203 88% 53%;
+  --chart-2: 159 100% 36%;
+  --chart-3: 42 92% 56%;
+  --chart-4: 147 78% 42%;
+  --chart-5: 341 75% 51%;
+  --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.04);
+  --shadow-xs: 0px 1px 2px 0px rgba(0,0,0,0.05);
+  --shadow-sm: 0px 1px 3px 0px rgba(0,0,0,0.08), 0px 1px 2px -1px rgba(0,0,0,0.05);
+  --shadow: 0px 1px 3px 0px rgba(0,0,0,0.08), 0px 1px 2px -1px rgba(0,0,0,0.05);
+  --shadow-md: 0px 4px 6px -1px rgba(0,0,0,0.08), 0px 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0px 10px 15px -3px rgba(0,0,0,0.08), 0px 4px 6px -4px rgba(0,0,0,0.05);
+  --shadow-xl: 0px 20px 25px -5px rgba(0,0,0,0.08), 0px 8px 10px -6px rgba(0,0,0,0.05);
+  --shadow-2xl: 0px 25px 50px -12px rgba(0,0,0,0.15);
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --primary-border: hsl(var(--primary));
+  --secondary-border: hsl(var(--secondary));
+  --muted-border: hsl(var(--muted));
+  --accent-border: hsl(var(--accent));
+  --destructive-border: hsl(var(--destructive));
+}
+
 .dark {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);

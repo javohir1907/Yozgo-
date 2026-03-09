@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { LeaderboardTable } from "@/components/leaderboard-table";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LanguageSelector, type Language } from "@/components/language-selector";
 import { Loader2, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useI18n } from "@/lib/i18n";
 
 interface LeaderboardEntry {
   rank: number;
@@ -19,6 +20,7 @@ interface LeaderboardEntry {
 export default function LeaderboardPage() {
   const [period, setPeriod] = useState<string>("alltime");
   const [language, setLanguage] = useState<Language>("en");
+  const { t } = useI18n();
 
   const { data: entries, isLoading } = useQuery<LeaderboardEntry[]>({
     queryKey: [`/api/leaderboard?period=${period}&language=${language}`],
@@ -30,10 +32,10 @@ export default function LeaderboardPage() {
         <header className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
-            <h1 className="text-4xl font-bold tracking-tight" data-testid="text-leaderboard-title">Leaderboard</h1>
+            <h1 className="text-4xl font-bold tracking-tight" data-testid="text-leaderboard-title">{t.leaderboard.title}</h1>
           </div>
           <p className="text-muted-foreground">
-            Top typists across the globe. Can you make it to the top?
+            {t.leaderboard.subtitle}
           </p>
         </header>
 
@@ -44,14 +46,14 @@ export default function LeaderboardPage() {
             className="w-full md:w-auto"
           >
             <TabsList data-testid="tabs-leaderboard-period">
-              <TabsTrigger value="daily" data-testid="button-period-daily">Daily</TabsTrigger>
-              <TabsTrigger value="weekly" data-testid="button-period-weekly">Weekly</TabsTrigger>
-              <TabsTrigger value="alltime" data-testid="button-period-alltime">All-time</TabsTrigger>
+              <TabsTrigger value="daily" data-testid="button-period-daily">{t.leaderboard.daily}</TabsTrigger>
+              <TabsTrigger value="weekly" data-testid="button-period-weekly">{t.leaderboard.weekly}</TabsTrigger>
+              <TabsTrigger value="alltime" data-testid="button-period-alltime">{t.leaderboard.allTime}</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Language:</span>
+            <span className="text-sm text-muted-foreground">{t.leaderboard.language}</span>
             <LanguageSelector 
               currentLanguage={language} 
               onLanguageChange={(lang) => setLanguage(lang)} 
@@ -70,7 +72,7 @@ export default function LeaderboardPage() {
                 className="flex flex-col items-center justify-center absolute inset-0"
               >
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="mt-2 text-sm text-muted-foreground">Fetching rankings...</p>
+                <p className="mt-2 text-sm text-muted-foreground">{t.leaderboard.fetchingRankings}</p>
               </motion.div>
             ) : (
               <motion.div
@@ -83,8 +85,8 @@ export default function LeaderboardPage() {
                   <LeaderboardTable entries={entries} />
                 ) : (
                   <div className="flex flex-col items-center justify-center py-20 text-center border rounded-lg bg-card">
-                    <p className="text-muted-foreground">No records found for this period and language.</p>
-                    <p className="text-sm text-muted-foreground/70">Be the first to set a record!</p>
+                    <p className="text-muted-foreground">{t.leaderboard.noRecords}</p>
+                    <p className="text-sm text-muted-foreground/70">{t.leaderboard.beFirst}</p>
                   </div>
                 )}
               </motion.div>

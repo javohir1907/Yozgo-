@@ -14,6 +14,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Target, Timer, BarChart3, History } from "lucide-react";
 import { format } from "date-fns";
+import { useI18n } from "@/lib/i18n";
 
 interface ProfileData {
   user: {
@@ -39,6 +40,7 @@ interface ProfileData {
 
 export default function Profile() {
   const { user: authUser } = useAuth();
+  const { t } = useI18n();
   
   const { data, isLoading } = useQuery<ProfileData>({
     queryKey: ["/api/profile", authUser?.id],
@@ -77,7 +79,6 @@ export default function Profile() {
 
   return (
     <div className="container mx-auto p-8 space-y-8 animate-in fade-in duration-500">
-      {/* Header */}
       <div className="flex items-center gap-6 mb-8">
         <Avatar className="h-24 w-24 border-2 border-primary/20">
           <AvatarImage src={user.avatarUrl} />
@@ -91,17 +92,16 @@ export default function Profile() {
           </h1>
           <p className="text-muted-foreground mt-1 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            Typing Enthusiast
+            {t.profile.typingEnthusiast}
           </p>
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="bg-card/50 backdrop-blur-sm border-primary/10 hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Total Tests
+              {t.profile.totalTests}
             </CardTitle>
             <Timer className="h-4 w-4 text-primary" />
           </CardHeader>
@@ -115,7 +115,7 @@ export default function Profile() {
         <Card className="bg-card/50 backdrop-blur-sm border-primary/10 hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Best WPM
+              {t.profile.bestWpm}
             </CardTitle>
             <Trophy className="h-4 w-4 text-yellow-500" />
           </CardHeader>
@@ -129,7 +129,7 @@ export default function Profile() {
         <Card className="bg-card/50 backdrop-blur-sm border-primary/10 hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Avg. WPM
+              {t.profile.avgWpm}
             </CardTitle>
             <BarChart3 className="h-4 w-4 text-blue-500" />
           </CardHeader>
@@ -143,7 +143,7 @@ export default function Profile() {
         <Card className="bg-card/50 backdrop-blur-sm border-primary/10 hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Avg. Accuracy
+              {t.profile.avgAccuracy}
             </CardTitle>
             <Target className="h-4 w-4 text-green-500" />
           </CardHeader>
@@ -155,12 +155,11 @@ export default function Profile() {
         </Card>
       </div>
 
-      {/* Progress Chart */}
       <Card className="bg-card/50 backdrop-blur-sm border-primary/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-primary" />
-            Performance History
+            {t.profile.performanceHistory}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -170,12 +169,11 @@ export default function Profile() {
         </CardContent>
       </Card>
 
-      {/* Recent History */}
       <Card className="bg-card/50 backdrop-blur-sm border-primary/10">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="w-5 h-5 text-primary" />
-            Recent Tests
+            {t.profile.recentTests}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -183,10 +181,10 @@ export default function Profile() {
             <TableHeader>
               <TableRow>
                 <TableHead>WPM</TableHead>
-                <TableHead>Accuracy</TableHead>
-                <TableHead>Language</TableHead>
-                <TableHead>Mode</TableHead>
-                <TableHead>Date</TableHead>
+                <TableHead>{t.typing.accuracy}</TableHead>
+                <TableHead>{t.leaderboard.language}</TableHead>
+                <TableHead>{t.profile.mode}</TableHead>
+                <TableHead>{t.profile.date}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -204,7 +202,7 @@ export default function Profile() {
               {recentResults.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No tests completed yet.
+                    {t.profile.noTests}
                   </TableCell>
                 </TableRow>
               )}

@@ -10,10 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { Trophy, Users, Play, Copy, Loader2 } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 export default function BattlePage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useI18n();
   const [, setLocation] = useLocation();
   const [battleCode, setBattleCode] = useState<string | null>(null);
   const [inputCode, setInputCode] = useState("");
@@ -27,7 +29,7 @@ export default function BattlePage() {
   useEffect(() => {
     if (error) {
       toast({
-        title: "Error",
+        title: t.battle.error,
         description: error,
         variant: "destructive",
       });
@@ -43,13 +45,13 @@ export default function BattlePage() {
         code,
         status: "waiting",
         language: "en",
-        mode: "50", // 50 words for battle
+        mode: "50",
       });
       setBattleCode(code);
     } catch (err) {
       toast({
-        title: "Error",
-        description: "Failed to create battle",
+        title: t.battle.error,
+        description: t.battle.failedCreate,
         variant: "destructive",
       });
     } finally {
@@ -74,17 +76,12 @@ export default function BattlePage() {
       setCurrentIndex(newIndex);
       setUserInput("");
 
-      // Calculate progress and WPM
       const progress = Math.min(Math.round((newIndex / battleStart.words.length) * 100), 100);
-      const timeElapsed = (Date.now() - battleStart.startTime) / 60000; // in minutes
+      const timeElapsed = (Date.now() - battleStart.startTime) / 60000;
       const currentWpm = Math.round(newIndex / timeElapsed);
       
       setWpm(currentWpm);
       sendProgress(progress, currentWpm);
-
-      if (newIndex === battleStart.words.length) {
-        // Finished
-      }
     }
   }, [battleStart, battleEnd, currentIndex, sendProgress]);
 
@@ -92,8 +89,8 @@ export default function BattlePage() {
     if (battleCode) {
       navigator.clipboard.writeText(battleCode);
       toast({
-        title: "Copied!",
-        description: "Battle code copied to clipboard",
+        title: t.battle.copied,
+        description: t.battle.copiedDesc,
       });
     }
   };
@@ -102,10 +99,10 @@ export default function BattlePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Users className="w-16 h-16 text-muted-foreground" />
-        <h2 className="text-2xl font-bold">Sign in to Battle</h2>
-        <p className="text-muted-foreground">You need to be logged in to compete with others.</p>
+        <h2 className="text-2xl font-bold">{t.battle.signInTitle}</h2>
+        <p className="text-muted-foreground">{t.battle.signInSubtitle}</p>
         <Button onClick={() => window.location.href = "/api/login"}>
-          Sign In
+          {t.nav.signIn}
         </Button>
       </div>
     );
@@ -114,20 +111,20 @@ export default function BattlePage() {
   if (!battleCode) {
     return (
       <div className="container max-w-2xl mx-auto py-12 px-4">
-        <h1 className="text-4xl font-bold mb-8 text-center font-mono tracking-tighter">BATTLE MODE</h1>
+        <h1 className="text-4xl font-bold mb-8 text-center font-mono tracking-tighter">{t.battle.title}</h1>
         
         <div className="grid gap-6">
           <Card className="hover-elevate transition-all border-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Play className="w-5 h-5" />
-                Create a Battle
+                {t.battle.createBattle}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">Start a new room and invite your friends to a typing duel.</p>
+              <p className="text-muted-foreground mb-4">{t.battle.createDesc}</p>
               <Button onClick={createBattle} disabled={isCreating} className="w-full">
-                {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Create Room"}
+                {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : t.battle.createRoom}
               </Button>
             </CardContent>
           </Card>
@@ -136,19 +133,19 @@ export default function BattlePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                Join a Battle
+                {t.battle.joinBattle}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">
                 <Input 
-                  placeholder="Enter Room Code" 
+                  placeholder={t.battle.enterCode}
                   value={inputCode} 
                   onChange={(e) => setInputCode(e.target.value)}
                   className="font-mono uppercase"
                   data-testid="input-battle-code"
                 />
-                <Button onClick={joinBattle} data-testid="button-join-battle">Join</Button>
+                <Button onClick={joinBattle} data-testid="button-join-battle">{t.battle.join}</Button>
               </div>
             </CardContent>
           </Card>
@@ -162,15 +159,15 @@ export default function BattlePage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-2xl font-bold font-mono">BATTLE: {battleCode}</h1>
-          <p className="text-muted-foreground">Mode: 50 Words • Language: EN</p>
+          <p className="text-muted-foreground">{t.battle.mode} 50 Words • Language: EN</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={copyCode} className="flex items-center gap-2">
             <Copy className="w-4 h-4" />
-            Copy Code
+            {t.battle.copyCode}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setBattleCode(null)}>
-            Leave Room
+            {t.battle.leaveRoom}
           </Button>
         </div>
       </div>
@@ -178,7 +175,7 @@ export default function BattlePage() {
       <div className="grid gap-8">
         <Card className="border-2">
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Players</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t.battle.players}</CardTitle>
           </CardHeader>
           <CardContent>
             {room?.players.map((player: any) => (
@@ -189,6 +186,7 @@ export default function BattlePage() {
                 progress={player.progress}
                 wpm={player.wpm}
                 isMe={player.id === user.id}
+                youLabel={t.battle.you}
               />
             ))}
             
@@ -196,8 +194,8 @@ export default function BattlePage() {
               <div className="flex flex-col items-center justify-center py-8 gap-4 border-t mt-4">
                 <p className="text-muted-foreground">
                   {room.players.length < 2 
-                    ? "Waiting for more players..." 
-                    : "Everyone is here! Get ready."}
+                    ? t.battle.waiting
+                    : t.battle.ready}
                 </p>
                 <Button 
                   onClick={sendReady} 
@@ -205,7 +203,7 @@ export default function BattlePage() {
                   variant={room.players.find((p: any) => p.id === user.id)?.isReady ? "secondary" : "default"}
                   className="w-full max-w-xs"
                 >
-                  {room.players.find((p: any) => p.id === user.id)?.isReady ? "Ready!" : "I'm Ready"}
+                  {room.players.find((p: any) => p.id === user.id)?.isReady ? t.battle.readyStatus : t.battle.imReady}
                 </Button>
               </div>
             )}
@@ -236,7 +234,7 @@ export default function BattlePage() {
               <CardHeader className="text-center">
                 <Trophy className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
                 <CardTitle className="text-3xl font-bold">
-                  {battleEnd.winnerId === user.id ? "VICTORY!" : "DEFEAT"}
+                  {battleEnd.winnerId === user.id ? t.battle.victory : t.battle.defeat}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -249,7 +247,7 @@ export default function BattlePage() {
                   ))}
                 </div>
                 <Button onClick={() => window.location.reload()} className="w-full">
-                  Play Again
+                  {t.battle.playAgain}
                 </Button>
               </CardContent>
             </Card>

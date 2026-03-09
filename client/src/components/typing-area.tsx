@@ -55,8 +55,6 @@ export function TypingArea({
     const isPastWord = wordIdx < currentIndex;
 
     if (isPastWord) {
-      // In a real app we'd track correctness of past words too
-      // For now assume they were correct for visualization or implement full tracking
       colorClass = "text-correct";
     } else if (isCurrentWord) {
       if (charIdx < userInput.length) {
@@ -69,7 +67,7 @@ export function TypingArea({
     return (
       <span
         key={`${wordIdx}-${charIdx}`}
-        className={cn("relative transition-colors duration-150", colorClass)}
+        className={cn("relative", colorClass)}
       >
         {isCaretPosition && (
           <span 

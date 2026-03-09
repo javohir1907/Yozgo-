@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useI18n } from "@/lib/i18n";
 
 interface LeaderboardEntry {
   rank: number;
@@ -23,17 +24,19 @@ interface LeaderboardTableProps {
 }
 
 export function LeaderboardTable({ entries }: LeaderboardTableProps) {
+  const { t } = useI18n();
+
   return (
     <div className="rounded-md border bg-card" data-testid="leaderboard-table">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[80px]">Rank</TableHead>
-            <TableHead>User</TableHead>
+            <TableHead className="w-[80px]">{t.leaderboard.rank}</TableHead>
+            <TableHead>{t.leaderboard.user}</TableHead>
             <TableHead className="text-right">WPM</TableHead>
-            <TableHead className="text-right">Accuracy</TableHead>
-            <TableHead className="text-right">Language</TableHead>
-            <TableHead className="text-right">Date</TableHead>
+            <TableHead className="text-right">{t.leaderboard.accuracy}</TableHead>
+            <TableHead className="text-right">{t.leaderboard.language}</TableHead>
+            <TableHead className="text-right">{t.leaderboard.date}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

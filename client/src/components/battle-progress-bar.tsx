@@ -7,6 +7,7 @@ interface BattleProgressBarProps {
   avatarUrl?: string;
   wpm: number;
   isMe?: boolean;
+  youLabel?: string;
 }
 
 export function BattleProgressBar({
@@ -15,6 +16,7 @@ export function BattleProgressBar({
   avatarUrl,
   wpm,
   isMe,
+  youLabel = "You",
 }: BattleProgressBarProps) {
   return (
     <div className="space-y-2 mb-6" data-testid={`battle-progress-${username}`}>
@@ -25,7 +27,7 @@ export function BattleProgressBar({
             <AvatarFallback>{username.substring(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <span className={isMe ? "font-bold text-primary" : "text-muted-foreground"}>
-            {username} {isMe && "(You)"}
+            {username} {isMe && `(${youLabel})`}
           </span>
         </div>
         <span className="font-mono text-primary">{wpm} WPM</span>
