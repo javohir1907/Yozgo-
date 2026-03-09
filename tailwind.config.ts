@@ -51,6 +51,10 @@ export default {
           foreground: "hsl(var(--destructive-foreground) / <alpha-value>)",
           border: "var(--destructive-border)",
         },
+        caret: "hsl(var(--caret) / <alpha-value>)",
+        correct: "hsl(var(--correct) / <alpha-value>)",
+        error: "hsl(var(--error) / <alpha-value>)",
+        pending: "hsl(var(--pending) / <alpha-value>)",
         ring: "hsl(var(--ring) / <alpha-value>)",
         chart: {
           "1": "hsl(var(--chart-1) / <alpha-value>)",
