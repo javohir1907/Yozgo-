@@ -1,5 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -18,6 +19,7 @@ app.use(cors({
   origin: ["https://yozgo-frontend.onrender.com", "http://localhost:5000", "http://localhost:5173"],
   credentials: true
 }));
+app.use(cookieParser());
 
 app.use(
   express.json({
@@ -67,8 +69,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  app.use("/api", debugRouter);
   await registerRoutes(httpServer, app);
+  app.use("/api", debugRouter);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
