@@ -4,25 +4,26 @@ import path from "path";
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(process.cwd(), "dist/public");
-  
-  console.log("Static files path:", distPath);
-  
-  if (!fs.existsSync(distPath)) {
-    const distPath2 = path.resolve(process.cwd(), "public");
-    if (!fs.existsSync(distPath2)) {
-      throw new Error(
-        `Could not find the build directory: ${distPath}`
-      );
-    }
-    app.use(express.static(distPath2));
-    app.use("/{*path}", (_req, res) => {
-      res.sendFile(path.resolve(distPath2, "index.html"));
-    });
+  const distPath2 = path.resolve(process.cwd(), "public");
+
+  console.log("Trying dist/public:", distPath);
+  console.log("Trying public:", distPath2);
+
+  let finalPath = "";
+
+  if (fs.existsSync(distPath)) {
+    finalPath = distPath;
+  } else if (fs.existsSync(distPath2)) {
+    finalPath = distPath2;
+  } else {
+    console.error("No static files found! Checked:", distPath, distPath2);
     return;
   }
-  
-  app.use(express.static(distPath));
+
+  console.log("Serving static from:", finalPath);
+  app.use(express.static(finalPath));
+
   app.use("/{*path}", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    res.sendFile(path.resolve(finalPath, "index.html"));
   });
 }
