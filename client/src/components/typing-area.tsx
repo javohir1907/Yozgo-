@@ -120,6 +120,16 @@ export function TypingArea({
               data-testid={`word-${wordIdx}`}
             >
               {word.split("").map((char, charIdx) => renderChar(char, wordIdx, charIdx))}
+              {isCurrent && userInput.length > word.length && 
+                userInput.slice(word.length).split("").map((char, charIdx) => (
+                  <span
+                    key={`extra-${charIdx}`}
+                    className="text-error underline decoration-error/50 opacity-70"
+                  >
+                    {char}
+                  </span>
+                ))
+              }
             </span>
           );
         })}
