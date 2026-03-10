@@ -2,7 +2,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import type { Express, RequestHandler } from "express";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
 import { eq } from "drizzle-orm";
 
@@ -12,7 +12,7 @@ export function setupAuth(app: Express) {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000;
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
+    pool,
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
@@ -20,14 +20,14 @@ export function setupAuth(app: Express) {
 
   app.use(
     session({
-      secret: process.env.SESSION_SECRET!,
+      secret: process.env.SESSION_SECRET || "yozgo-super-secret-key",
       store: sessionStore,
       resave: false,
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: sessionTtl,
       },
     })
