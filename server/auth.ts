@@ -70,7 +70,7 @@ export function setupAuth(app: Express) {
       res.status(201).json(safeUser);
     } catch (error) {
       console.error("Registration error:", error);
-      res.status(500).json({ message: "Failed to register" });
+      res.status(500).json({ message: "Failed to register: " + (error as any).message, stack: (error as any).stack });
     }
   });
 
@@ -97,7 +97,7 @@ export function setupAuth(app: Express) {
       res.json(safeUser);
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ message: "Failed to log in" });
+      res.status(500).json({ message: "Failed to log in: " + (error as any).message, stack: (error as any).stack });
     }
   });
 
@@ -117,7 +117,7 @@ export function setupAuth(app: Express) {
       res.json(safeUser);
     } catch (error) {
       console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      res.status(500).json({ message: "Failed to fetch user: " + (error as any).message, stack: (error as any).stack });
     }
   });
 
