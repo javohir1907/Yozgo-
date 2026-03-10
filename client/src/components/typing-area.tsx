@@ -98,7 +98,7 @@ export function TypingArea({
         value={userInput}
         onChange={(e) => onInputChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        disabled={!isActive}
+        disabled={!isActive && isFinished}
         autoFocus
         data-testid="input-typing"
       />
