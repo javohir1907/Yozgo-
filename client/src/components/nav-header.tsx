@@ -123,14 +123,15 @@ export function NavHeader() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button 
-              variant="default" 
-              size="sm"
-              onClick={() => window.location.href = "/api/login"}
-              data-testid="button-login"
-            >
-              {t.nav.signIn}
-            </Button>
+            <Link href="/auth">
+              <Button 
+                variant="default" 
+                size="sm"
+                data-testid="button-login"
+              >
+                {t.nav.signIn}
+              </Button>
+            </Link>
           )}
         </div>
       </div>

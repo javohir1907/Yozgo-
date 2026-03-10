@@ -13,11 +13,13 @@ import LeaderboardPage from "@/pages/leaderboard";
 import BattlePage from "@/pages/battle";
 import TypingTestPage from "@/pages/typing-test";
 import ProfilePage from "@/pages/profile";
+import AuthPage from "@/pages/auth";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
+      <Route path="/auth" component={AuthPage} />
       <Route path="/settings" component={SettingsPage} />
       <Route path="/leaderboard" component={LeaderboardPage} />
       <Route path="/battle" component={BattlePage} />

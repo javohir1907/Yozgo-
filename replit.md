@@ -8,7 +8,7 @@ YOZGO is a modern typing practice platform inspired by Monkeytype. It features a
 **Frontend**: React + TypeScript + Vite + TailwindCSS + shadcn/ui
 **Backend**: Express.js + TypeScript
 **Database**: PostgreSQL via Drizzle ORM
-**Auth**: Replit Auth (OIDC)
+**Auth**: Email/password (bcryptjs + express-session)
 **Real-time**: WebSockets (ws package) for multiplayer battles
 
 ## Pages & Routes
@@ -16,6 +16,7 @@ YOZGO is a modern typing practice platform inspired by Monkeytype. It features a
 | Path | Component | Description |
 |------|-----------|-------------|
 | `/` | LandingPage | Hero, features, CTA |
+| `/auth` | AuthPage | Login / Register |
 | `/typing-test` | TypingTestPage | Core typing experience |
 | `/leaderboard` | LeaderboardPage | Global rankings (daily/weekly/alltime) |
 | `/battle` | BattlePage | Real-time multiplayer battles |
@@ -51,7 +52,7 @@ YOZGO is a modern typing practice platform inspired by Monkeytype. It features a
 ## Database Schema
 
 Tables:
-- `users` - Replit Auth user profiles
+- `users` - User profiles (email/password auth)
 - `sessions` - Auth sessions (connect-pg-simple)
 - `test_results` - Individual typing test records
 - `leaderboard_entries` - Top scores per user per language/period
@@ -63,8 +64,9 @@ Tables:
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | /api/auth/user | required | Current user |
-| GET | /api/login | - | Auth redirect |
-| GET | /api/logout | - | Logout redirect |
+| POST | /api/auth/login | - | Login with email/password |
+| POST | /api/auth/register | - | Register new account |
+| POST | /api/auth/logout | required | Logout |
 | POST | /api/results | optional | Save test result |
 | GET | /api/results/me | required | User's test history |
 | GET | /api/leaderboard | - | Leaderboard entries |

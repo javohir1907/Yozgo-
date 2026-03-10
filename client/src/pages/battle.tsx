@@ -101,7 +101,7 @@ export default function BattlePage() {
         <Users className="w-16 h-16 text-muted-foreground" />
         <h2 className="text-2xl font-bold">{t.battle.signInTitle}</h2>
         <p className="text-muted-foreground">{t.battle.signInSubtitle}</p>
-        <Button onClick={() => window.location.href = "/api/login"}>
+        <Button onClick={() => window.location.href = "/auth"}>
           {t.nav.signIn}
         </Button>
       </div>

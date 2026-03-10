@@ -4,24 +4,18 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { insertTestResultSchema, insertBattleSchema } from "@shared/schema";
 import { BattleManager } from "./battle-manager";
-import { setupAuth, isAuthenticated } from "./replit_integrations/auth/replitAuth";
-import { registerAuthRoutes } from "./replit_integrations/auth/routes";
+import { setupAuth, isAuthenticated } from "./auth";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Setup Replit Auth
-  await setupAuth(app);
-  registerAuthRoutes(app);
+  setupAuth(app);
 
   const battleManager = new BattleManager(httpServer);
 
-  // Protected route example: results/me
   app.get("/api/results/me", isAuthenticated, async (req, res) => {
-    const user = (req as any).user;
-    // req.user in Replit Auth has claims.sub as the ID
-    const userId = user.claims.sub;
+    const userId = (req.session as any).userId;
 
     try {
       const results = await storage.getTestResultsByUserId(userId);
@@ -33,8 +27,7 @@ export async function registerRoutes(
 
   app.post("/api/results", isAuthenticated, async (req, res) => {
     try {
-      const user = (req as any).user;
-      const userId = user.claims.sub;
+      const userId = (req.session as any).userId;
 
       const data = insertTestResultSchema.parse({ ...req.body, userId });
       const result = await storage.createTestResult(data);
@@ -57,7 +50,6 @@ export async function registerRoutes(
     }
   });
 
-  // Leaderboard API
   app.get("/api/leaderboard", async (req, res) => {
     try {
       const querySchema = z.object({
@@ -68,7 +60,6 @@ export async function registerRoutes(
       const query = querySchema.parse(req.query);
       const entries = await storage.getLeaderboard(query.period, query.language);
       
-      // Transform for frontend LeaderboardTable
       const transformedEntries = entries.map((entry, index) => ({
         rank: index + 1,
         username: entry.user.firstName || entry.user.email?.split('@')[0] || "Unknown",
@@ -89,7 +80,6 @@ export async function registerRoutes(
     }
   });
 
-  // User Profile and Statistics
   app.get("/api/profile/:userId", async (req, res) => {
     try {
       const { userId } = req.params;
@@ -116,7 +106,6 @@ export async function registerRoutes(
     }
   });
 
-  // Battle API
   app.post("/api/battles", async (req, res) => {
     try {
       const data = insertBattleSchema.parse(req.body);
