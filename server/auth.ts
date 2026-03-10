@@ -1,6 +1,7 @@
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
+import passport from "passport";
 import type { Express, RequestHandler } from "express";
 import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
@@ -32,6 +33,9 @@ export function setupAuth(app: Express) {
       },
     })
   );
+
+  app.use(passport.initialize());
+  app.use(passport.session());
 
   app.post("/api/auth/register", async (req, res) => {
     try {
