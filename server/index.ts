@@ -16,7 +16,7 @@ declare module "http" {
 }
 
 app.use(cors({
-  origin: ["https://yozgo-frontend.onrender.com", "http://localhost:5000", "http://localhost:5173"],
+  origin: ["https://yozgo-frontend.onrender.com", "http://localhost:5000", "http://localhost:5173", "https://yozgo.uz", "https://www.yozgo.uz"],
   credentials: true
 }));
 app.use(cookieParser());
