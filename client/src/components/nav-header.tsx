@@ -35,8 +35,7 @@ export function NavHeader() {
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-            <img src="/logo.png" alt="YOZGO Logo" className="h-8 object-contain hidden sm:block" />
-            <img src="/logo.png" alt="YOZGO Logo" className="h-8 object-contain sm:hidden" />
+            <img src="/logo.png" alt="YOZGO Logo" className="h-10 sm:h-12 w-auto object-cover rounded-md sm:rounded-lg" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">

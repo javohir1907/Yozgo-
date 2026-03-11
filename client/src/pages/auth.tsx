@@ -51,8 +51,9 @@ export default function AuthPage() {
     <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <img src="/logo.png" alt="YOZGO Logo" className="h-10 object-contain" />
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Keyboard className="w-8 h-8 text-primary" />
+            <span className="font-bold text-2xl tracking-tighter">YOZGO</span>
           </div>
           <CardTitle data-testid="text-auth-title">
             {isLogin ? t.auth?.login || "Sign In" : t.auth?.register || "Create Account"}

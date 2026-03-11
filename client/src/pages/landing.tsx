@@ -20,8 +20,8 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-foreground flex flex-col md:flex-row items-center justify-center gap-4">
-              {t.landing.heroTitle} <img src="/logo.png" alt="YOZGO Logo" className="h-12 md:h-16 object-contain" />
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-foreground">
+              {t.landing.heroTitle} <span className="text-primary">YOZGO</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-[600px] mx-auto mb-8">
               {t.landing.heroSubtitle}
@@ -102,8 +102,9 @@ export default function LandingPage() {
 
       <footer className="py-12 border-t mt-auto">
         <div className="container px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center h-full">
-            <img src="/logo.png" alt="YOZGO Logo" className="h-8 object-contain" />
+          <div className="flex items-center gap-2 font-bold text-xl">
+            <Keyboard className="w-6 h-6 text-primary" />
+            <span>YOZGO</span>
           </div>
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} YOZGO. {t.landing.footer}
