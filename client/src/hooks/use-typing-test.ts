@@ -107,12 +107,12 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
 
     if (value.endsWith(" ")) {
       const word = words[currentIndex];
-      const typedWord = value.trim(); // Changed from trimEnd to trim for cleaner check
+      const typedWord = value.trim();
 
       // Only advance if the typed word is exactly the same as target word
       if (typedWord === word) {
-        correctCharsRef.current += word.length + 1;
-        
+        correctCharsRef.current += word.length + 1; // +1 for space
+
         setWordStatuses(prev => {
           const next = [...prev];
           next[currentIndex] = "correct";
@@ -122,12 +122,29 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
         setCurrentIndex(prev => prev + 1);
         setUserInput("");
         updateLiveStats();
+      } else {
+        // If word is incomplete or incorrect when space is pressed
+        incorrectCharsRef.current += 1;
+        updateLiveStats();
       }
-      // If word is incomplete or incorrect, do nothing (don't update userInput with the space)
     } else {
+      // Check for incorrect keystrokes while typing
+      const word = words[currentIndex];
+      if (value.length > userInput.length) {
+        // Only count as incorrect if the character added doesn't match the target word
+        const lastChar = value[value.length - 1];
+        const targetChar = word[value.length - 1];
+
+        if (lastChar === targetChar) {
+          correctCharsRef.current += 1;
+        } else {
+          incorrectCharsRef.current += 1;
+        }
+        updateLiveStats();
+      }
       setUserInput(value);
     }
-  }, [isFinished, isActive, words, currentIndex, startTest, updateLiveStats]);
+  }, [isFinished, isActive, userInput, words, currentIndex, startTest, updateLiveStats]);
 
   return {
     words,
