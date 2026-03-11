@@ -13,6 +13,22 @@ const translations = {
       logOut: "Log out",
       settings: "Settings",
     },
+    auth: {
+      login: "Sign In",
+      register: "Create Account",
+      loginDesc: "Sign in to track your progress",
+      registerDesc: "Create an account to save your results",
+      name: "Name",
+      namePlaceholder: "Your name (optional)",
+      email: "Email",
+      password: "Password",
+      loginButton: "Sign In",
+      registerButton: "Create Account",
+      noAccount: "Don't have an account?",
+      hasAccount: "Already have an account?",
+      loginLink: "Sign in",
+      registerLink: "Sign up"
+    },
     landing: {
       heroTitle: "Master Your Typing with",
       heroSubtitle: "The ultimate typing test platform for speed, accuracy, and global competition. Support for Uzbek, Russian, and English.",
@@ -135,6 +151,22 @@ const translations = {
       profile: "Профиль",
       logOut: "Выйти",
       settings: "Настройки",
+    },
+    auth: {
+      login: "Войти",
+      register: "Создать аккаунт",
+      loginDesc: "Войдите, чтобы отслеживать прогресс",
+      registerDesc: "Создайте аккаунт для сохранения результатов",
+      name: "Имя",
+      namePlaceholder: "Ваше имя (необязательно)",
+      email: "Email",
+      password: "Пароль",
+      loginButton: "Войти",
+      registerButton: "Создать аккаунт",
+      noAccount: "Нет аккаунта?",
+      hasAccount: "Ужа есть аккаунт?",
+      loginLink: "Войти",
+      registerLink: "Регистрация"
     },
     landing: {
       heroTitle: "Освойте быстрый набор с",
@@ -259,6 +291,22 @@ const translations = {
       logOut: "Chiqish",
       settings: "Sozlamalar",
     },
+    auth: {
+      login: "Kirish",
+      register: "Hisob yaratish",
+      loginDesc: "Natijalarni kuzatish uchun kiring",
+      registerDesc: "Natijalarni saqlash uchun hisob yarating",
+      name: "Ism",
+      namePlaceholder: "Ismingiz (ixtiyoriy)",
+      email: "Email",
+      password: "Parol",
+      loginButton: "Kirish",
+      registerButton: "Hisob yaratish",
+      noAccount: "Hisobingiz yo'qmi?",
+      hasAccount: "Hisobingiz bormi?",
+      loginLink: "Kiring",
+      registerLink: "Ro'yxatdan o'ting"
+    },
     landing: {
       heroTitle: "Tez yozishni o'rganing",
       heroSubtitle: "Tezlik va aniqlik bo'yicha eng yaxshi mashq platformasi. O'zbek, rus va ingliz tillarini qo'llab-quvvatlaydi.",
@@ -372,7 +420,7 @@ const translations = {
       uzbek: "O'zbek",
     },
   },
-} as const;
+};
 
 export type Translations = typeof translations.en;
 

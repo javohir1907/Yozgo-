@@ -13,15 +13,15 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/90 z-10" />
         </div>
-        
+
         <div className="container relative z-20 px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-foreground">
-              {t.landing.heroTitle} <span className="text-primary">YOZGO</span>
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-foreground flex flex-col md:flex-row items-center justify-center gap-4">
+              {t.landing.heroTitle} <img src="/logo.png" alt="YOZGO Logo" className="h-12 md:h-16 object-contain" />
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-[600px] mx-auto mb-8">
               {t.landing.heroSubtitle}
@@ -40,7 +40,7 @@ export default function LandingPage() {
             </div>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="mt-16 p-6 rounded-lg border bg-card/50 backdrop-blur-sm max-w-2xl mx-auto hidden md:block"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -62,22 +62,22 @@ export default function LandingPage() {
       <section className="py-24 bg-card/30">
         <div className="container px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <FeatureCard 
+            <FeatureCard
               icon={<Zap className="w-10 h-10 text-primary" />}
               title={t.landing.featureSpeed}
               description={t.landing.featureSpeedDesc}
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Globe className="w-10 h-10 text-primary" />}
               title={t.landing.featureMultilingual}
               description={t.landing.featureMultilingualDesc}
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Users className="w-10 h-10 text-primary" />}
               title={t.landing.featureBattles}
               description={t.landing.featureBattlesDesc}
             />
-            <FeatureCard 
+            <FeatureCard
               icon={<Trophy className="w-10 h-10 text-primary" />}
               title={t.landing.featureRankings}
               description={t.landing.featureRankingsDesc}
@@ -99,12 +99,11 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
-      
+
       <footer className="py-12 border-t mt-auto">
         <div className="container px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2 font-bold text-xl">
-            <Keyboard className="w-6 h-6 text-primary" />
-            <span>YOZGO</span>
+          <div className="flex items-center h-full">
+            <img src="/logo.png" alt="YOZGO Logo" className="h-8 object-contain" />
           </div>
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} YOZGO. {t.landing.footer}

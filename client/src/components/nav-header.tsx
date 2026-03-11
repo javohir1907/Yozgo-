@@ -34,9 +34,9 @@ export function NavHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl hover:opacity-90 transition-opacity">
-            <Keyboard className="w-8 h-8 text-primary" />
-            <span className="hidden sm:inline-block tracking-tighter">YOZGO</span>
+          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
+            <img src="/logo.png" alt="YOZGO Logo" className="h-8 object-contain hidden sm:block" />
+            <img src="/logo.png" alt="YOZGO Logo" className="h-8 object-contain sm:hidden" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
@@ -44,9 +44,8 @@ export function NavHeader() {
               <Link key={item.href} href={item.href}>
                 <Button
                   variant="ghost"
-                  className={`gap-2 h-10 px-4 transition-colors ${
-                    location === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-                  }`}
+                  className={`gap-2 h-10 px-4 transition-colors ${location === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                    }`}
                   data-testid={`link-nav-${item.href.replace('/', '')}`}
                 >
                   <item.icon className="w-4 h-4" />
@@ -112,7 +111,7 @@ export function NavHeader() {
                     <span>{t.nav.profile}</span>
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="text-destructive focus:text-destructive cursor-pointer"
                   onClick={() => logout()}
                   data-testid="button-logout"
@@ -124,8 +123,8 @@ export function NavHeader() {
             </DropdownMenu>
           ) : (
             <Link href="/auth">
-              <Button 
-                variant="default" 
+              <Button
+                variant="default"
                 size="sm"
                 data-testid="button-login"
               >
