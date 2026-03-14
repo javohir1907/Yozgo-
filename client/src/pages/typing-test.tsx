@@ -25,7 +25,6 @@ export default function TypingTestPage() {
       accuracy: number;
       language: string;
       mode: string;
-      userId?: string;
     }) => {
       const res = await apiRequest("POST", "/api/results", result);
       return res.json();
@@ -43,7 +42,12 @@ export default function TypingTestPage() {
     },
   });
 
-  const onComplete = useCallback((stats: { wpm: number; accuracy: number; correctChars: number; incorrectChars: number }) => {
+  const onComplete = useCallback((stats: {
+    wpm: number;
+    accuracy: number;
+    correctChars: number;
+    incorrectChars: number;
+  }) => {
     if (user) {
       resultMutation.mutate({
         wpm: stats.wpm,
@@ -76,19 +80,27 @@ export default function TypingTestPage() {
       {!isFinished ? (
         <>
           <div className="w-full flex flex-col items-center gap-4 mb-12">
-            {!isActive && (
-              <div className="flex flex-col items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                <LanguageSelector
-                  currentLanguage={language}
-                  onLanguageChange={setLanguage}
-                />
-                <TimerModeSelector
-                  currentMode={mode}
-                  onModeChange={setMode}
-                />
-              </div>
-            )}
-            
+
+            {/* FIX: Til va rejim selektorlari - faqat test boshlanmagan vaqtda ko'rinadi */}
+            {/* Pastga tushish animatsiyasi bilan yashiriladi */}
+            <div
+              className={`flex flex-col items-center gap-4 overflow-hidden transition-all duration-300 ease-in-out ${
+                isActive
+                  ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none"
+                  : "max-h-40 opacity-100 translate-y-0"
+              }`}
+            >
+              <LanguageSelector
+                currentLanguage={language}
+                onLanguageChange={setLanguage}
+              />
+              <TimerModeSelector
+                currentMode={mode}
+                onModeChange={setMode}
+              />
+            </div>
+
+            {/* FIX: Stats har doim ko'rinadi, lekin test boshlanmasa 0 turadi */}
             <StatsDisplay
               wpm={stats.wpm}
               accuracy={stats.accuracy}
@@ -106,11 +118,16 @@ export default function TypingTestPage() {
             wordStatuses={wordStatuses}
           />
 
-          {!isActive && (
-            <p className="mt-8 text-muted-foreground font-mono animate-pulse">
+          {/* FIX: "Boshlash uchun yozing" matni faqat isActive=false da ko'rinadi */}
+          <div
+            className={`mt-8 transition-all duration-300 ${
+              isActive ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+          >
+            <p className="text-muted-foreground font-mono animate-pulse">
               {t.typing.typeToStart}
             </p>
-          )}
+          </div>
         </>
       ) : (
         <div className="w-full animate-in zoom-in-95 duration-300">
