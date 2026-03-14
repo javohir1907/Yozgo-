@@ -308,9 +308,9 @@ const translations = {
       registerLink: "Ro'yxatdan o'ting"
     },
     landing: {
-      heroTitle: "Tez yozishni o'rganing",
-      heroSubtitle: "Tezlik va aniqlik bo'yicha eng yaxshi mashq platformasi. O'zbek, rus va ingliz tillarini qo'llab-quvvatlaydi.",
-      startTyping: "Yozishni boshlash",
+            heroTitle: "Yozish tezligingizni sinab ko'ring",
+            heroSubtitle: "Do'stlaringiz bilan raqobatlashing, eng tez yozuvchi kim ekanini aniqlang!",
+            startTyping: "Musobaqani boshlash",
       viewLeaderboard: "Reyting",
       readyTitle: "Tezligingizni oshirishga tayyormisiz?",
       readySubtitle: "Minglab foydalanuvchilarga qo'shiling va tez yozish mahoratini oshirishni bugundan boshlang.",
