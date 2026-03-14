@@ -73,7 +73,7 @@ export function NavHeader() {
                 >
                   {lang.label}
                 </DropdownMenuItem>
-              ))}
+              ))}/>
             </DropdownMenuContent>
           </DropdownMenu>
 
