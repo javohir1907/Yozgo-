@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebsocket } from "@/hooks/use-websocket";
 import { TypingArea } from "@/components/typing-area";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
-import { Trophy, Users, Play, Copy, Loader2 } from "lucide-react";
+import { Trophy, Users, Play, Copy, Loader2, Crown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 export default function BattlePage() {
@@ -23,8 +23,38 @@ export default function BattlePage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [wpm, setWpm] = useState(0);
   const [isCreating, setIsCreating] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { room, battleStart, battleEnd, error, sendReady, sendProgress } = useWebsocket(battleCode, user || null);
+  const { room, battleStart, battleEnd, error, sendReady, sendProgress } = useWebsocket(battleCode, user as any);
+
+
+  // Countdown timer when battle starts
+  useEffect(() => {
+    if (battleStart && !battleEnd) {
+      // battleStart.startTime is when battle started — show countdown from 3 to 0
+      const now = Date.now();
+      const elapsed = now - battleStart.startTime;
+      const remaining = Math.max(0, 3000 - elapsed);
+      
+      if (remaining > 0) {
+        setCountdown(Math.ceil(remaining / 1000));
+        countdownRef.current = setInterval(() => {
+          setCountdown(prev => {
+            if (prev === null || prev <= 1) {
+              if (countdownRef.current) clearInterval(countdownRef.current);
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+    }
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [battleStart]);
 
   useEffect(() => {
     if (error) {
@@ -48,6 +78,7 @@ export default function BattlePage() {
         mode: "50",
       });
       setBattleCode(code);
+      setIsAdmin(true); // Creator is admin
     } catch (err) {
       toast({
         title: t.battle.error,
@@ -62,11 +93,12 @@ export default function BattlePage() {
   const joinBattle = () => {
     if (inputCode.trim()) {
       setBattleCode(inputCode.trim().toUpperCase());
+      setIsAdmin(false);
     }
   };
 
   const handleInputChange = useCallback((value: string) => {
-    if (!battleStart || battleEnd) return;
+    if (!battleStart || battleEnd || countdown !== null) return;
 
     setUserInput(value);
     const currentWord = battleStart.words[currentIndex];
@@ -83,7 +115,7 @@ export default function BattlePage() {
       setWpm(currentWpm);
       sendProgress(progress, currentWpm);
     }
-  }, [battleStart, battleEnd, currentIndex, sendProgress]);
+  }, [battleStart, battleEnd, currentIndex, sendProgress, countdown]);
 
   const copyCode = () => {
     if (battleCode) {
@@ -93,6 +125,11 @@ export default function BattlePage() {
         description: t.battle.copiedDesc,
       });
     }
+  };
+
+  // Admin starts battle manually
+  const handleAdminStart = () => {
+    sendReady();
   };
 
   if (!user) {
@@ -142,6 +179,7 @@ export default function BattlePage() {
                   placeholder={t.battle.enterCode}
                   value={inputCode} 
                   onChange={(e) => setInputCode(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && joinBattle()}
                   className="font-mono uppercase"
                   data-testid="input-battle-code"
                 />
@@ -159,7 +197,13 @@ export default function BattlePage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-2xl font-bold font-mono">BATTLE: {battleCode}</h1>
-          <p className="text-muted-foreground">{t.battle.mode} 50 Words • Language: EN</p>
+          <p className="text-muted-foreground">{t.battle.mode} 50 Words • Language: EN
+            {isAdmin && (
+              <span className="ml-2 inline-flex items-center gap-1 text-yellow-500 text-xs font-semibold">
+                <Crown className="w-3 h-3" /> Admin
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={copyCode} className="flex items-center gap-2">
@@ -173,44 +217,87 @@ export default function BattlePage() {
       </div>
 
       <div className="grid gap-8">
+        {/* Players list — always visible, real-time */}
         <Card className="border-2">
           <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">{t.battle.players}</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              {t.battle.players} ({room?.players?.length ?? 0})
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {room?.players.map((player: any) => (
-              <BattleProgressBar
-                key={player.id}
-                username={player.username}
-                avatarUrl={player.avatarUrl}
-                progress={player.progress}
-                wpm={player.wpm}
-                isMe={player.id === user.id}
-                youLabel={t.battle.you}
-              />
-            ))}
+            {(!room?.players || room.players.length === 0) ? (
+              <div className="flex flex-col items-center py-6 gap-2 text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <p className="text-sm">{t.battle.waiting}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {room.players.map((player: any) => (
+                  <BattleProgressBar
+                    key={player.id}
+                    username={player.username}
+                    avatarUrl={player.avatarUrl}
+                    progress={player.progress}
+                    wpm={player.wpm}
+                    isMe={player.id === user.id}
+                    youLabel={t.battle.you}
+                  />
+                ))}
+              </div>
+            )}
             
             {room?.status === "waiting" && (
-              <div className="flex flex-col items-center justify-center py-8 gap-4 border-t mt-4">
-                <p className="text-muted-foreground">
-                  {room.players.length < 2 
+              <div className="flex flex-col items-center justify-center py-6 gap-4 border-t mt-4">
+                <p className="text-muted-foreground text-sm">
+                  {(room?.players?.length ?? 0) < 2
                     ? t.battle.waiting
                     : t.battle.ready}
                 </p>
-                <Button 
-                  onClick={sendReady} 
-                  disabled={room.players.find((p: any) => p.id === user.id)?.isReady}
-                  variant={room.players.find((p: any) => p.id === user.id)?.isReady ? "secondary" : "default"}
-                  className="w-full max-w-xs"
-                >
-                  {room.players.find((p: any) => p.id === user.id)?.isReady ? t.battle.readyStatus : t.battle.imReady}
-                </Button>
+
+                {/* Admin: Start battle button */}
+                {isAdmin ? (
+                  <Button
+                    onClick={handleAdminStart}
+                    className="w-full max-w-xs bg-primary hover:bg-primary/90 font-bold"
+                    disabled={room.players.find((p: any) => p.id === user.id)?.isReady}
+                    data-testid="button-admin-start"
+                  >
+                    <Crown className="w-4 h-4 mr-2" />
+                    {room.players.find((p: any) => p.id === user.id)?.isReady
+                      ? t.battle.readyStatus
+                      : "Jangni boshlash"}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={sendReady}
+                    disabled={room.players.find((p: any) => p.id === user.id)?.isReady}
+                    variant={room.players.find((p: any) => p.id === user.id)?.isReady ? "secondary" : "default"}
+                    className="w-full max-w-xs"
+                    data-testid="button-ready"
+                  >
+                    {room.players.find((p: any) => p.id === user.id)?.isReady ? t.battle.readyStatus : t.battle.imReady}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {battleStart && !battleEnd && (
+        {/* Countdown overlay */}
+        {battleStart && countdown !== null && (
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="text-center animate-in zoom-in duration-300">
+              <div className="text-9xl font-black font-mono text-primary animate-pulse">
+                {countdown}
+              </div>
+              <p className="text-xl text-muted-foreground mt-4">Tayyor bo'ling!</p>
+            </div>
+          </div>
+        )}
+
+        {/* Typing area */}
+        {battleStart && !battleEnd && countdown === null && (
           <div className="space-y-8 animate-in fade-in duration-500">
             <div className="text-center">
               <span className="text-4xl font-bold font-mono text-primary">{wpm}</span>
@@ -241,7 +328,10 @@ export default function BattlePage() {
                 <div className="space-y-2">
                   {battleEnd.results.map((result: any) => (
                     <div key={result.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                      <span className="font-bold">{result.username}</span>
+                      <span className="font-bold flex items-center gap-2">
+                        {result.id === battleEnd.winnerId && <Trophy className="w-4 h-4 text-yellow-500" />}
+                        {result.username}
+                      </span>
                       <span className="font-mono text-primary font-bold">{result.wpm} WPM</span>
                     </div>
                   ))}
