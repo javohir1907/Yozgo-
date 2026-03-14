@@ -3,40 +3,6 @@ import { createContext, useContext, useState, useEffect } from "react";
 export type UILanguage = "en" | "ru" | "uz";
 
 const translations = {
-    en: {
-          nav: {
-                  test: "Test",
-                  leaderboard: "Leaderboard",
-                  battle: "Battle",
-                  signIn: "Sign In",
-                  profile: "Profile",
-                  logOut: "Log out",
-                  settings: "Settings",
-          },
-          auth: {
-                  login: "Sign In",
-                  register: "Create Account",
-                  loginDesc: "Sign in to track your progress",
-                  registerDesc: "Create an account to save your results",
-                  name: "Name",
-                  namePlaceholder: "Your name (optional)",
-                  email: "Email",
-                  password: "Password",
-                  loginButton: "Sign In",
-                  registerButton: "Create Account",
-                  noAccount: "Don't have an account?",
-                  hasAccount: "Already have an account?",
-                  loginLink: "Sign in",
-                  registerLink: "Sign up",
-                  forgotPassword: "Forgot password?",
-                  usernameExists: "This username is taken, please choose another."
-          },
-          landing: {
-                  heroTitle: "Test Your Typing Speed import { createContext, useContext, useState, useEffect } from "react";
-
-export type UILanguage = "en" | "ru" | "uz";
-
-const translations = {
   en: {
     nav: {
       test: "Test",
@@ -502,3 +468,4 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 export function useI18n() {
   return useContext(I18nContext);
 }
+
