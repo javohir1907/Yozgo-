@@ -3,6 +3,40 @@ import { createContext, useContext, useState, useEffect } from "react";
 export type UILanguage = "en" | "ru" | "uz";
 
 const translations = {
+    en: {
+          nav: {
+                  test: "Test",
+                  leaderboard: "Leaderboard",
+                  battle: "Battle",
+                  signIn: "Sign In",
+                  profile: "Profile",
+                  logOut: "Log out",
+                  settings: "Settings",
+          },
+          auth: {
+                  login: "Sign In",
+                  register: "Create Account",
+                  loginDesc: "Sign in to track your progress",
+                  registerDesc: "Create an account to save your results",
+                  name: "Name",
+                  namePlaceholder: "Your name (optional)",
+                  email: "Email",
+                  password: "Password",
+                  loginButton: "Sign In",
+                  registerButton: "Create Account",
+                  noAccount: "Don't have an account?",
+                  hasAccount: "Already have an account?",
+                  loginLink: "Sign in",
+                  registerLink: "Sign up",
+                  forgotPassword: "Forgot password?",
+                  usernameExists: "This username is taken, please choose another."
+          },
+          landing: {
+                  heroTitle: "Test Your Typing Speed import { createContext, useContext, useState, useEffect } from "react";
+
+export type UILanguage = "en" | "ru" | "uz";
+
+const translations = {
   en: {
     nav: {
       test: "Test",
@@ -27,24 +61,26 @@ const translations = {
       noAccount: "Don't have an account?",
       hasAccount: "Already have an account?",
       loginLink: "Sign in",
-      registerLink: "Sign up"
+      registerLink: "Sign up",
+      forgotPassword: "Forgot password?",
+      usernameExists: "This username is taken, please choose another."
     },
     landing: {
-      heroTitle: "Master Your Typing with",
-      heroSubtitle: "The ultimate typing test platform for speed, accuracy, and global competition. Support for Uzbek, Russian, and English.",
-      startTyping: "Start Typing",
+      heroTitle: "Test Your Typing Speed —",
+      heroSubtitle: "Compete with your friends and find out who is the fastest typist!",
+      startTyping: "Start Competition",
       viewLeaderboard: "View Leaderboard",
-      readyTitle: "Ready to improve your speed?",
-      readySubtitle: "Join thousands of users and start your journey to becoming a typing master today.",
-      getStarted: "Get Started Now",
-      featureSpeed: "Extreme Speed",
-      featureSpeedDesc: "Real-time WPM calculation with millisecond precision to track your progress.",
+      readyTitle: "Ready to compete with the best?",
+      readySubtitle: "YOZGO brings together the fastest typists for real competitions. Show the world what you're made of.",
+      getStarted: "Join the Competition",
+      featureSpeed: "Real Competitions",
+      featureSpeedDesc: "Organized typing competitions where speed and accuracy determine the champion.",
       featureMultilingual: "Multilingual",
-      featureMultilingualDesc: "Full support for Uzbek, Russian, and English word lists and keyboard layouts.",
+      featureMultilingualDesc: "Compete in Uzbek, Russian, and English — all in one platform.",
       featureBattles: "Live Battles",
-      featureBattlesDesc: "Challenge friends or random opponents in real-time multiplayer typing duels.",
+      featureBattlesDesc: "Face off against real opponents in live, head-to-head typing duels.",
       featureRankings: "Rankings",
-      featureRankingsDesc: "Compete on daily, weekly, and all-time leaderboards to become the top typist.",
+      featureRankingsDesc: "Climb the daily, weekly, and all-time leaderboards to be crowned the top typist.",
       footer: "All rights reserved.",
     },
     typing: {
@@ -164,26 +200,29 @@ const translations = {
       loginButton: "Войти",
       registerButton: "Создать аккаунт",
       noAccount: "Нет аккаунта?",
-      hasAccount: "Ужа есть аккаунт?",
+      hasAccount: "Уже есть аккаунт?",
       loginLink: "Войти",
-      registerLink: "Регистрация"
+      registerLink: "Регистрация",
+      forgotPassword: "Забыли пароль?",
+      usernameExists: "Это имя занято, выберите другое."
     },
     landing: {
-      heroTitle: "Освойте быстрый набор с",
-      heroSubtitle: "Лучшая платформа для тренировки скорости и точности печати. Поддержка узбекского, русского и английского языков.",
-      startTyping: "Начать печатать",
+      heroTitle: "Проверьте скорость вашей печати —",
+      heroSubtitle: "Соревнуйтесь с друзьями и выясните, кто печатает быстрее всех!",
+      startTyping: "Начать соревнование",
+
       viewLeaderboard: "Рейтинг",
-      readyTitle: "Готовы улучшить скорость?",
-      readySubtitle: "Присоединяйтесь к тысячам пользователей и начните путь к мастерству печати уже сегодня.",
-      getStarted: "Начать сейчас",
-      featureSpeed: "Высокая скорость",
-      featureSpeedDesc: "Расчёт WPM в реальном времени с точностью до миллисекунды.",
+      readyTitle: "Готовы соревноваться с лучшими?",
+      readySubtitle: "YOZGO объединяет самых быстрых печатников для настоящих соревнований. Покажите, на что вы способны.",
+      getStarted: "Присоединиться к соревнованию",
+      featureSpeed: "Настоящие соревнования",
+      featureSpeedDesc: "Организованные соревнования по скоростной печати, где победитель определяется скоростью и точностью.",
       featureMultilingual: "Мультиязычность",
-      featureMultilingualDesc: "Полная поддержка узбекского, русского и английского языков.",
+      featureMultilingualDesc: "Соревнуйтесь на узбекском, русском и английском — всё на одной платформе.",
       featureBattles: "Живые батлы",
-      featureBattlesDesc: "Бросьте вызов друзьям или случайным соперникам в мультиплеерных дуэлях.",
+      featureBattlesDesc: "Сразитесь с реальными соперниками в прямых поединках по скоростной печати.",
       featureRankings: "Рейтинги",
-      featureRankingsDesc: "Соревнуйтесь в дневных, недельных и общих рейтингах.",
+      featureRankingsDesc: "Поднимайтесь в ежедневных, еженедельных и общих рейтингах, чтобы стать чемпионом.",
       footer: "Все права защищены.",
     },
     typing: {
@@ -305,24 +344,26 @@ const translations = {
       noAccount: "Hisobingiz yo'qmi?",
       hasAccount: "Hisobingiz bormi?",
       loginLink: "Kiring",
-      registerLink: "Ro'yxatdan o'ting"
+      registerLink: "Ro'yxatdan o'ting",
+      forgotPassword: "Parolni unutdingizmi?",
+      usernameExists: "Bu nik band, boshqa nik tanlang."
     },
     landing: {
-            heroTitle: "Yozish tezligingizni sinab ko'ring",
-            heroSubtitle: "Do'stlaringiz bilan raqobatlashing, eng tez yozuvchi kim ekanini aniqlang!",
-            startTyping: "Musobaqani boshlash",
+      heroTitle: "Yozish tezligingizni sinab ko'ring",
+      heroSubtitle: "Do'stlaringiz bilan raqobatlashing, eng tez yozuvchi kim ekanini aniqlang!",
+      startTyping: "Musobaqani boshlash",
       viewLeaderboard: "Reyting",
-      readyTitle: "Tezligingizni oshirishga tayyormisiz?",
-      readySubtitle: "Minglab foydalanuvchilarga qo'shiling va tez yozish mahoratini oshirishni bugundan boshlang.",
-      getStarted: "Hozir boshlash",
-      featureSpeed: "Yuqori tezlik",
-      featureSpeedDesc: "Millisekundlik aniqlik bilan real vaqtda WPM hisoblash.",
+      readyTitle: "Eng yaxshilar bilan raqobatlashga tayyormisiz?",
+      readySubtitle: "YOZGO eng tez yozuvchilarni haqiqiy musobaqalarga olib keladi. O'z imkoniyatingizni dunyoga ko'rsating.",
+      getStarted: "Musobaqaga qo'shilish",
+      featureSpeed: "Haqiqiy musobaqalar",
+      featureSpeedDesc: "Tezlik va aniqlik asosida g'olib aniqlanadigan uyushtirilgan yozish musobaqalari.",
       featureMultilingual: "Ko'p tilli",
-      featureMultilingualDesc: "O'zbek, rus va ingliz tillari uchun to'liq qo'llab-quvvatlash.",
+      featureMultilingualDesc: "O'zbek, rus va ingliz tillarida musobaqalashing — hammasi bir platformada.",
       featureBattles: "Jonli janglar",
-      featureBattlesDesc: "Do'stlaringiz yoki tasodifiy raqiblarga real vaqtda qo'shiling.",
+      featureBattlesDesc: "Haqiqiy raqiblar bilan jonli, to'g'ridan-to'g'ri yozish duellarida uchrashing.",
       featureRankings: "Reytinglar",
-      featureRankingsDesc: "Kunlik, haftalik va barcha vaqt reytinglarida raqobatlashing.",
+      featureRankingsDesc: "Kunlik, haftalik va barcha vaqt reytinglarida ko'tarilib, eng yaxshi yozuvchi unvonini qo'lga kiriting.",
       footer: "Barcha huquqlar himoyalangan.",
     },
     typing: {
