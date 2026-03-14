@@ -2,7 +2,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import type { Express, RequestHandler } from "express";
+import type { Express, RequestHandler, Request, Response, NextFunction } from "express";
 import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
 import { eq } from "drizzle-orm";
@@ -157,4 +157,11 @@ export function setupAuth(app: Express) {
       res.sendStatus(200);
     });
   });
+}
+
+export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  if ((req.session as any).userId) {
+    return next();
+  }
+  return res.status(401).json({ message: "Unauthorized" });
 }
