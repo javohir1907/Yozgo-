@@ -13,10 +13,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+
 export function NavHeader() {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { t, uiLang, setUILang } = useI18n();
+
 
   const navItems = [
     { label: t.nav.test, href: "/typing-test", icon: Keyboard },
@@ -24,19 +26,22 @@ export function NavHeader() {
     { label: t.nav.battle, href: "/battle", icon: Users },
   ];
 
+
   const uiLangOptions: { code: UILanguage; label: string }[] = [
     { code: "en", label: "EN" },
     { code: "ru", label: "RU" },
     { code: "uz", label: "UZ" },
   ];
 
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">>
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-            <img src="/logo.png" alt="YOZGO Logo" className="h-10 sm:h-12 w-auto object-cover rounded-md sm:rounded-lg" />
+            <img src="/logo.png" alt="YOZGO Logo" className="h-10 sm:h-12 w-auto object-cover rounded-md sm:rounded-lg" /> />
           </Link>
+
 
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => (
@@ -55,6 +60,7 @@ export function NavHeader() {
           </nav>
         </div>
 
+
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -71,68 +77,3 @@ export function NavHeader() {
                   className={uiLang === lang.code ? "bg-accent text-accent-foreground" : ""}
                   data-testid={`button-ui-lang-${lang.code}`}
                 >
-                  {lang.label}
-                </DropdownMenuItem>
-              ))}/>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Link href="/settings">
-            <Button variant="ghost" size="icon" className="text-muted-foreground" data-testid="link-settings">
-              <Settings className="w-5 h-5" />
-              <span className="sr-only">{t.nav.settings}</span>
-            </Button>
-          </Link>
-
-          {isAuthenticated ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full" data-testid="button-user-menu">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || user?.email || "User"} />
-                    <AvatarFallback>{(user?.firstName || user?.email || "U").substring(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{user?.firstName || user?.email}</p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {user?.email}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="flex items-center w-full cursor-pointer">
-                    <UserIcon className="mr-2 h-4 w-4" />
-                    <span>{t.nav.profile}</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive cursor-pointer"
-                  onClick={() => logout()}
-                  data-testid="button-logout"
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>{t.nav.logOut}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Link href="/auth">
-              <Button
-                variant="default"
-                size="sm"
-                data-testid="button-login"
-              >
-                {t.nav.signIn}
-              </Button>
-            </Link>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
