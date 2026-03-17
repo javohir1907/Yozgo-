@@ -54,6 +54,7 @@ async function upsertUser(claims: any) {
   await authStorage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
+    password: "", // Hack for ts errors on unused replit auth code
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],

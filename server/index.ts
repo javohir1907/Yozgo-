@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import debugRouter from "./debug-auth";
+import helmet from "helmet";
 
 const app = express();
 const httpServer = createServer(app);
@@ -14,6 +15,32 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // 'unsafe-eval' is typically required by Vite in dev
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "wss:", "ws:", "https:", "http:"], // include 'ws:' and 'http:' for local development Vite / Socket.IO
+      fontSrc: ["'self'", "data:"],   // 'data:' is common for fonts (e.g. injected by Vite or some UI libs)
+      frameAncestors: ["'none'"],
+    },
+  },
+  hsts: {
+    maxAge: 63072000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  frameguard: { action: 'deny' },
+  permittedCrossDomainPolicies: true,
+}));
+
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  next();
+});
 
 app.use(cors({
   origin: ["https://yozgo-frontend.onrender.com", "http://localhost:5000", "http://localhost:5173", "https://yozgo.uz", "https://www.yozgo.uz"],
