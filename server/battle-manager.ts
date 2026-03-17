@@ -1,16 +1,31 @@
 import { type Server } from "http";
-import { WebSocketServer, WebSocket } from "ws";
+import { Server as SocketServer, Socket } from "socket.io";
 import { storage } from "./storage";
 import { words } from "../shared/words";
 import { type User } from "@shared/schema";
 
+interface PlayerPerformance {
+  wpm: number;
+  accuracy: number;
+  progress: number;
+  timestamp: number;
+}
+
 interface Player {
-  ws: WebSocket;
+  socket: Socket;
   user: User;
   progress: number;
   wpm: number;
+  bestWpm: number;
+  attempts: number;
   isReady: boolean;
   isFinished: boolean;
+}
+
+interface RoomSettings {
+  testDuration: number; // in seconds (e.g. 30)
+  totalTime: number;    // in minutes (e.g. 5)
+  maxAttempts: number;
 }
 
 interface Room {
@@ -18,53 +33,61 @@ interface Room {
   code: string;
   language: string;
   mode: string;
+  adminId: string;
   players: Map<string, Player>; // userId -> Player
   status: 'waiting' | 'playing' | 'finished';
   startTime?: number;
+  endTime?: number;
+  settings: RoomSettings;
   testWords: string[];
 }
 
 export class BattleManager {
-  private wss: WebSocketServer;
+  private io: SocketServer;
   private rooms: Map<string, Room> = new Map(); // roomCode -> Room
 
   constructor(server: Server) {
-    this.wss = new WebSocketServer({ server, path: '/ws/battle' });
-    this.setupWSS();
+    this.io = new SocketServer(server, {
+      cors: {
+        origin: ["https://yozgo-frontend.onrender.com", "http://localhost:5000", "http://localhost:5173", "https://yozgo.uz", "https://www.yozgo.uz"],
+        methods: ["GET", "POST"],
+        credentials: true
+      }
+    });
+    this.setupSocketIO();
   }
 
-  private setupWSS() {
-    this.wss.on('connection', (ws) => {
+  private setupSocketIO() {
+    this.io.on('connection', (socket) => {
       let currentRoomCode: string | null = null;
       let currentUserId: string | null = null;
 
-      ws.on('message', async (data) => {
-        try {
-          const message = JSON.parse(data.toString());
-          
-          switch (message.type) {
-            case 'join_room':
-              await this.handleJoinRoom(ws, message.code, message.user);
-              currentRoomCode = message.code;
-              currentUserId = message.user.id;
-              break;
-            case 'player_ready':
-              if (currentRoomCode && currentUserId) {
-                this.handlePlayerReady(currentRoomCode, currentUserId);
-              }
-              break;
-            case 'typing_progress':
-              if (currentRoomCode && currentUserId) {
-                this.handleTypingProgress(currentRoomCode, currentUserId, message.progress, message.wpm);
-              }
-              break;
-          }
-        } catch (error) {
-          console.error('WebSocket message error:', error);
+      socket.on('join-room', async (data: { code: string, user: User }) => {
+        const { code, user } = data;
+        await this.handleJoinRoom(socket, code, user);
+        currentRoomCode = code;
+        currentUserId = user.id;
+      });
+
+      socket.on('start-battle', (data: { settings: RoomSettings }) => {
+        if (currentRoomCode && currentUserId) {
+          this.handleStartBattle(currentRoomCode, currentUserId, data.settings);
         }
       });
 
-      ws.on('close', () => {
+      socket.on('submit-result', (data: { wpm: number, accuracy: number, progress: number }) => {
+        if (currentRoomCode && currentUserId) {
+          this.handleResultSubmission(currentRoomCode, currentUserId, data);
+        }
+      });
+
+      socket.on('typing-progress', (data: { progress: number, wpm: number }) => {
+        if (currentRoomCode && currentUserId) {
+          this.handleTypingProgress(currentRoomCode, currentUserId, data.progress, data.wpm);
+        }
+      });
+
+      socket.on('disconnect', () => {
         if (currentRoomCode && currentUserId) {
           this.handleLeaveRoom(currentRoomCode, currentUserId);
         }
@@ -72,13 +95,13 @@ export class BattleManager {
     });
   }
 
-  private async handleJoinRoom(ws: WebSocket, code: string, user: User) {
+  private async handleJoinRoom(socket: Socket, code: string, user: User) {
     let room = this.rooms.get(code);
     
     if (!room) {
       const battle = await storage.getBattleByCode(code);
       if (!battle) {
-        ws.send(JSON.stringify({ type: 'error', message: 'Battle not found' }));
+        socket.emit('error-message', { message: 'Battle not found' });
         return;
       }
       
@@ -87,26 +110,36 @@ export class BattleManager {
         code: battle.code,
         language: battle.language,
         mode: battle.mode,
+        adminId: user.id, // The first person to "join" the room in memory is typically the creator
         players: new Map(),
         status: battle.status as any,
-        testWords: this.generateWords(battle.language, parseInt(battle.mode))
+        settings: {
+          testDuration: 30,
+          totalTime: 5,
+          maxAttempts: 10
+        },
+        testWords: this.generateWords(battle.language, 100) // Generate more words for multiple attempts
       };
       this.rooms.set(code, room);
     }
 
-    if (room.status !== 'waiting') {
-      ws.send(JSON.stringify({ type: 'error', message: 'Battle already started' }));
+    if (room.status === 'finished') {
+      socket.emit('error-message', { message: 'Battle already finished' });
       return;
     }
 
     room.players.set(user.id, {
-      ws,
+      socket,
       user,
       progress: 0,
       wpm: 0,
+      bestWpm: 0,
+      attempts: 0,
       isReady: false,
       isFinished: false
     });
+
+    socket.join(code);
 
     // Add to DB if not already a participant
     const participants = await storage.getBattleParticipants(room.id);
@@ -123,34 +156,30 @@ export class BattleManager {
     this.broadcastRoomUpdate(room);
   }
 
-  private handlePlayerReady(code: string, userId: string) {
+  private async handleStartBattle(code: string, userId: string, settings: RoomSettings) {
     const room = this.rooms.get(code);
-    if (!room) return;
+    if (!room || room.adminId !== userId) return;
 
-    const player = room.players.get(userId);
-    if (player) {
-      player.isReady = true;
-      
-      // Check if all players are ready
-      const allReady = Array.from(room.players.values()).every(p => p.isReady);
-      if (allReady && room.players.size >= 2) {
-        this.startBattle(room);
-      } else {
-        this.broadcastRoomUpdate(room);
-      }
-    }
-  }
-
-  private async startBattle(room: Room) {
+    room.settings = settings;
     room.status = 'playing';
     room.startTime = Date.now();
-    await storage.updateBattleStatus(room.id, 'playing');
+    room.endTime = room.startTime + (settings.totalTime * 60 * 1000);
     
-    this.broadcast(room, {
-      type: 'battle_start',
+    await storage.updateBattleStatus(room.id, 'playing');
+
+    this.io.to(code).emit('battle-start', {
+      settings: room.settings,
       startTime: room.startTime,
+      endTime: room.endTime,
       words: room.testWords
     });
+
+    // Schedule battle end
+    setTimeout(() => {
+      this.finishBattle(code);
+    }, settings.totalTime * 60 * 1000);
+
+    this.broadcastRoomUpdate(room);
   }
 
   private handleTypingProgress(code: string, userId: string, progress: number, wpm: number) {
@@ -162,46 +191,66 @@ export class BattleManager {
       player.progress = progress;
       player.wpm = wpm;
 
-      if (progress >= 100 && !player.isFinished) {
-        player.isFinished = true;
-        this.checkBattleEnd(room);
-      }
-
-      this.broadcast(room, {
-        type: 'update_progress',
-        players: this.getPlayersData(room)
+      this.io.to(code).emit('leaderboard-update', {
+        players: this.getPlayersData(room),
+        leadingPlayerId: this.getLeadingPlayerId(room)
       });
     }
   }
 
-  private async checkBattleEnd(room: Room) {
-    const allFinished = Array.from(room.players.values()).every(p => p.isFinished);
-    if (allFinished) {
-      room.status = 'finished';
-      await storage.updateBattleStatus(room.id, 'finished');
-      
-      // Determine winner
-      const players = Array.from(room.players.values());
-      const winner = players.reduce((prev, current) => (prev.wpm > current.wpm) ? prev : current);
+  private async handleResultSubmission(code: string, userId: string, data: { wpm: number, accuracy: number, progress: number }) {
+    const room = this.rooms.get(code);
+    if (!room || room.status !== 'playing') return;
 
-      // Update DB participants
-      for (const p of players) {
-        const dbParticipants = await storage.getBattleParticipants(room.id);
-        const participant = dbParticipants.find(dp => dp.userId === p.user.id);
-        if (participant) {
-          await storage.updateBattleParticipant(participant.id, {
-            wpm: p.wpm,
-            isWinner: p.user.id === winner.user.id
-          });
-        }
+    const player = room.players.get(userId);
+    if (player) {
+      player.attempts++;
+      if (data.wpm > player.bestWpm) {
+        player.bestWpm = data.wpm;
       }
 
-      this.broadcast(room, {
-        type: 'battle_end',
-        winnerId: winner.user.id,
-        results: this.getPlayersData(room)
+      // Update DB for this participant (rolling update of best score)
+      const participants = await storage.getBattleParticipants(room.id);
+      const participant = participants.find(p => p.userId === userId);
+      if (participant) {
+        await storage.updateBattleParticipant(participant.id, {
+          wpm: player.bestWpm,
+          accuracy: data.accuracy
+        });
+      }
+
+      this.io.to(code).emit('leaderboard-update', {
+        players: this.getPlayersData(room),
+        leadingPlayerId: this.getLeadingPlayerId(room)
       });
     }
+  }
+
+  private async finishBattle(code: string) {
+    const room = this.rooms.get(code);
+    if (!room || room.status === 'finished') return;
+
+    room.status = 'finished';
+    await storage.updateBattleStatus(room.id, 'finished');
+
+    const playersData = this.getPlayersData(room);
+    const winnerId = this.getLeadingPlayerId(room);
+
+    if (winnerId) {
+      // Mark winner in DB
+      const participants = await storage.getBattleParticipants(room.id);
+      const winnerParticipant = participants.find(p => p.userId === winnerId);
+      if (winnerParticipant) {
+        await storage.updateBattleParticipant(winnerParticipant.id, {
+          isWinner: true
+        });
+      }
+    }
+
+    this.io.to(code).emit('battle-end', {
+      winnerId,
+      results: playersData
+    });
   }
 
   private handleLeaveRoom(code: string, userId: string) {
@@ -209,19 +258,28 @@ export class BattleManager {
     if (!room) return;
 
     room.players.delete(userId);
+    
     if (room.players.size === 0) {
       this.rooms.delete(code);
     } else {
+      // If admin leaves, assign new admin
+      if (room.adminId === userId) {
+        const nextUserId = room.players.keys().next().value;
+        if (nextUserId) {
+          room.adminId = nextUserId;
+        }
+      }
       this.broadcastRoomUpdate(room);
     }
   }
 
   private broadcastRoomUpdate(room: Room) {
-    this.broadcast(room, {
-      type: 'room_update',
+    this.io.to(room.code).emit('room-update', {
       room: {
         code: room.code,
         status: room.status,
+        adminId: room.adminId,
+        settings: room.settings,
         players: this.getPlayersData(room)
       }
     });
@@ -234,24 +292,24 @@ export class BattleManager {
       avatarUrl: p.user.profileImageUrl,
       progress: p.progress,
       wpm: p.wpm,
+      bestWpm: p.bestWpm,
+      attempts: p.attempts,
       isReady: p.isReady,
       isFinished: p.isFinished
-    }));
+    })).sort((a, b) => b.bestWpm - a.bestWpm);
   }
 
-  private broadcast(room: Room, message: any) {
-    const data = JSON.stringify(message);
-    room.players.forEach(p => {
-      if (p.ws.readyState === WebSocket.OPEN) {
-        p.ws.send(data);
-      }
-    });
+  private getLeadingPlayerId(room: Room): string | null {
+    const players = Array.from(room.players.values());
+    if (players.length === 0) return null;
+    
+    return players.reduce((prev, current) => (prev.bestWpm > current.bestWpm) ? prev : current).user.id;
   }
 
   private generateWords(lang: string, count: number): string[] {
     const list = words[lang as keyof typeof words] || words.en;
     const result = [];
-    for (let i = 0; i < count * 5; i++) { // Rough estimate for words needed
+    for (let i = 0; i < count; i++) {
       result.push(list[Math.floor(Math.random() * list.length)]);
     }
     return result;

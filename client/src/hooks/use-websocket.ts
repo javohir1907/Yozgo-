@@ -1,66 +1,87 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { type User } from "@shared/schema";
-
-type Message = {
-  type: string;
-  [key: string]: any;
-};
+import { io, Socket } from "socket.io-client";
 
 export function useWebsocket(code: string | null, user: User | null) {
   const [room, setRoom] = useState<any>(null);
   const [battleStart, setBattleStart] = useState<any>(null);
   const [battleEnd, setBattleEnd] = useState<any>(null);
+  const [leadingPlayerId, setLeadingPlayerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const socketRef = useRef<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
     if (!code || !user) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/battle`);
-    socketRef.current = ws;
+    // In production, we connect to the same host. In development, we might need to specify the port if frontend and backend are separate.
+    // Based on index.ts, the server is serving static files, so same host works.
+    const socket = io({
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+    
+    socketRef.current = socket;
 
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: "join_room", code, user }));
-    };
+    socket.on('connect', () => {
+      setIsConnected(true);
+      socket.emit('join-room', { code, user });
+    });
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      switch (message.type) {
-        case "room_update":
-          setRoom(message.room);
-          break;
-        case "battle_start":
-          setBattleStart(message);
-          break;
-        case "update_progress":
-          setRoom((prev: any) => prev ? { ...prev, players: message.players } : null);
-          break;
-        case "battle_end":
-          setBattleEnd(message);
-          break;
-        case "error":
-          setError(message.message);
-          break;
-      }
-    };
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+    });
 
-    ws.onclose = () => {
-      socketRef.current = null;
-    };
+    socket.on('room-update', (data) => {
+      setRoom(data.room);
+    });
+
+    socket.on('battle-start', (data) => {
+      setBattleStart(data);
+      setBattleEnd(null);
+    });
+
+    socket.on('leaderboard-update', (data) => {
+      setRoom((prev: any) => prev ? { ...prev, players: data.players } : null);
+      setLeadingPlayerId(data.leadingPlayerId);
+    });
+
+    socket.on('battle-end', (data) => {
+      setBattleEnd(data);
+      setBattleStart(null);
+    });
+
+    socket.on('error-message', (data) => {
+      setError(data.message);
+    });
 
     return () => {
-      ws.close();
+      socket.disconnect();
     };
   }, [code, user]);
 
-  const sendReady = useCallback(() => {
-    socketRef.current?.send(JSON.stringify({ type: "player_ready" }));
+  const startBattle = useCallback((settings: any) => {
+    socketRef.current?.emit('start-battle', { settings });
+  }, []);
+
+  const submitResult = useCallback((wpm: number, accuracy: number, progress: number) => {
+    socketRef.current?.emit('submit-result', { wpm, accuracy, progress });
   }, []);
 
   const sendProgress = useCallback((progress: number, wpm: number) => {
-    socketRef.current?.send(JSON.stringify({ type: "typing_progress", progress, wpm }));
+    socketRef.current?.emit('typing-progress', { progress, wpm });
   }, []);
 
-  return { room, battleStart, battleEnd, error, sendReady, sendProgress };
+  return { 
+    room, 
+    battleStart, 
+    battleEnd, 
+    leadingPlayerId,
+    error, 
+    isConnected,
+    startBattle, 
+    submitResult, 
+    sendProgress 
+  };
 }

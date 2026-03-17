@@ -25,6 +25,8 @@ const allowlist = [
   "passport-local",
   "pg",
   "stripe",
+  "socket.io",
+  "socket.io-client",
   "uuid",
   "ws",
   "xlsx",
