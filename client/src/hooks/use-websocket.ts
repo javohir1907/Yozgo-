@@ -14,12 +14,13 @@ export function useWebsocket(code: string | null, user: User | null) {
   useEffect(() => {
     if (!code || !user) return;
 
-    // In production, we connect to the same host. In development, we might need to specify the port if frontend and backend are separate.
-    // Based on index.ts, the server is serving static files, so same host works.
-    const socket = io({
+    const socketUrl = import.meta.env.VITE_API_URL || undefined;
+    const socket = io(socketUrl, {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
     });
     
     socketRef.current = socket;
