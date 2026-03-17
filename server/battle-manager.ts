@@ -16,7 +16,9 @@ interface Player {
   user: User;
   progress: number;
   wpm: number;
+  accuracy: number;
   bestWpm: number;
+  bestAccuracy: number;
   attempts: number;
   isReady: boolean;
   isFinished: boolean;
@@ -26,6 +28,8 @@ interface RoomSettings {
   testDuration: number; // in seconds (e.g. 30)
   totalTime: number;    // in minutes (e.g. 5)
   maxAttempts: number;
+  language?: string;
+  adminParticipates?: boolean;
 }
 
 interface Room {
@@ -133,7 +137,9 @@ export class BattleManager {
       user,
       progress: 0,
       wpm: 0,
+      accuracy: 100,
       bestWpm: 0,
+      bestAccuracy: 100,
       attempts: 0,
       isReady: false,
       isFinished: false
@@ -161,6 +167,11 @@ export class BattleManager {
     if (!room || room.adminId !== userId) return;
 
     room.settings = settings;
+    if (settings.language && settings.language !== room.language) {
+      room.language = settings.language;
+      room.testWords = this.generateWords(settings.language, 100);
+    }
+    
     room.status = 'playing';
     room.startTime = Date.now();
     room.endTime = room.startTime + (settings.totalTime * 60 * 1000);
@@ -205,8 +216,10 @@ export class BattleManager {
     const player = room.players.get(userId);
     if (player) {
       player.attempts++;
-      if (data.wpm > player.bestWpm) {
+      player.accuracy = data.accuracy;
+      if (data.wpm >= player.bestWpm) { // >= because accuracy might improve on same WPM
         player.bestWpm = data.wpm;
+        player.bestAccuracy = data.accuracy;
       }
 
       // Update DB for this participant (rolling update of best score)
@@ -286,17 +299,27 @@ export class BattleManager {
   }
 
   private getPlayersData(room: Room) {
-    return Array.from(room.players.values()).map(p => ({
-      id: p.user.id,
-      username: p.user.firstName || p.user.email?.split('@')[0] || 'Unknown',
-      avatarUrl: p.user.profileImageUrl,
-      progress: p.progress,
-      wpm: p.wpm,
-      bestWpm: p.bestWpm,
-      attempts: p.attempts,
-      isReady: p.isReady,
-      isFinished: p.isFinished
-    })).sort((a, b) => b.bestWpm - a.bestWpm);
+    return Array.from(room.players.values()).map(p => {
+      const isAdmin = p.user.id === room.adminId;
+      const adminParticipates = room.settings?.adminParticipates !== undefined ? room.settings.adminParticipates : true;
+      const isSpectator = isAdmin && !adminParticipates;
+      
+      return {
+        id: p.user.id,
+        username: p.user.firstName || p.user.email?.split('@')[0] || 'Unknown',
+        avatarUrl: p.user.profileImageUrl,
+        progress: p.progress,
+        wpm: p.wpm,
+        accuracy: p.accuracy,
+        bestWpm: p.bestWpm,
+        bestAccuracy: p.bestAccuracy,
+        attempts: p.attempts,
+        isReady: p.isReady,
+        isFinished: p.isFinished,
+        isAdmin,
+        isSpectator
+      };
+    }).filter(p => !p.isSpectator).sort((a, b) => b.bestWpm - a.bestWpm);
   }
 
   private getLeadingPlayerId(room: Room): string | null {

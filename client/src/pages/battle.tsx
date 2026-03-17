@@ -38,6 +38,11 @@ export default function BattlePage() {
   const [testDuration, setTestDuration] = useState(30);
   const [totalTime, setTotalTime] = useState(5);
   const [maxAttempts, setMaxAttempts] = useState(5);
+  const [language, setLanguage] = useState("uz");
+  const [adminParticipates, setAdminParticipates] = useState(true);
+  
+  const [totalKeystrokes, setTotalKeystrokes] = useState(0);
+  const [correctKeystrokes, setCorrectKeystrokes] = useState(0);
 
   const { 
     room, 
@@ -116,6 +121,9 @@ export default function BattlePage() {
     setUserInput("");
     setCurrentIndex(0);
     setWpm(0);
+    setAccuracy(100);
+    setTotalKeystrokes(0);
+    setCorrectKeystrokes(0);
   };
 
   const endAttempt = () => {
@@ -161,27 +169,45 @@ export default function BattlePage() {
   const handleInputChange = useCallback((value: string) => {
     if (!isAttemptActive) return;
 
-    setUserInput(value);
     const currentWord = battleStart.words[currentIndex];
+    let curTotal = totalKeystrokes;
+    let curCorrect = correctKeystrokes;
+
+    if (value.length > userInput.length) {
+      curTotal += 1;
+      const addedChar = value[value.length - 1];
+      const targetChar = (currentWord + " ")[value.length - 1]; // includes space
+      if (addedChar === targetChar) curCorrect += 1;
+      
+      setTotalKeystrokes(curTotal);
+      setCorrectKeystrokes(curCorrect);
+    }
+    
+    // Monkeyspeed exact WPM formula: (correctChars / 5) / minutes
+    const timeElapsedMins = (battleStart.settings.testDuration - (attemptTimer || 0)) / 60;
+    const exactWpm = timeElapsedMins > 0 ? Math.round((curCorrect / 5) / timeElapsedMins) : 0;
+    const exactAcc = curTotal > 0 ? Math.round((curCorrect / curTotal) * 100) : 100;
+
+    setWpm(exactWpm);
+    setAccuracy(exactAcc);
 
     if (value === currentWord + " ") {
       const newIndex = currentIndex + 1;
       setCurrentIndex(newIndex);
       setUserInput("");
-
-      const timeElapsed = (battleStart.settings.testDuration - (attemptTimer || 0)) / 60;
-      const currentWpm = timeElapsed > 0 ? Math.round(newIndex / timeElapsed) : 0;
-      
-      setWpm(currentWpm);
-      sendProgress(Math.min(Math.round((newIndex / 50) * 100), 100), currentWpm);
+      sendProgress(Math.min(Math.round((newIndex / 50) * 100), 100), exactWpm);
+    } else {
+      setUserInput(value);
     }
-  }, [isAttemptActive, currentIndex, battleStart, attemptTimer, sendProgress]);
+  }, [isAttemptActive, currentIndex, battleStart, attemptTimer, sendProgress, userInput, totalKeystrokes, correctKeystrokes]);
 
   const handleAdminStart = () => {
     startBattle({
       testDuration,
       totalTime,
-      maxAttempts
+      maxAttempts,
+      language,
+      adminParticipates
     });
   };
 
@@ -283,7 +309,7 @@ export default function BattlePage() {
           <Button variant="outline" onClick={copyCode} className="gap-2 shrink-0">
             <Copy className="w-4 h-4" /> Kod
           </Button>
-          <Button variant="ghost" onClick={() => window.location.reload()} className="text-red-500 hover:text-red-600 hover:bg-red-50/10">
+          <Button variant="ghost" onClick={() => setLocation("/")} className="text-red-500 hover:text-red-600 hover:bg-red-50/10">
             Chiqish
           </Button>
         </div>
@@ -305,6 +331,32 @@ export default function BattlePage() {
                 {isAdmin ? (
                   <>
                     <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Sizning rolingiz:</Label>
+                          <select 
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={adminParticipates ? "true" : "false"}
+                            onChange={(e) => setAdminParticipates(e.target.value === "true")}
+                          >
+                            <option value="true" className="bg-background text-foreground">👑 Qatnashaman</option>
+                            <option value="false" className="bg-background text-foreground">👁️ Kuzatuvchiman</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Til:</Label>
+                          <select 
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                          >
+                            <option value="uz" className="bg-background text-foreground">🇺🇿 O'zbekcha</option>
+                            <option value="en" className="bg-background text-foreground">🇺🇸 English</option>
+                            <option value="ru" className="bg-background text-foreground">🇷🇺 Русский</option>
+                          </select>
+                        </div>
+                      </div>
+
                       <div className="flex justify-between">
                         <Label>Test davomiyligi: {testDuration} soniya</Label>
                       </div>
@@ -373,7 +425,11 @@ export default function BattlePage() {
                   <div className="flex justify-center gap-12 mb-8">
                     <div className="text-center">
                       <div className="text-5xl font-black font-mono text-primary">{wpm}</div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Soniya / WPM</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">WPM (Tezlik)</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-5xl font-black font-mono text-orange-500">{accuracy}%</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Aniqlik</div>
                     </div>
                   </div>
 
@@ -418,15 +474,18 @@ export default function BattlePage() {
                           <p className="text-xs text-muted-foreground uppercase tracking-widest">{player.attempts}ta urinish</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-3xl font-black font-mono text-primary">{player.bestWpm}</span>
-                        <span className="text-sm text-muted-foreground ml-1">WPM</span>
+                      <div className="text-right flex flex-col items-end">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-3xl font-black font-mono text-primary">{player.bestWpm}</span>
+                          <span className="text-sm text-muted-foreground">WPM</span>
+                        </div>
+                        <div className="text-sm font-bold text-orange-500 flex items-center">{player.bestAccuracy ?? 100}% Accuracy</div>
                       </div>
                     </motion.div>
                   ))}
                 </div>
-                <Button onClick={() => window.location.reload()} className="w-full h-12 text-lg font-bold" variant="outline">
-                  <RotateCcw className="w-5 h-5 mr-2" /> Qayta O'ynash
+                <Button onClick={() => setLocation("/")} className="w-full h-12 text-lg font-bold" variant="outline">
+                  <RotateCcw className="w-5 h-5 mr-2" /> Yangi xona / Asosiy
                 </Button>
               </CardContent>
             </Card>
@@ -461,16 +520,19 @@ export default function BattlePage() {
                           </div>
                         )}
                         <BattleProgressBar
-                          username={player.username}
+                          username={player.isAdmin ? `👑 ${player.username}` : player.username}
                           avatarUrl={player.avatarUrl}
                           progress={player.progress}
                           wpm={player.bestWpm > player.wpm ? player.bestWpm : player.wpm}
                           isMe={player.id === user.id}
                           youLabel="Siz"
                         />
-                        <div className="flex justify-between items-center -mt-4 px-1">
+                        <div className="flex justify-between items-center -mt-4 px-1 pb-1">
                           <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{player.attempts} Urinish</span>
-                          <span className="text-xs font-black text-primary/60">{player.bestWpm} Peak WPM</span>
+                          <span className="flex items-center gap-2">
+                            <span className="text-xs font-black text-primary/60">{player.bestWpm} Peak WPM</span>
+                            <span className="text-xs font-black text-orange-500/80">{player.bestAccuracy ?? 100}% ACC</span>
+                          </span>
                         </div>
                       </motion.div>
                     );

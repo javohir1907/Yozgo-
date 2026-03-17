@@ -23,7 +23,7 @@ export function serveStatic(app: Express) {
   console.log("Serving static from:", finalPath);
   app.use(express.static(finalPath));
 
-  app.use("/{*path}", (_req, res) => {
+  app.get("*", (_req, res) => {
     res.sendFile(path.resolve(finalPath, "index.html"));
   });
 }
