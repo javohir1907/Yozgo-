@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,18 +15,33 @@ import TypingTestPage from "@/pages/typing-test";
 import ProfilePage from "@/pages/profile";
 import AuthPage from "@/pages/auth";
 
+import { motion, AnimatePresence } from "framer-motion";
+
 function Router() {
+  const [location] = useLocation();
+  
   return (
-    <Switch>
-      <Route path="/" component={LandingPage} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/settings" component={SettingsPage} />
-      <Route path="/leaderboard" component={LeaderboardPage} />
-      <Route path="/battle" component={BattlePage} />
-      <Route path="/typing-test" component={TypingTestPage} />
-      <Route path="/profile" component={ProfilePage} />
-      <Route component={NotFound} />
-    </Switch>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location}
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -5 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className="h-full w-full"
+      >
+        <Switch>
+          <Route path="/" component={LandingPage} />
+          <Route path="/auth" component={AuthPage} />
+          <Route path="/settings" component={SettingsPage} />
+          <Route path="/leaderboard" component={LeaderboardPage} />
+          <Route path="/battle" component={BattlePage} />
+          <Route path="/typing-test" component={TypingTestPage} />
+          <Route path="/profile" component={ProfilePage} />
+          <Route component={NotFound} />
+        </Switch>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
