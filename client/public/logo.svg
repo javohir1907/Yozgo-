@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100">
+  <!-- Keycap Y -->
+  <g transform="translate(10, 10)">
+    <rect width="70" height="80" rx="12" fill="#111" stroke="#444" stroke-width="2"/>
+    <rect x="10" y="10" width="50" height="55" rx="6" fill="#0f0f0f" />
+    <text x="35" y="45" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="32" fill="#f97316" text-anchor="middle" dominant-baseline="middle">Y</text>
+  </g>
+  <!-- Keycap O -->
+  <g transform="translate(90, 10)">
+    <rect width="70" height="80" rx="12" fill="#111" stroke="#444" stroke-width="2"/>
+    <rect x="10" y="10" width="50" height="55" rx="6" fill="#0f0f0f" />
+    <text x="35" y="45" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="32" fill="#eee" text-anchor="middle" dominant-baseline="middle">O</text>
+  </g>
+  <!-- Keycap Z -->
+  <g transform="translate(170, 10)">
+    <rect width="70" height="80" rx="12" fill="#111" stroke="#444" stroke-width="2"/>
+    <rect x="10" y="10" width="50" height="55" rx="6" fill="#0f0f0f" />
+    <text x="35" y="45" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="32" fill="#eee" text-anchor="middle" dominant-baseline="middle">Z</text>
+  </g>
+  <!-- Keycap G -->
+  <g transform="translate(250, 10)">
+    <rect width="70" height="80" rx="12" fill="#111" stroke="#444" stroke-width="2"/>
+    <rect x="10" y="10" width="50" height="55" rx="6" fill="#0f0f0f" />
+    <text x="35" y="45" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="32" fill="#eee" text-anchor="middle" dominant-baseline="middle">G</text>
+  </g>
+  <!-- Keycap O -->
+  <g transform="translate(330, 10)">
+    <rect width="70" height="80" rx="12" fill="#111" stroke="#444" stroke-width="2"/>
+    <rect x="10" y="10" width="50" height="55" rx="6" fill="#0f0f0f" />
+    <text x="35" y="45" font-family="system-ui, -apple-system, sans-serif" font-weight="900" font-size="32" fill="#eee" text-anchor="middle" dominant-baseline="middle">O</text>
+  </g>
+</svg>
