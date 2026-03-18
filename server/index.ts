@@ -16,31 +16,23 @@ declare module "http" {
   }
 }
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // 'unsafe-eval' is typically required by Vite in dev
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "wss:", "ws:", "https:", "http:"], // include 'ws:' and 'http:' for local development Vite / Socket.IO
-      fontSrc: ["'self'", "data:"],   // 'data:' is common for fonts (e.g. injected by Vite or some UI libs)
-      frameAncestors: ["'none'"],
-    },
-  },
-  hsts: {
-    maxAge: 63072000,
-    includeSubDomains: true,
-    preload: true,
-  },
-  frameguard: { action: 'deny' },
-  permittedCrossDomainPolicies: true,
-}));
-
 app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' wss: ws: https: http:; font-src 'self' https://fonts.gstatic.com data:; require-trusted-types-for 'script'; trusted-types default 'allow-duplicates'"
+  );
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
   next();
 });
+
+app.use(helmet({
+  contentSecurityPolicy: false, // We are setting this manually above
+  hsts: false, // We are setting this manually above
+  frameguard: false, // We are setting X-Frame-Options manually above
+  permittedCrossDomainPolicies: true,
+}));
 
 app.use(cors({
   origin: ["https://yozgo-frontend.onrender.com", "http://localhost:5000", "http://localhost:5173", "https://yozgo.uz", "https://www.yozgo.uz"],
