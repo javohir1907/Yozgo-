@@ -40,6 +40,46 @@ async function createTables() {
     );
   `);
 
+    console.log("Adding and updating users schema for admin role if missing...");
+    await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar NOT NULL DEFAULT 'user';
+    `);
+
+    console.log("Setting 'javohir1907' as admin if they exist...");
+    await pool.query(`
+    UPDATE users SET role = 'admin' WHERE first_name ILIKE 'javohir1907' OR email ILIKE 'javohir1907%';
+    `);
+
+    console.log("Setting up new tables...");
+    await pool.query(`
+    CREATE TABLE IF NOT EXISTS reviews (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id varchar REFERENCES users(id) NOT NULL,
+      rating integer NOT NULL,
+      comment text NOT NULL,
+      created_at timestamp NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS competitions (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      title text NOT NULL,
+      prize text,
+      date timestamp NOT NULL,
+      is_active boolean DEFAULT true,
+      created_at timestamp NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS advertisements (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      title text NOT NULL,
+      image_url text NOT NULL,
+      link_url text NOT NULL,
+      start_date timestamp NOT NULL,
+      end_date timestamp NOT NULL,
+      is_active boolean DEFAULT true
+    );
+    `);
+
     console.log("Tables verify/create completed!");
     process.exit(0);
 }
