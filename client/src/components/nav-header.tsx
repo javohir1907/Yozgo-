@@ -39,11 +39,14 @@ export function NavHeader() {
               {["Y", "O", "Z", "G", "O"].map((letter, i) => (
                 <div
                   key={i}
-                  className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-md bg-gradient-to-b from-[#333] to-[#1a1a1a] shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),0_3px_0_#000,0_4px_8px_rgba(0,0,0,0.6)] border border-gray-600/50 cursor-pointer select-none transition-transform hover:-translate-y-[1px]"
+                  className="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-md bg-gradient-to-b from-[#333] to-[#1a1a1a] shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),0_3px_0_#000,0_4px_8px_rgba(0,0,0,0.6)] border border-gray-600/50 cursor-pointer select-none transition-transform hover:-translate-y-[1px]"
                 >
-                  <span className={`text-base sm:text-lg font-black drop-shadow-[0_0_2px_rgba(255,255,255,0.2)] font-mono ${i === 0 ? 'text-orange-500' : 'text-gray-100'}`}>
+                  <span className="text-base sm:text-lg font-black drop-shadow-[0_0_2px_rgba(255,255,255,0.2)] font-mono text-white">
                     {letter}
                   </span>
+                  {(i === 1 || i === 3) && (
+                    <div className="absolute bottom-[10%] w-1/3 h-[2px] sm:h-[3px] bg-[#444] rounded-full shadow-[inset_0_1px_1px_rgba(0,0,0,0.8),0_1px_0_rgba(255,255,255,0.1)]" />
+                  )}
                 </div>
               ))}
             </div>
