@@ -110,7 +110,7 @@ app.use((req, res, next) => {
     `);
 
     await pool.query(`
-      UPDATE users SET role = 'admin' WHERE first_name = 'javohir1907' AND email = 'xolmatovjavohir911@gmail.com';
+      UPDATE users SET role = 'admin' WHERE username = 'javohir1907' AND email = 'xolmatovjavohir911@gmail.com';
     `);
     
     // Also ensuring tables are handled here because Render might skip NPM start phase

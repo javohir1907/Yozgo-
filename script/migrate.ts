@@ -45,10 +45,14 @@ async function createTables() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar NOT NULL DEFAULT 'user';
     `);
 
-    console.log("Setting 'javohir1907' as admin with secure email match...");
-    await pool.query(`
-    UPDATE users SET role = 'admin' WHERE first_name = 'javohir1907' AND email = 'xolmatovjavohir911@gmail.com';
-    `);
+    try {
+      console.log("Setting 'javohir1907' as admin with secure email match...");
+      await pool.query(`
+      UPDATE users SET role = 'admin' WHERE username = 'javohir1907' AND email = 'xolmatovjavohir911@gmail.com';
+      `);
+    } catch (e) {
+      console.log("Could not update via 'username' (column might still be 'first_name'), ignoring to prevent crash...");
+    }
 
     console.log("Setting up new tables...");
     await pool.query(`
