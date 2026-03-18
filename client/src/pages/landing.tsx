@@ -83,7 +83,7 @@ export default function LandingPage() {
           {/* Texts */}
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
             <motion.h1 
-              className="text-4xl md:text-6xl lg:text-7xl font-bebas text-white mb-4 drop-shadow-md"
+              className="text-4xl md:text-6xl lg:text-7xl font-bebas text-white mb-4 drop-shadow-md whitespace-pre-wrap"
               variants={{
                 hidden: { opacity: 1 },
                 visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.8 } }
@@ -91,7 +91,7 @@ export default function LandingPage() {
               initial="hidden"
               animate="visible"
             >
-              {"Barmoqlar tili bilan gapiring".split("").map((char, i) => (
+              {t.landing.heroTitle.split("").map((char, i) => (
                 <motion.span
                   key={i}
                   variants={{
@@ -99,13 +99,13 @@ export default function LandingPage() {
                     visible: { opacity: 1 }
                   }}
                 >
-                  {char}
+                  {char === " " ? "\u00A0" : char}
                 </motion.span>
               ))}
             </motion.h1>
 
             <motion.div 
-              className="text-base md:text-2xl text-gray-400 font-medium mb-10 flex items-center justify-center min-h-[40px] flex-wrap max-w-[90%]"
+              className="text-base md:text-2xl text-gray-400 font-medium mb-10 flex items-center justify-center min-h-[40px] flex-wrap max-w-[90%] whitespace-pre-wrap"
               variants={{
                 hidden: { opacity: 1 },
                 visible: { opacity: 1, transition: { staggerChildren: 0.03, delayChildren: 2.0 } }
@@ -113,7 +113,7 @@ export default function LandingPage() {
               initial="hidden"
               animate="visible"
             >
-              {"Do'stlaringga qarshi yoz. Eng tez yozuvchi sen bo'l.".split("").map((char, i) => (
+              {t.landing.heroSubtitle.split("").map((char, i) => (
                 <motion.span
                   key={i}
                   variants={{
@@ -121,7 +121,7 @@ export default function LandingPage() {
                     visible: { opacity: 1 }
                   }}
                 >
-                  {char}
+                  {char === " " ? "\u00A0" : char}
                 </motion.span>
               ))}
               <motion.span 

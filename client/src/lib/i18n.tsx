@@ -32,8 +32,8 @@ const translations = {
       usernameExists: "This username is taken, please choose another."
     },
     landing: {
-      heroTitle: "Test Your Typing Speed —",
-      heroSubtitle: "Compete with your friends and find out who is the fastest typist!",
+      heroTitle: "SPEAK WITH YOUR FINGERS",
+      heroSubtitle: "Compete against your friends. Be the fastest typist.",
       startTyping: "Start Competition",
       viewLeaderboard: "View Leaderboard",
       readyTitle: "Ready to compete with the best?",
@@ -173,8 +173,8 @@ const translations = {
       usernameExists: "Это имя занято, выберите другое."
     },
     landing: {
-      heroTitle: "Проверьте скорость вашей печати —",
-      heroSubtitle: "Соревнуйтесь с друзьями и выясните, кто печатает быстрее всех!",
+      heroTitle: "ГОВОРИ ПАЛЬЦАМИ",
+      heroSubtitle: "Соревнуйся с друзьями. Стань самым быстрым.",
       startTyping: "Начать соревнование",
 
       viewLeaderboard: "Рейтинг",
@@ -315,8 +315,8 @@ const translations = {
       usernameExists: "Bu nik band, boshqa nik tanlang."
     },
     landing: {
-      heroTitle: "Yozish tezligingizni sinab ko'ring",
-      heroSubtitle: "Do'stlaringiz bilan raqobatlashing, eng tez yozuvchi kim ekanini aniqlang!",
+      heroTitle: "Barmoqlar tili bilan gapiring",
+      heroSubtitle: "Do'stlaringizga qarshi yozing. Eng tez yozuvchi Siz bo'ling.",
       startTyping: "Musobaqani boshlash",
       viewLeaderboard: "Reyting",
       readyTitle: "Eng yaxshilar bilan raqobatlashga tayyormisiz?",
