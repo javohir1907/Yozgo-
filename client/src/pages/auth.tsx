@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [error, setError] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -20,6 +22,30 @@ export default function AuthPage() {
   const { login, register, isLoggingIn, isRegistering, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const { t } = useI18n();
+
+  useEffect(() => {
+    if (isLogin || !firstName || firstName.trim() === "") {
+      setIsUsernameAvailable(null);
+      return;
+    }
+    
+    setIsCheckingUsername(true);
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(firstName.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          setIsUsernameAvailable(data.available);
+        }
+      } catch (err) {
+        console.error("Checking error", err);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [firstName, isLogin]);
 
   if (isAuthenticated) {
     setLocation("/typing-test");
@@ -132,14 +158,34 @@ export default function AuthPage() {
             {!isLogin && (
               <div className="space-y-2">
                 <Label htmlFor="firstName">{t.auth?.name || "Name"}</Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  placeholder={t.auth?.namePlaceholder || "Your name (optional)"}
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  data-testid="input-firstname"
-                />
+                <div className="relative">
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder={t.auth?.namePlaceholder || "Your name (optional)"}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    data-testid="input-firstname"
+                    className={
+                      !isLogin && firstName 
+                      ? (isUsernameAvailable === false ? "border-red-500 focus-visible:ring-red-500 pr-8" : (isUsernameAvailable === true ? "border-green-500 focus-visible:ring-green-500 pr-8" : ""))
+                      : ""
+                    }
+                  />
+                  {!isLogin && firstName && !isCheckingUsername && isUsernameAvailable === true && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 pointer-events-none">
+                      ✓
+                    </div>
+                  )}
+                </div>
+                {!isLogin && firstName && !isCheckingUsername && firstName.trim() !== "" && (
+                  <p className={`text-sm ${isUsernameAvailable === false ? 'text-red-500' : 'text-green-500'}`}>
+                    {isUsernameAvailable === false ? 'Bu nom band, boshqa nom tanlang' : '✓ Mavjud'}
+                  </p>
+                )}
+                {!isLogin && firstName && isCheckingUsername && (
+                  <p className="text-sm text-yellow-500">Tekshirilmoqda...</p>
+                )}
               </div>
             )}
             <div className="space-y-2">

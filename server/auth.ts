@@ -59,7 +59,7 @@ export function setupAuth(app: Express) {
       if (firstName && firstName.trim()) {
         const [existingName] = await db.select().from(users).where(ilike(users.firstName, firstName.trim()));
         if (existingName) {
-          return res.status(409).json({ message: "Bu nik band, boshqa nik tanlang" });
+          return res.status(409).json({ message: "Bu nickname allaqachon band, boshqa nom tanlang" });
         }
       }
 
@@ -127,6 +127,25 @@ export function setupAuth(app: Express) {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // FIX: Real-time username check route
+  app.get("/api/auth/check-username", async (req, res) => {
+    const { username } = req.query;
+    if (!username || typeof username !== "string" || !username.trim()) {
+      return res.status(400).json({ message: "Username query parameter is required" });
+    }
+
+    try {
+      const [existingName] = await db.select().from(users).where(ilike(users.firstName, username.trim()));
+      if (existingName) {
+        return res.json({ available: false });
+      }
+      return res.json({ available: true });
+    } catch (error) {
+      console.error("Error checking username:", error);
+      res.status(500).json({ message: "Failed to check username" });
     }
   });
 

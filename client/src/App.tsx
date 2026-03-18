@@ -14,6 +14,7 @@ import BattlePage from "@/pages/battle";
 import TypingTestPage from "@/pages/typing-test";
 import ProfilePage from "@/pages/profile";
 import AuthPage from "@/pages/auth";
+import AdminPage from "@/pages/admin";
 
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -38,6 +39,7 @@ function Router() {
           <Route path="/battle" component={BattlePage} />
           <Route path="/typing-test" component={TypingTestPage} />
           <Route path="/profile" component={ProfilePage} />
+          <Route path="/admin" component={AdminPage} />
           <Route component={NotFound} />
         </Switch>
       </motion.div>

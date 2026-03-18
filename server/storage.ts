@@ -12,7 +12,16 @@ import {
   testResults,
   leaderboardEntries,
   battles,
-  battleParticipants
+  battleParticipants,
+  reviews,
+  competitions,
+  advertisements,
+  Review,
+  InsertReview,
+  Competition,
+  InsertCompetition,
+  Advertisement,
+  InsertAdvertisement
 } from "@shared/schema";
 import { UpsertUser } from "@shared/models/auth";
 import { db } from "./db";
@@ -47,6 +56,20 @@ export interface IStorage {
   addBattleParticipant(participant: InsertBattleParticipant): Promise<BattleParticipant>;
   getBattleParticipants(battleId: string): Promise<(BattleParticipant & { user: User })[]>;
   updateBattleParticipant(id: string, data: Partial<BattleParticipant>): Promise<BattleParticipant>;
+
+  // Reviews
+  createReview(review: InsertReview): Promise<Review>;
+  getRecentReviews(limit?: number): Promise<(Review & { user: User })[]>;
+
+  // Competitions
+  createCompetition(competition: InsertCompetition): Promise<Competition>;
+  getActiveCompetitions(): Promise<Competition[]>;
+
+  // Advertisements
+  createAdvertisement(ad: InsertAdvertisement): Promise<Advertisement>;
+  getActiveAdvertisements(): Promise<Advertisement[]>;
+  getAllAdvertisements(): Promise<Advertisement[]>;
+  toggleAdvertisement(id: string, isActive: boolean): Promise<Advertisement>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -187,6 +210,63 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db.update(battleParticipants)
       .set(data)
       .where(eq(battleParticipants.id, id))
+      .returning();
+    return updated;
+  }
+
+  // Reviews
+  async createReview(review: InsertReview): Promise<Review> {
+    const [newReview] = await db.insert(reviews).values(review).returning();
+    return newReview;
+  }
+
+  async getRecentReviews(limitNum = 5) {
+    const results = await db.select({
+      review: reviews,
+      user: users,
+    })
+    .from(reviews)
+    .innerJoin(users, eq(reviews.userId, users.id))
+    .orderBy(desc(reviews.createdAt))
+    .limit(limitNum);
+
+    return results.map(r => ({ ...r.review, user: r.user }));
+  }
+
+  // Competitions
+  async createCompetition(competition: InsertCompetition): Promise<Competition> {
+    const [newComp] = await db.insert(competitions).values(competition).returning();
+    return newComp;
+  }
+
+  async getActiveCompetitions(): Promise<Competition[]> {
+    return db.select()
+      .from(competitions)
+      .where(eq(competitions.isActive, true))
+      .orderBy(competitions.date);
+  }
+
+  // Advertisements
+  async createAdvertisement(ad: InsertAdvertisement): Promise<Advertisement> {
+    const [newAd] = await db.insert(advertisements).values(ad).returning();
+    return newAd;
+  }
+
+  async getActiveAdvertisements(): Promise<Advertisement[]> {
+    return db.select()
+      .from(advertisements)
+      .where(eq(advertisements.isActive, true))
+      .orderBy(desc(advertisements.startDate));
+  }
+
+  async getAllAdvertisements(): Promise<Advertisement[]> {
+    return db.select().from(advertisements).orderBy(desc(advertisements.id));
+  }
+
+  async toggleAdvertisement(id: string, isActive: boolean): Promise<Advertisement> {
+    const [updated] = await db.update(advertisements)
+      .set({ isActive })
+      .where(eq(advertisements.id, id))
       .returning();
     return updated;
   }

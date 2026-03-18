@@ -1,17 +1,41 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { Keyboard, Zap, Globe, Users, Trophy } from "lucide-react";
+import { Keyboard, Zap, Globe, Users, Trophy, Star, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest } from "@/lib/queryClient";
+import { useState, useEffect } from "react";
 
 export default function LandingPage() {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+
+  const { data: ads } = useQuery<any[]>({ queryKey: ["/api/advertisements"] });
+  const { data: competitions } = useQuery<any[]>({ queryKey: ["/api/competitions"] });
+  const { data: reviews } = useQuery<any[]>({ queryKey: ["/api/reviews"] });
+
+  const submitReview = useMutation({
+    mutationFn: async (data: { rating: number; comment: string }) => {
+      await apiRequest("POST", "/api/reviews", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reviews"] });
+      setComment("");
+      setRating(5);
+    }
+  });
 
   return (
     <div className="flex flex-col min-h-screen">
       <section className="relative h-[80vh] flex items-center justify-center overflow-hidden bg-background">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/90 z-10" />
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-5 dark:opacity-10 mix-blend-luminosity" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/95 to-background z-10" />
         </div>
 
         <div className="container relative z-20 px-4 text-center">
@@ -19,12 +43,25 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
+            className="flex flex-col items-center"
           >
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-foreground">
-              {t.landing.heroTitle} <span className="text-primary">YOZGO</span>
+            <div className="mb-6 p-4 bg-background/50 backdrop-blur-md rounded-full shadow-lg border border-primary/20">
+              <img 
+                src="/logo.png" 
+                alt="YOZGO Logo" 
+                className="w-32 h-32 md:w-40 md:h-40 object-contain drop-shadow-lg" 
+                onError={(e) => { 
+                  e.currentTarget.style.display = 'none'; 
+                  e.currentTarget.parentElement?.querySelector('svg')?.classList.remove('hidden'); 
+                }} 
+              />
+              <Keyboard className="w-24 h-24 text-primary hidden" />
+            </div>
+            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter mb-4 text-foreground uppercase drop-shadow-md">
+              YOZGO
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-[600px] mx-auto mb-8">
-              {t.landing.heroSubtitle}
+            <p className="text-xl md:text-2xl text-primary font-medium max-w-[600px] mx-auto mb-8 drop-shadow-sm">
+              Yozish tezligingizni sinab ko'ring
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/typing-test">
@@ -59,7 +96,38 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-24 bg-card/30">
+      {ads && ads.length > 0 && (
+        <section className="bg-muted/50 py-6 border-b">
+          <div className="container px-4 flex justify-center gap-6 flex-wrap">
+            {ads.map((ad: any) => (
+              <a key={ad.id} href={ad.linkUrl} target="_blank" rel="noopener noreferrer" className="block w-full max-w-[400px] hover:scale-[1.02] transition-transform duration-300">
+                <img src={ad.imageUrl} alt={ad.title} className="w-full h-auto rounded-lg shadow-md border object-cover min-h-[100px]" />
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="py-24 bg-background">
+        <div className="container px-4">
+          <div className="max-w-4xl mx-auto border-l-4 border-orange-500 bg-orange-500/5 p-8 rounded-r-2xl shadow-sm">
+            <h2 className="text-3xl font-bold mb-6 text-foreground">Biz Haqimizda</h2>
+            <div className="space-y-4 text-muted-foreground md:text-lg leading-relaxed text-left">
+              <p>
+                <strong className="text-orange-500 font-semibold text-xl">YOZGO</strong> — bu yozish tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus yaratilgan platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura ko'nikmalarini qiziqarli va raqobatbardosh usulda rivojlantirishga yordam berishdir.
+              </p>
+              <p>
+                Loyiha qisqa vaqt ichida o'zbek tilidagi eng qulay yozish trenajyoriga aylandi. Biz foydalanuvchilar orasida musobaqalar o'tkazish, reyting tizimi orqali sog'lom raqobatni shakllantirish va yangi marralarni zabt etish imkoniyatini taqdim etamiz.
+              </p>
+              <p>
+                Bizning jamoamiz texnologiya va ta'lim sohasiga qiziquvchi yosh dasturchilardan iborat. Har kuni platformani yanada qulay va zamonaviy qilish ustida ish olib boramiz.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-24 bg-card/30 border-t">
         <div className="container px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <FeatureCard
@@ -100,6 +168,108 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {competitions && competitions.length > 0 && (
+        <section className="py-24 bg-card/10 border-t">
+          <div className="container px-4">
+            <h2 className="text-3xl font-bold mb-10 text-center">Yaqinda bo'ladigan musobaqalar</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {competitions.map((comp: any) => (
+                <div key={comp.id} className="p-6 rounded-xl border bg-card hover:border-primary/50 transition-colors shadow-sm">
+                  <h3 className="text-xl font-bold mb-2">{comp.title}</h3>
+                  {comp.prize && <p className="text-amber-500 font-semibold mb-4">🏆 Sovrin: {comp.prize}</p>}
+                  <div className="flex items-center gap-2 text-muted-foreground mb-6">
+                    <Clock className="w-4 h-4" />
+                    <Countdown date={comp.date} />
+                  </div>
+                  <Link href="/battle">
+                    <Button className="w-full">Qatnashish</Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="py-24 bg-card/30 border-t">
+        <div className="container px-4">
+          <h2 className="text-3xl font-bold mb-10 text-center">Fikr va Mulohazalar</h2>
+          
+          <div className="grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
+            <div className="space-y-6">
+              <h3 className="text-xl font-semibold mb-4">Foydalanuvchilarimiz nima deydi?</h3>
+              {reviews && reviews.length > 0 ? (
+                <div className="space-y-4">
+                  {reviews.map((rev: any) => (
+                    <div key={rev.id} className="p-4 rounded-lg bg-background border shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-semibold">{rev.user.username}</span>
+                        <div className="flex text-yellow-500">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`w-4 h-4 ${i < rev.rating ? "fill-current" : "text-muted opacity-30"}`} />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground">{rev.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground italic">Mijozlarimiz hozircha fikr qoldirishmagan.</p>
+              )}
+            </div>
+
+            <div>
+              <div className="p-6 rounded-xl border bg-background shadow-md">
+                <h3 className="text-xl font-semibold mb-6">Fikr qoldirish</h3>
+                {user ? (
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    if(comment.trim()) submitReview.mutate({ rating, comment });
+                  }} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Baholang</label>
+                      <div className="flex gap-1 mb-4">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setRating(s)}
+                            className="focus:outline-none transition-transform hover:scale-110"
+                          >
+                            <Star className={`w-8 h-8 ${s <= rating ? "text-yellow-500 fill-current" : "text-muted opacity-30"}`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Izohingiz</label>
+                      <textarea 
+                        className="w-full min-h-[100px] p-3 rounded-md border bg-transparent focus:ring-1 focus:ring-primary outline-none"
+                        placeholder="Saytdan qanday taassurot oldingiz?"
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" disabled={submitReview.isPending} className="w-full">
+                      Yuborish
+                    </Button>
+                  </form>
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-muted-foreground mb-4">Fikr qoldirish uchun tizimga kirishingiz kerak.</p>
+                    <Link href="/auth">
+                      <Button variant="outline">Tizimga kirish</Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <footer className="py-12 border-t mt-auto">
         <div className="container px-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 font-bold text-xl">
@@ -126,5 +296,41 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
       <h3 className="text-xl font-bold mb-2">{title}</h3>
       <p className="text-muted-foreground leading-relaxed">{description}</p>
     </div>
+  );
+}
+
+function Countdown({ date }: { date: string }) {
+  const [timeLeft, setTimeLeft] = useState<{days: number, hours: number, mins: number} | null>(null);
+
+  useEffect(() => {
+    const target = new Date(date).getTime();
+    
+    // Initial evaluation
+    const evaluateTime = () => {
+      const distance = target - new Date().getTime();
+      if (distance < 0) {
+        setTimeLeft(null);
+        return false;
+      }
+      setTimeLeft({
+        days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        mins: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))
+      });
+      return true;
+    };
+    
+    if (evaluateTime()) {
+      const interval = setInterval(() => {
+        if (!evaluateTime()) clearInterval(interval);
+      }, 60000); // Check every minute instead of second to avoid too frequent renders
+      return () => clearInterval(interval);
+    }
+  }, [date]);
+
+  if (!timeLeft) return <span>Boshlanib bo'ldi yoku tugadi!</span>;
+  
+  return (
+    <span className="font-medium">{timeLeft.days} kun, {timeLeft.hours} soat, {timeLeft.mins} daq.</span>
   );
 }
