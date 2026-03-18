@@ -51,7 +51,7 @@ export default function LandingPage() {
         <div className="container relative z-20 px-4 flex flex-col items-center justify-center pt-10">
           {/* Logo Keycaps */}
           <motion.div 
-            className="flex gap-2 md:gap-4 mb-8"
+            className="flex gap-3 md:gap-6 mb-12"
             variants={{
               hidden: { opacity: 0 },
               visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -71,9 +71,9 @@ export default function LandingPage() {
                     transition: { type: "spring", stiffness: 200, damping: 15 } 
                   }
                 }}
-                className="w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 flex items-center justify-center rounded-xl md:rounded-2xl bg-gradient-to-b from-[#333] to-[#1a1a1a] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_6px_0_#000,0_10px_20px_rgba(0,0,0,0.8)] border border-[#44] hover:-translate-y-1 hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),0_8px_0_#000,0_15px_25px_rgba(0,0,0,0.9)] transition-all cursor-default select-none"
+                className="w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 md:w-32 md:h-32 flex items-center justify-center rounded-xl md:rounded-2xl bg-gradient-to-b from-[#333] to-[#1a1a1a] shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_8px_0_#000,0_12px_24px_rgba(0,0,0,0.9)] border-2 border-gray-600/50 hover:-translate-y-1 hover:shadow-[inset_0_2px_6px_rgba(255,255,255,0.3),0_10px_0_#000,0_18px_30px_rgba(0,0,0,1)] transition-all cursor-default select-none"
               >
-                <span className="text-4xl sm:text-5xl md:text-7xl font-black text-gray-200 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)] font-mono">
+                <span className={`text-5xl sm:text-6xl md:text-8xl font-black drop-shadow-[0_0_8px_rgba(255,255,255,0.2)] font-mono ${i === 0 ? 'text-orange-500' : 'text-gray-100'}`}>
                   {letter}
                 </span>
               </motion.div>
@@ -337,9 +337,9 @@ export default function LandingPage() {
 
       <footer className="py-12 border-t mt-auto">
         <div className="container px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-2 font-bold text-xl">
-            <Keyboard className="w-6 h-6 text-primary" />
-            <span>YOZGO</span>
+          <div className="flex items-center gap-3 font-bold text-xl">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-600 rounded-md flex items-center justify-center text-white font-black text-xl md:text-2xl shadow-sm border border-orange-400">Y</div>
+            <span className="text-white text-2xl tracking-wider">YOZGO</span>
           </div>
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} YOZGO. {t.landing.footer}

@@ -34,8 +34,19 @@ export function NavHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-90 transition-opacity">
-            <img src="/logo.svg" alt="YOZGO Logo" className="h-10 sm:h-12 w-auto object-cover rounded-md sm:rounded-lg shadow-[0_0_8px_rgba(0,0,0,0.5)]" />
+          <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
+            <div className="flex gap-[0.35rem]">
+              {["Y", "O", "Z", "G", "O"].map((letter, i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-md bg-gradient-to-b from-[#333] to-[#1a1a1a] shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),0_3px_0_#000,0_4px_8px_rgba(0,0,0,0.6)] border border-gray-600/50 cursor-pointer select-none transition-transform hover:-translate-y-[1px]"
+                >
+                  <span className={`text-base sm:text-lg font-black drop-shadow-[0_0_2px_rgba(255,255,255,0.2)] font-mono ${i === 0 ? 'text-orange-500' : 'text-gray-100'}`}>
+                    {letter}
+                  </span>
+                </div>
+              ))}
+            </div>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
