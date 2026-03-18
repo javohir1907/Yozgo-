@@ -32,67 +32,132 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <section className="relative h-[80vh] flex items-center justify-center overflow-hidden bg-background">
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+        .font-bebas { font-family: 'Bebas Neue', display, sans-serif; letter-spacing: 0.05em; }
+        .bg-dot-pattern {
+          background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+          background-size: 24px 24px;
+        }
+      `}} />
+      <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-[#0f0f0f] border-b border-white/5">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-5 dark:opacity-10 mix-blend-luminosity" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/95 to-background z-10" />
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-[0.03] mix-blend-screen" />
+          <div className="absolute inset-0 bg-dot-pattern opacity-30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0f0f0f] via-[#0f0f0f]/80 to-transparent z-10" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0f0f0f] via-transparent to-[#0f0f0f] z-10" />
         </div>
 
-        <div className="container relative z-20 px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-col items-center"
+        <div className="container relative z-20 px-4 flex flex-col items-center justify-center pt-10">
+          {/* Logo Keycaps */}
+          <motion.div 
+            className="flex gap-2 md:gap-4 mb-8"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+            }}
+            initial="hidden"
+            animate="visible"
           >
-            <div className="mb-6 p-4 bg-background/50 backdrop-blur-md rounded-full shadow-lg border border-primary/20">
-              <img 
-                src="/logo.png" 
-                alt="YOZGO Logo" 
-                className="w-32 h-32 md:w-40 md:h-40 object-contain drop-shadow-lg" 
-                onError={(e) => { 
-                  e.currentTarget.style.display = 'none'; 
-                  e.currentTarget.parentElement?.querySelector('svg')?.classList.remove('hidden'); 
-                }} 
+            {["Y", "O", "Z", "G", "O"].map((letter, i) => (
+              <motion.div
+                key={i}
+                variants={{
+                  hidden: { opacity: 0, y: -60, rotateX: 45 },
+                  visible: { 
+                    opacity: 1, 
+                    y: 0, 
+                    rotateX: 0,
+                    transition: { type: "spring", stiffness: 200, damping: 15 } 
+                  }
+                }}
+                className="w-16 h-16 sm:w-20 sm:h-20 md:w-28 md:h-28 flex items-center justify-center rounded-xl md:rounded-2xl bg-gradient-to-b from-[#333] to-[#1a1a1a] shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_6px_0_#000,0_10px_20px_rgba(0,0,0,0.8)] border border-[#44] hover:-translate-y-1 hover:shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),0_8px_0_#000,0_15px_25px_rgba(0,0,0,0.9)] transition-all cursor-default select-none"
+              >
+                <span className="text-4xl sm:text-5xl md:text-7xl font-black text-gray-200 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)] font-mono">
+                  {letter}
+                </span>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Texts */}
+          <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
+            <motion.h1 
+              className="text-4xl md:text-6xl lg:text-7xl font-bebas text-white mb-4 drop-shadow-md"
+              variants={{
+                hidden: { opacity: 1 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.8 } }
+              }}
+              initial="hidden"
+              animate="visible"
+            >
+              {"Barmoqlar tili bilan gapiring".split("").map((char, i) => (
+                <motion.span
+                  key={i}
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: { opacity: 1 }
+                  }}
+                >
+                  {char}
+                </motion.span>
+              ))}
+            </motion.h1>
+
+            <motion.div 
+              className="text-base md:text-2xl text-gray-400 font-medium mb-10 flex items-center justify-center min-h-[40px] flex-wrap max-w-[90%]"
+              variants={{
+                hidden: { opacity: 1 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.03, delayChildren: 2.0 } }
+              }}
+              initial="hidden"
+              animate="visible"
+            >
+              {"Do'stlaringga qarshi yoz. Eng tez yozuvchi sen bo'l.".split("").map((char, i) => (
+                <motion.span
+                  key={i}
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: { opacity: 1 }
+                  }}
+                >
+                  {char}
+                </motion.span>
+              ))}
+              <motion.span 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 1, 0] }}
+                transition={{ repeat: Infinity, duration: 0.8, delay: 3.5 }}
+                className="inline-block w-2 h-5 md:h-7 bg-orange-500 ml-1"
               />
-              <Keyboard className="w-24 h-24 text-primary hidden" />
-            </div>
-            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tighter mb-4 text-foreground uppercase drop-shadow-md">
-              YOZGO
-            </h1>
-            <p className="text-xl md:text-2xl text-primary font-medium max-w-[600px] mx-auto mb-8 drop-shadow-sm">
-              Yozish tezligingizni sinab ko'ring
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            </motion.div>
+
+            {/* Buttons */}
+            <motion.div 
+              className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center w-full sm:w-auto px-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 3.5, duration: 0.5 }}
+            >
               <Link href="/typing-test">
-                <Button size="lg" className="text-lg px-8" data-testid="link-start-typing">
-                  {t.landing.startTyping}
+                <Button 
+                  size="lg" 
+                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl bg-orange-600 hover:bg-orange-500 text-white border-b-[5px] border-orange-800 active:border-b-0 active:translate-y-[5px] transition-all"
+                >
+                  Musobaqani boshlash
                 </Button>
               </Link>
               <Link href="/leaderboard">
-                <Button size="lg" variant="outline" className="text-lg px-8" data-testid="link-view-leaderboard">
-                  {t.landing.viewLeaderboard}
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-white/20 text-white hover:bg-white/10 hover:text-white transition-all bg-transparent backdrop-blur-sm"
+                >
+                  Reyting
                 </Button>
               </Link>
-            </div>
-          </motion.div>
-
-          <motion.div
-            className="mt-16 p-6 rounded-lg border bg-card/50 backdrop-blur-sm max-w-2xl mx-auto hidden md:block"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-          >
-            <div className="flex items-center gap-2 mb-4 border-b pb-2">
-              <div className="w-3 h-3 rounded-full bg-red-500/50" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-              <div className="w-3 h-3 rounded-full bg-green-500/50" />
-              <span className="text-xs text-muted-foreground ml-2 font-mono">typing_demo.js</span>
-            </div>
-            <p className="text-2xl font-mono text-left leading-relaxed">
-              <span className="text-correct">The</span> <span className="text-correct">quick</span> <span className="text-correct">brown</span> <span className="text-error">foks</span><span className="animate-pulse border-l-2 border-caret ml-1" /> <span className="text-pending">jumps over the lazy dog...</span>
-            </p>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
       </section>
 
