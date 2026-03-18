@@ -91,6 +91,20 @@ app.use((req, res, next) => {
 (async () => {
   try {
     console.log("Running guaranteed DB migrations from index.ts...");
+
+    // Tizimga faqat bir marta ishlaydigan va keyin o'zini bloklaydigan o'chirish logikasi:
+    await pool.query(`CREATE TABLE IF NOT EXISTS _one_time_reset (done boolean);`);
+    const resetCheck = await pool.query(`SELECT * FROM _one_time_reset;`);
+    
+    if (resetCheck.rowCount === 0) {
+      console.log("Running ONE-TIME users database wipe...");
+      // UUID ishlatilgani uchun sequence restart qilinmaydi va xato beradi! 
+      // CASCADE qilib barcha usersga bog'langan eski result/review larni ham tozalash:
+      await pool.query(`TRUNCATE TABLE users CASCADE;`);
+      await pool.query(`INSERT INTO _one_time_reset (done) VALUES (true);`);
+      console.log("Wipe completed successfully.");
+    }
+
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar NOT NULL DEFAULT 'user';
     `);
