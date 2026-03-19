@@ -343,26 +343,19 @@ export function startBot() {
     }
 
     if (query.data === 'x_yes' && state?.type === 'xabar') {
-       await bot?.sendMessage(chatId, "Xabar yuborilmoqda...");
+       await bot?.sendMessage(chatId, "Yuklanmoqda...");
        try {
           const { notifications } = require("@shared/schema");
           await db.insert(notifications).values({
             title: "Yozgo Administratori",
             message: state.text
           });
-          const t_users = await db.execute(sql`SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL`);
-          let success = 0;
-          for (const u of t_users.rows) {
-            try {
-              if (u.telegram_id) {
-                 await bot?.sendMessage(u.telegram_id as number, `Xabar:\n\n${state.text}`);
-                 success++;
-              }
-            } catch(e) {}
-          }
-          bot?.sendMessage(chatId, `Xabar qabul qildi: ${success} ta foydalanuvchi`);
+          
+          const { broadcastFromUserBot } = require("./userBot");
+          const result = await broadcastFromUserBot(state.text);
+          bot?.sendMessage(chatId, result.text);
        } catch (e) {
-          bot?.sendMessage(chatId, "Xatolik yuz berdi.");
+          bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any)?.message);
        }
        delete userStates[chatId];
     }

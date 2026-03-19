@@ -10,7 +10,9 @@ import { pool } from "./db";
 
 const app = express();
 const { startBot } = require("./bot");
+const { startUserBot } = require("./userBot");
 startBot();
+startUserBot();
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -61,7 +63,6 @@ app.use(
     },
   }),
 );
-
 app.use(express.urlencoded({ extended: false }));
 
 export function log(message: string, source = "express") {
