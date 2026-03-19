@@ -1,6 +1,6 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { db } from './db';
-import { advertisements, competitions, users, testResults } from '@shared/schema';
+import { advertisements, competitions } from '@shared/schema';
 import { sql, eq, desc, isNotNull } from 'drizzle-orm';
 import { storage } from './storage';
 
@@ -48,7 +48,7 @@ export function startBot() {
 
   const isAdmin = (msg: TelegramBot.Message) => {
     if (msg.chat.id !== adminId) {
-      bot?.sendMessage(msg.chat.id, "⛔️ <b>Sizda bu botdan foydalanish huquqi yo'q!</b>", { parse_mode: "HTML" });
+      bot?.sendMessage(msg.chat.id, "Sizda bu botdan foydalanish huquqi yo'q.", { parse_mode: "HTML" });
       return false;
     }
     return true;
@@ -57,28 +57,23 @@ export function startBot() {
   bot.onText(/^\/start$/, async (msg) => {
     if (!isAdmin(msg)) return;
     const text = 
-      "👑 <b>Assalomu alaykum, Admin! YoshYozgo Boshqaruv Paneliga xush kelibsiz.</b>\\n\\n" +
-      "👇 <b>Quyidagi buyruqlardan birini tanlang yoki menyudan foydalaning:</b>\\n\\n" +
-      "📊 <b>Statistika:</b>\\n" +
-      " 🔸 /stats — Umumiy ma'lumotlar va reyting\\n" +
-      " 🔸 /foydalanuvchilar — Oxirgi 10 ta ro'yxatdan o'tganlar\\n\\n" +
-      "📢 <b>Reklama:</b>\\n" +
-      " 🔸 /reklama — Yangi reklama qo'shish\\n" +
-      " 🔸 /reklama_list — Barcha reklamalar ro'yxati\\n\\n" +
-      "🏆 <b>Musobaqa:</b>\\n" +
-      " 🔸 /musobaqa_yarat — Yangi musobaqa e'loni\\n" +
-      " 🔸 /musobaqa_list — Barcha musobaqalar ro'yxati\\n\\n" +
-      "✉️ <b>Ommaviy xabar:</b>\\n" +
-      " 🔸 /xabar — Barcha a'zolarga xabar yuborish\\n\\n" +
-      "❌ <b>Bekor qilish:</b>\\n" +
-      " 🔸 /bekor — Jarayonni to'xtatish";
+      "Boshqaruv paneliga xush kelibsiz.\\n\\n" +
+      "Buyruqlar ro'yxati:\\n\\n" +
+      "/stats - Barcha statistik ma'lumotlar\\n" +
+      "/foydalanuvchilar - Oxirgi 10 ta foydalanuvchi\\n\\n" +
+      "/reklama - Yangi reklama qo'shish\\n" +
+      "/reklama_list - Barcha reklamalar ro'yxati\\n\\n" +
+      "/musobaqa_yarat - Yangi musobaqa yaratish\\n" +
+      "/musobaqa_list - Barcha musobaqalar ro'yxati\\n\\n" +
+      "/xabar - Barcha foydalanuvchilarga xabar yuborish\\n" +
+      "/bekor - Har qanday jarayonni to'xtatish";
       
     const opts = {
       parse_mode: 'HTML' as const,
       reply_markup: {
         inline_keyboard: [
-           [{ text: "📊 Statistika", callback_data: "cmd_stats" }, { text: "🏆 Musobaqalar", callback_data: "cmd_musobaqa_list" }],
-           [{ text: "📢 Reklamalar", callback_data: "cmd_reklama_list" }, { text: "👥 Foydalanuvchilar", callback_data: "cmd_foydalanuvchilar" }]
+           [{ text: "Statistika", callback_data: "cmd_stats" }, { text: "Musobaqalar", callback_data: "cmd_musobaqa_list" }],
+           [{ text: "Reklamalar", callback_data: "cmd_reklama_list" }, { text: "Foydalanuvchilar", callback_data: "cmd_foydalanuvchilar" }]
         ]
       }
     };
@@ -86,24 +81,52 @@ export function startBot() {
   });
 
   const sendStats = async (chatId: number) => {
-    const loading = await bot?.sendMessage(chatId, "⏳ <i>Statistika yuklanmoqda...</i>", { parse_mode: "HTML" });
+    await bot?.sendMessage(chatId, "Yuklanmoqda...", { parse_mode: "HTML" });
     try {
-      const totalUsers = await db.execute(sql`SELECT count(*) FROM users`);
-      const todayUsers = await db.execute(sql`SELECT count(*) FROM users WHERE date(created_at) = current_date`);
+      const stats = await db.execute(sql`
+        SELECT 
+          (SELECT count(*) FROM users) as total_users,
+          (SELECT count(*) FROM users WHERE date(created_at) = current_date) as today_users,
+          (SELECT count(*) FROM users WHERE created_at >= date_trunc('week', current_date)) as week_users,
+          (SELECT count(*) FROM users WHERE created_at >= date_trunc('month', current_date)) as month_users,
+          (SELECT count(*) FROM test_results) as total_tests,
+          (SELECT count(*) FROM test_results WHERE date(created_at) = current_date) as today_tests,
+          (SELECT coalesce(round(avg(wpm)), 0) FROM test_results) as avg_wpm,
+          (SELECT count(*) FROM competitions WHERE is_active = true) as active_comps,
+          (SELECT count(*) FROM competitions) as total_comps
+      `);
       
-      const testsData = await db.execute(sql`SELECT count(*) as total, max(wpm) as max_wpm, coalesce(round(avg(wpm)), 0) as avg_wpm FROM test_results`);
+      const maxWpmRecord = await db.execute(sql`
+        SELECT t.wpm, u.username, u.first_name 
+        FROM test_results t 
+        JOIN users u ON t.user_id = u.id 
+        ORDER BY t.wpm DESC 
+        LIMIT 1
+      `);
       
-      const text = 
-        "📊 <b>Batafsil Statistika:</b>\\n\\n" +
-        `👥 <b>Jami foydalanuvchilar:</b> ${totalUsers.rows[0].count}\\n` +
-        `🆕 <b>Bugun qo'shilganlar:</b> ${todayUsers.rows[0].count}\\n\\n` +
-        `📝 <b>Jami testlar soni:</b> ${testsData.rows[0].total}\\n` +
-        `⚡️ <b>O'rtacha tezlik (WPM):</b> ${testsData.rows[0].avg_wpm}\\n` +
-        `🔥 <b>Eng yuqori tezlik (WPM):</b> ${testsData.rows[0].max_wpm || 0}`;
+      const r = stats.rows[0] as any;
+      let maxWpmText = "Mavjud emas";
+      if (maxWpmRecord.rows.length > 0) {
+         const m = maxWpmRecord.rows[0] as any;
+         maxWpmText = `${m.wpm} (${m.first_name || m.username || 'Nomsiz foydalanuvchi'})`;
+      }
 
-      if (loading) bot?.editMessageText(text, { chat_id: chatId, message_id: loading.message_id, parse_mode: "HTML" });
+      const text = 
+        "Batafsil Statistika:\\n\\n" +
+        `- Jami foydalanuvchilar: ${r.total_users} ta\\n` +
+        `- Bugun qo'shilganlar: ${r.today_users} ta\\n` +
+        `- Bu hafta qo'shilganlar: ${r.week_users} ta\\n` +
+        `- Bu oy qo'shilganlar: ${r.month_users} ta\\n\\n` +
+        `- Jami testlar: ${r.total_tests} ta\\n` +
+        `- Bugungi testlar: ${r.today_tests} ta\\n` +
+        `- O'rtacha WPM: ${r.avg_wpm}\\n` +
+        `- Eng yuqori WPM: ${maxWpmText}\\n\\n` +
+        `- Aktiv musobaqalar: ${r.active_comps} ta\\n` +
+        `- Jami o'tkazilgan musobaqalar: ${r.total_comps} ta`;
+
+      bot?.sendMessage(chatId, text, { parse_mode: "HTML" });
     } catch (e) {
-      if (loading) bot?.editMessageText("❌ Xatolik yuz berdi: " + (e as any).message, { chat_id: chatId, message_id: loading.message_id });
+      bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any).message);
     }
   };
 
@@ -113,16 +136,36 @@ export function startBot() {
   });
   
   const sendUsersList = async (chatId: number) => {
-    const loading = await bot?.sendMessage(chatId, "⏳ <i>Foydalanuvchilar yuklanmoqda...</i>", { parse_mode: "HTML" });
+    await bot?.sendMessage(chatId, "Yuklanmoqda...", { parse_mode: "HTML" });
     try {
-      const latest = await db.select().from(users).orderBy(desc(users.createdAt)).limit(10);
-      let text = "👥 <b>Oxirgi 10 ta foydalanuvchi:</b>\\n\\n";
-      latest.forEach((u, i) => {
-        text += `${i+1}. <b>${u.firstName || 'Nomsiz'}</b> - ${u.email}\\n`;
-      });
-      if (loading) bot?.editMessageText(text, { chat_id: chatId, message_id: loading.message_id, parse_mode: "HTML" });
+      const usersList = await db.execute(sql`
+        SELECT 
+          u.id, u.username, u.first_name, u.email, u.created_at,
+          (SELECT count(*) FROM test_results t WHERE t.user_id = u.id) as total_tests,
+          (SELECT max(wpm) FROM test_results t WHERE t.user_id = u.id) as max_wpm
+        FROM users u
+        ORDER BY u.created_at DESC
+        LIMIT 10
+      `);
+      
+      if (usersList.rows.length === 0) {
+        bot?.sendMessage(chatId, "Foydalanuvchilar topilmadi.");
+        return;
+      }
+
+      for (const u of usersList.rows as any[]) {
+         const dateStr = new Date(u.created_at).toLocaleString('uz-UZ');
+         const text = 
+           `- ID: ${u.id}\\n` +
+           `- Ismi: ${u.first_name || u.username || 'Nomsiz'}\\n` +
+           `- Email: ${u.email}\\n` +
+           `- Ro'yxatdan o'tgan sana: ${dateStr}\\n` +
+           `- Jami testlari soni: ${u.total_tests || 0} ta\\n` +
+           `- Eng yuqori WPM natijasi: ${u.max_wpm || 0}`;
+         await bot?.sendMessage(chatId, text);
+      }
     } catch (e) {
-      if (loading) bot?.editMessageText("❌ Xatolik.", { chat_id: chatId, message_id: loading.message_id });
+      bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any).message);
     }
   };
 
@@ -134,7 +177,7 @@ export function startBot() {
   bot.onText(/^\/bekor$/, (msg) => {
     if (!isAdmin(msg)) return;
     delete userStates[msg.chat.id];
-    bot?.sendMessage(msg.chat.id, "❌ <b>Barcha buyruqlar bekor qilindi.</b>", { parse_mode: "HTML" });
+    bot?.sendMessage(msg.chat.id, "Barcha buyruqlar bekor qilindi.", { parse_mode: "HTML" });
   });
 
   // ========== Ommaviy Xabar ==========
@@ -144,22 +187,21 @@ export function startBot() {
     if (textInfo) {
        userStates[msg.chat.id] = { type: 'xabar', text: textInfo };
        const confirmMsg = 
-          "⚠️ <b>Diqqat!</b> Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\\n\\n" +
-          `<i>${textInfo}</i>\\n\\n` +
-          "<b>Tasdiqlaysizmi?</b>";
+          "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\\n\\n" +
+          `${textInfo}\\n\\n` +
+          "Tasdiqlaysizmi?";
        const opts = {
-          parse_mode: 'HTML' as const,
           reply_markup: {
             inline_keyboard: [
-              [{ text: "✅ Ha, yuborish", callback_data: "x_yes" }],
-              [{ text: "❌ Bekor qilish", callback_data: "m_no" }]
+              [{ text: "Ha, yuborish", callback_data: "x_yes" }],
+              [{ text: "Bekor qilish", callback_data: "m_no" }]
             ]
           }
         };
         bot?.sendMessage(msg.chat.id, confirmMsg, opts);
     } else {
       userStates[msg.chat.id] = { type: 'xabar' };
-      bot?.sendMessage(msg.chat.id, "📝 <b>Barcha foydalanuvchilarga jo'natiladigan xabar matnini kiriting:</b>", { parse_mode: "HTML" });
+      bot?.sendMessage(msg.chat.id, "Barcha foydalanuvchilarga jo'natiladigan xabar matnini kiriting:", { parse_mode: "HTML" });
     }
   });
 
@@ -167,14 +209,14 @@ export function startBot() {
   bot.onText(/^\/reklama$/, (msg) => {
     if (!isAdmin(msg)) return;
     userStates[msg.chat.id] = { type: 'reklama', step: 'title' };
-    bot?.sendMessage(msg.chat.id, "📢 <b>Yangi reklama</b>\\n\\n1. Homiy nomi yoki sarlavhani kiriting:", { parse_mode: "HTML" });
+    bot?.sendMessage(msg.chat.id, "Yangi reklama.\\n\\n1. Homiy nomi yoki sarlavhani kiriting:", { parse_mode: "HTML" });
   });
 
   // ========== MUSOBAQA CREATION ==========
   bot.onText(/^\/musobaqa_yarat$/, (msg) => {
     if (!isAdmin(msg)) return;
     userStates[msg.chat.id] = { type: 'musobaqa', step: 'title' };
-    bot?.sendMessage(msg.chat.id, "🏆 <b>Musobaqa e'lonini yaratamiz</b>\\n\\n1. Musobaqa nomini kiriting:", { parse_mode: "HTML" });
+    bot?.sendMessage(msg.chat.id, "Yangi musobaqa yaratish.\\n\\n1. Musobaqa nomini kiriting:", { parse_mode: "HTML" });
   });
 
   bot.on('message', async (msg) => {
@@ -184,16 +226,15 @@ export function startBot() {
 
     if (state.type === 'xabar') {
        const confirmMsg = 
-          "⚠️ <b>Diqqat!</b> Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\\n\\n" +
-          `<i>${msg.text}</i>\\n\\n` +
-          "<b>Tasdiqlaysizmi?</b>";
+          "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\\n\\n" +
+          `${msg.text}\\n\\n` +
+          "Tasdiqlaysizmi?";
        state.text = msg.text;
        const opts = {
-          parse_mode: 'HTML' as const,
           reply_markup: {
             inline_keyboard: [
-              [{ text: "✅ Ha, yuborish", callback_data: "x_yes" }],
-              [{ text: "❌ Bekor qilish", callback_data: "m_no" }]
+              [{ text: "Ha, yuborish", callback_data: "x_yes" }],
+              [{ text: "Bekor qilish", callback_data: "m_no" }]
             ]
           }
         };
@@ -207,28 +248,27 @@ export function startBot() {
       } else if (state.step === 'image') {
         state.imageUrl = msg.text;
         state.step = 'link';
-        bot?.sendMessage(msg.chat.id, "3. Havola (Bosganda qayerga o'tsin?):");
+        bot?.sendMessage(msg.chat.id, "3. Havola (Bosganda qayerga o'tishi kerakligini kiriting):");
       } else if (state.step === 'link') {
         state.linkUrl = msg.text;
         state.step = 'desc';
-        bot?.sendMessage(msg.chat.id, "4. Qisqa tavsif (Ixtiyoriy, agar yozmasangiz nuqta yoki 'yoq' deng):");
+        bot?.sendMessage(msg.chat.id, "4. Qisqa tavsif kiriting (majburiy emas, bo'sh qoldirish uchun nuqta qo'ying):");
       } else if (state.step === 'desc') {
-        state.description = msg.text === 'yoq' || msg.text === '.' ? '' : msg.text;
+        state.description = msg.text === '.' ? '' : msg.text;
         state.step = 'confirm';
         
         const preview = 
-          `<b>Sarlavha:</b> ${state.title}\\n` +
-          `<b>Rasm:</b> ${state.imageUrl}\\n` +
-          `<b>Link:</b> ${state.linkUrl}\\n` +
-          `<b>Tavsif:</b> ${state.description}\\n\\n` +
-          "Barcha ma'lumotlar to'g'rimi?";
+          `Homiy nomi: ${state.title}\\n` +
+          `Rasm havolasi: ${state.imageUrl}\\n` +
+          `Havola URL: ${state.linkUrl}\\n` +
+          `Tavsif: ${state.description}\\n\\n` +
+          "Ushbu reklamani tasdiqlaysizmi?";
 
         const opts = {
-          parse_mode: 'HTML' as const,
           reply_markup: {
             inline_keyboard: [
-              [{ text: "✅ Ha, joylaymiz", callback_data: "r_yes" }],
-              [{ text: "❌ Bekor qilish", callback_data: "r_no" }]
+              [{ text: "Ha, joylash", callback_data: "r_yes" }],
+              [{ text: "Bekor qilish", callback_data: "r_no" }]
             ]
           }
         };
@@ -239,32 +279,44 @@ export function startBot() {
       if (state.step === 'title') {
         state.title = msg.text;
         state.step = 'date';
-        bot?.sendMessage(msg.chat.id, "2. Qachon bo'ladi? (Erkin formatda, masalan: 01.04.2026 yoxud 1 aprel 2026):");
+        bot?.sendMessage(msg.chat.id, 
+          "2. Sanani kiriting.\\n\\n" +
+          "Istalgan formatda yozishingiz mumkin. Masalan:\\n" +
+          "- 2026-04-01\\n" +
+          "- 01.04.2026\\n" +
+          "- 1 aprel 2026\\n\\n" +
+          "Agar noto'g'ri bo'lsa, tizim o'zi xabar beradi."
+        );
       } else if (state.step === 'date') {
         const d = parseUzbekDate(msg.text);
         if (!d) {
-          bot?.sendMessage(msg.chat.id, "❌ <b>Sana formati noto'g'ri! Iltimos tekshirib qaytadan kiriting.</b> (Masalan: 01.04.2026)", { parse_mode: 'HTML' });
+          bot?.sendMessage(msg.chat.id, 
+            "Kiritilgan sana formati noto'g'ri. Iltimos to'g'ri sanani kiriting.\\n\\n" +
+            "To'g'ri namuna: 01.04.2026 yoki 2026-04-01"
+          );
           return;
         }
         state.date = d.toISOString();
         state.step = 'prize';
-        bot?.sendMessage(msg.chat.id, `✅ <b>Sana qabul qilindi:</b> ${d.toLocaleDateString()}\\n\\n3. Sovrin (Masalan: 1,000,000 so'm yoki Premium):`, { parse_mode: 'HTML' });
+        bot?.sendMessage(msg.chat.id, 
+          `Sanasi qabul qilindi: ${d.toLocaleDateString('uz-UZ')}\\n\\n` +
+          `3. Musobaqa sovrinini kiriting:`
+        );
       } else if (state.step === 'prize') {
         state.prize = msg.text;
         state.step = 'confirm';
 
         const preview = 
-          `<b>Musobaqa:</b> ${state.title}\\n` +
-          `<b>Sana:</b> ${new Date(state.date).toLocaleDateString()}\\n` +
-          `<b>Sovrin:</b> ${state.prize}\\n\\n` +
+          `Musobaqa nomi: ${state.title}\\n` +
+          `Sanasi: ${new Date(state.date).toLocaleDateString('uz-UZ')}\\n` +
+          `Sovrin: ${state.prize}\\n\\n` +
           "Barcha ma'lumotlar to'g'rimi?";
 
         const opts = {
-          parse_mode: 'HTML' as const,
           reply_markup: {
             inline_keyboard: [
-              [{ text: "✅ Yaratish", callback_data: "m_yes" }],
-              [{ text: "❌ Bekor qilish", callback_data: "m_no" }]
+              [{ text: "Tasdiqlash", callback_data: "m_yes" }],
+              [{ text: "Bekor qilish", callback_data: "m_no" }]
             ]
           }
         };
@@ -286,32 +338,32 @@ export function startBot() {
 
     if (query.data === 'r_no' || query.data === 'm_no') {
       delete userStates[chatId];
-      bot?.editMessageText("❌ <b>Bekor qilindi.</b>", { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+      bot?.sendMessage(chatId, "Bekor qilindi.");
       return;
     }
 
     if (query.data === 'x_yes' && state?.type === 'xabar') {
-       await bot?.editMessageText("⏳ <i>Xabar yuborilmoqda...</i>", { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+       await bot?.sendMessage(chatId, "Xabar yuborilmoqda...");
        try {
-          const t_users = await db.select().from(users).where(isNotNull(users.telegramId));
+          const t_users = await db.execute(sql`SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL`);
           let success = 0;
-          for (const u of t_users) {
+          for (const u of t_users.rows) {
             try {
-              if (u.telegramId) {
-                 await bot?.sendMessage(u.telegramId, `📢 <b>YOZGO YANGILIKLARI</b>\\n\\n${state.text}`, { parse_mode: 'HTML' });
+              if (u.telegram_id) {
+                 await bot?.sendMessage(u.telegram_id as number, `Xabar:\\n\\n${state.text}`);
                  success++;
               }
             } catch(e) {}
           }
-          bot?.editMessageText(`✅ <b>Xabar ${success} ta foydalanuvchiga muvaffaqiyatli yuborildi!</b>`, { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+          bot?.sendMessage(chatId, `Xabar qabul qildi: ${success} ta foydalanuvchi`);
        } catch (e) {
-          bot?.editMessageText("❌ Xatolik yuz berdi.", { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+          bot?.sendMessage(chatId, "Xatolik yuz berdi.");
        }
        delete userStates[chatId];
     }
 
     if (query.data === 'r_yes' && state?.type === 'reklama') {
-      await bot?.editMessageText("⏳ <i>Yuklanmoqda...</i>", { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+      await bot?.sendMessage(chatId, "Yuklanmoqda...");
       try {
         await db.insert(advertisements).values({
           title: state.title,
@@ -322,24 +374,24 @@ export function startBot() {
           endDate: new Date("2030-12-31T23:59:59.000Z"),
           isActive: true
         });
-        bot?.editMessageText("✅ <b>Reklama saytga muvaffaqiyatli joylandi!</b>", { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+        bot?.sendMessage(chatId, "Reklama saytga muvaffaqiyatli qo'shildi.");
       } catch (e) {
-        bot?.editMessageText("❌ Xatolik: " + (e as any).message, { chat_id: chatId, message_id: query.message.message_id });
+        bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
       }
       delete userStates[chatId];
     }
 
     if (query.data === 'm_yes' && state?.type === 'musobaqa') {
-      await bot?.editMessageText("⏳ <i>Yuklanmoqda...</i>", { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+      await bot?.sendMessage(chatId, "Yuklanmoqda...");
       try {
         await storage.createCompetition({
            title: state.title,
            date: new Date(state.date),
            prize: state.prize || null
         });
-        bot?.editMessageText("✅ <b>Musobaqa saytga joylandi!</b>", { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+        bot?.sendMessage(chatId, "Musobaqa saytga joylandi.");
       } catch (e) {
-        bot?.editMessageText("❌ Xatolik: " + (e as any).message, { chat_id: chatId, message_id: query.message.message_id });
+        bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
       }
       delete userStates[chatId];
     }
@@ -348,25 +400,38 @@ export function startBot() {
        const id = query.data.replace('comp_cancel_', '');
        try {
           await db.delete(competitions).where(eq(competitions.id, id));
-          bot?.editMessageText("✅ <b>Musobaqa butunlay o'chirildi (bekor qilindi).</b>", { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+          bot?.sendMessage(chatId, "Musobaqa o'chirildi.");
        } catch (e) {
-          bot?.editMessageText("❌ Xato: " + (e as any).message, { chat_id: chatId, message_id: query.message.message_id, parse_mode: "HTML" });
+          bot?.sendMessage(chatId, "Xato: " + (e as any).message);
        }
     }
   });
 
   const sendReklamaList = async (chatId: number) => {
-    const loading = await bot?.sendMessage(chatId, "⏳ <i>Reklamalar yuklanmoqda...</i>", { parse_mode: 'HTML' });
+    await bot?.sendMessage(chatId, "Yuklanmoqda...");
     try {
       const ads = await db.select().from(advertisements);
-      if (!ads.length) return bot?.editMessageText("📢 Reklamalar mavjud emas.", { chat_id: chatId, message_id: loading?.message_id });
-      bot?.deleteMessage(chatId, loading!.message_id).catch(()=>{});
-      for (const ad of ads) {
-        const status = ad.isActive ? "🟢 FAOL" : "🔴 O'CHIRILGAN";
-        const text = `<b>ID:</b> <code>${ad.id}</code>\\n<b>Title:</b> ${ad.title}\\n<b>Status:</b> ${status}\\n<b>Kliklar:</b> ${ad.clicks || 0}\\n\\nYoqish: /reklama_on ${ad.id}\\nO'chirish: /reklama_off ${ad.id}`;
-        await bot?.sendMessage(chatId, text, { parse_mode: "HTML" });
+      if (!ads.length) {
+         bot?.sendMessage(chatId, "Reklamalar mavjud emas.");
+         return;
       }
-    } catch (e) {}
+      for (const ad of ads) {
+        const status = ad.isActive ? "Aktiv" : "Nofaol";
+        const dateStr = ad.startDate ? new Date(ad.startDate).toLocaleString('uz-UZ') : 'Noma\'lum';
+        const text = 
+          `- ID: ${ad.id}\\n` +
+          `- Homiy nomi: ${ad.title}\\n` +
+          `- Havola: ${ad.linkUrl}\\n` +
+          `- Qo'shilgan sana: ${dateStr}\\n` +
+          `- Click soni: ${ad.clicks || 0} marta\\n` +
+          `- Holati: ${status}\\n\\n` +
+          `Aktivlashtirish: /reklama_on ${ad.id}\\n` +
+          `O'chirish: /reklama_off ${ad.id}`;
+        await bot?.sendMessage(chatId, text);
+      }
+    } catch (e) {
+       bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
+    }
   };
 
   bot.onText(/^\/reklama_list$/, (msg) => {
@@ -376,43 +441,52 @@ export function startBot() {
 
   bot.onText(/^\/reklama_(on|off)\s+(.+)$/, async (msg, match) => {
     if (!isAdmin(msg) || !match) return;
-    const loading = await bot?.sendMessage(msg.chat.id, "⏳ O'zgartirilmoqda...", { parse_mode: 'HTML' });
     const [, action, id] = match;
     const isActive = action === 'on';
     try {
       await storage.toggleAdvertisement(id, isActive);
-      if (loading) bot?.editMessageText(`✅ <b>Muvaffaqiyatli ${isActive ? 'YOQILDI' : "O'CHIRILDI"}</b>`, { chat_id: msg.chat.id, message_id: loading.message_id, parse_mode: 'HTML' });
+      bot?.sendMessage(msg.chat.id, `Reklama holati o'zgartirildi: ${isActive ? 'Aktiv' : "Nofaol"}`);
     } catch (e) {
-      if (loading) bot?.editMessageText("❌ Xatolik: " + (e as any).message, { chat_id: msg.chat.id, message_id: loading.message_id });
+      bot?.sendMessage(msg.chat.id, "Xatolik: " + (e as any).message);
     }
   });
 
   const sendMusobaqaList = async (chatId: number) => {
-    const loading = await bot?.sendMessage(chatId, "⏳ <i>Musobaqalar yuklanmoqda...</i>", { parse_mode: 'HTML' });
+    await bot?.sendMessage(chatId, "Yuklanmoqda...");
     try {
       const comps = await db.select().from(competitions).orderBy(desc(competitions.createdAt));
-      if (!comps.length) return bot?.editMessageText("🏆 Musobaqalar mavjud emas.", { chat_id: chatId, message_id: loading?.message_id });
-      bot?.deleteMessage(chatId, loading!.message_id).catch(()=>{});
+      if (!comps.length) {
+         bot?.sendMessage(chatId, "Musobaqalar mavjud emas.");
+         return;
+      }
       
       const now = new Date();
       for (const c of comps) {
-        let status = "🟢 AKTIV";
-        if (!c.isActive) status = "🔴 TUGATILGAN";
-        else if (new Date(c.date) > now) status = "⏳ KUTILMOQDA";
+        let status = "Aktiv";
+        if (!c.isActive) status = "Tugagan";
+        else if (new Date(c.date) > now) status = "Kutilmoqda";
 
-        let text = `<b>ID:</b> <code>${c.id}</code>\\n🏆 <b>${c.title}</b>\\n🎁 <b>Sovrin:</b> ${c.prize}\\n🕒 <b>Sana:</b> ${new Date(c.date).toLocaleString()}\\n📊 <b>Status:</b> ${status}`;
-        if (c.winnerName) text += `\\n👑 <b>G'olib:</b> ${c.winnerName}`;
-        if (c.isActive) text += `\\n\\n✅ <b>Tugatish usuli:</b>\\n<code>/musobaqa_tugat ${c.id} G'olib-Ismi</code>`;
+        let text = 
+          `- ID raqami: ${c.id}\\n` +
+          `- Nomi: ${c.title}\\n` +
+          `- Sanasi va vaqti: ${new Date(c.date).toLocaleString('uz-UZ')}\\n` +
+          `- Sovrini: ${c.prize}\\n` +
+          `- Ro'yxatdan o'tganlar soni: ${c.participantsCount || 0} kishi\\n` +
+          `- Holati: ${status}`;
+          
+        if (c.winnerName) text += `\\n- G'olib: ${c.winnerName}`;
+        if (c.isActive) text += `\\n\\nG'olibni e'lon qilish va tugatish uchun:\\n/musobaqa_tugat ${c.id} FOYDALANUVCHI_ISMI`;
         
         const opts = {
-          parse_mode: 'HTML' as const,
           reply_markup: c.isActive ? {
-             inline_keyboard: [[{ text: "🗑 Bekor qilish (O'chirish)", callback_data: `comp_cancel_${c.id}` }]]
+             inline_keyboard: [[{ text: "Bekor qilish", callback_data: `comp_cancel_${c.id}` }]]
           } : undefined
         };
         await bot?.sendMessage(chatId, text, opts);
       }
-    } catch (e) {}
+    } catch (e) {
+       bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
+    }
   };
 
   bot.onText(/^\/musobaqa_list$/, (msg) => {
@@ -423,26 +497,24 @@ export function startBot() {
   bot.onText(/^\/musobaqa_bekor\s+(.+)$/, async (msg, match) => {
     if (!isAdmin(msg) || !match) return;
     const id = match[1];
-    const loading = await bot?.sendMessage(msg.chat.id, "⏳ O'chirilmoqda...");
+    await bot?.sendMessage(msg.chat.id, "O'chirilmoqda...");
     try {
       await db.delete(competitions).where(eq(competitions.id, id));
-      if (loading) bot?.editMessageText("✅ <b>Musobaqa muvaffaqiyatli bekor qilindi (o'chirildi).</b>", { chat_id: msg.chat.id, message_id: loading.message_id, parse_mode: 'HTML' });
+      bot?.sendMessage(msg.chat.id, "Musobaqa o'chirildi.");
     } catch (e) {
-      if (loading) bot?.editMessageText("❌ Xato: topilmadi yoki " + (e as any).message, { chat_id: msg.chat.id, message_id: loading.message_id });
+      bot?.sendMessage(msg.chat.id, "Xato: " + (e as any).message);
     }
   });
 
   bot.onText(/^\/musobaqa_tugat\s+([^\s]+)\s+(.+)$/, async (msg, match) => {
     if (!isAdmin(msg) || !match) return;
     const [, id, winnerName] = match;
-    const loading = await bot?.sendMessage(msg.chat.id, "⏳ <i>Yakunlanmoqda...</i>", { parse_mode: 'HTML' });
+    await bot?.sendMessage(msg.chat.id, "Yakunlanmoqda...");
     try {
       await db.update(competitions).set({ isActive: false, winnerName }).where(eq(competitions.id, id));
-      if (loading) bot?.editMessageText(`✅ <b>Musobaqa yopildi va G'olib belgilandi:</b> ${winnerName}`, { chat_id: msg.chat.id, message_id: loading.message_id, parse_mode: 'HTML' });
-      // Shuningdek adminga jami sms jo'natish:
-      bot?.sendMessage(msg.chat.id, `👑 <b>MUSOBAQA TUGADI!</b>\\n\\n🏆 <b>G'olib:</b> ${winnerName}`, { parse_mode: 'HTML' });
+      bot?.sendMessage(msg.chat.id, `Musobaqa tugatildi. G'olib: ${winnerName}`);
     } catch (e) {
-      if (loading) bot?.editMessageText("❌ Xatolik: " + (e as any).message, { chat_id: msg.chat.id, message_id: loading.message_id });
+      bot?.sendMessage(msg.chat.id, "Xatolik: " + (e as any).message);
     }
   });
 
@@ -457,7 +529,7 @@ export function startBot() {
         const diffHrs = (new Date(c.date).getTime() - now.getTime()) / (1000 * 3600);
         if (diffHrs > 0 && diffHrs <= 1 && !alertedIds.has(c.id)) {
           alertedIds.add(c.id);
-          bot?.sendMessage(adminId, `⏳ <b>Diqqat eslatma!</b>\\n\\n🏆 <b>${c.title}</b> musobaqasi yarim soat / 1 soat ichida boshlanadi! Saytni nazorat qiling.`, { parse_mode: 'HTML' });
+          bot?.sendMessage(adminId, `Eslatma:\\n\\n${c.title} musobaqasi boshlanishiga 1 soat qoldi.`);
         }
       }
     } catch (e) {}
