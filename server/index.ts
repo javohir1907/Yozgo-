@@ -118,6 +118,7 @@ app.use((req, res, next) => {
 
     await pool.query(`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar NOT NULL DEFAULT 'user';
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id varchar UNIQUE;
     `);
 
     await pool.query(`

@@ -181,6 +181,18 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/competitions/all", async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { competitions } = await import("@shared/schema");
+      const { desc } = await import("drizzle-orm");
+      const comps = await db.select().from(competitions).orderBy(desc(competitions.createdAt));
+      res.json(comps);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Admin middleware
   const isAdmin = async (req: any, res: any, next: any) => {
     if (req.headers["x-bot-secret"] && process.env.BOT_SECRET && req.headers["x-bot-secret"] === process.env.BOT_SECRET) {

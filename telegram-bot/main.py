@@ -16,13 +16,19 @@ from telegram.ext import (
 
 load_dotenv()
 
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-ADMIN_ID = os.getenv("ADMIN_TELEGRAM_ID")
-API_BASE_URL = os.getenv("API_BASE_URL", "https://yozgo.uz/api")
-BOT_SECRET = os.getenv("BOT_SECRET", "yozgo-bot-secret")
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN")
+ADMIN_ID = os.environ.get("ADMIN_TELEGRAM_ID") or os.getenv("ADMIN_TELEGRAM_ID")
+API_BASE_URL = os.environ.get("API_BASE_URL") or os.getenv("API_BASE_URL", "https://yozgo.uz/api")
+BOT_SECRET = os.environ.get("BOT_SECRET") or os.getenv("BOT_SECRET", "yozgo-bot-secret")
+
+if TOKEN:
+    TOKEN = TOKEN.strip().strip("'").strip('"')
 
 if ADMIN_ID:
-    ADMIN_ID = int(ADMIN_ID)
+    try:
+        ADMIN_ID = int(str(ADMIN_ID).strip())
+    except ValueError:
+        pass
 
 # State definitions for Reklama Conversation
 R_TITLE, R_IMAGE, R_LINK, R_DESC, R_CONFIRM = range(5)
@@ -332,6 +338,7 @@ async def alert_upcoming_competitions(context: ContextTypes.DEFAULT_TYPE):
 def main():
     if not TOKEN:
         print("Telegram bot token is not set!")
+        print("Available env vars:", [k for k in os.environ.keys() if "TEL" in k or "BOT" in k])
         return
 
     app = Application.builder().token(TOKEN).build()
