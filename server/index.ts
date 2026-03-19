@@ -123,9 +123,13 @@ app.use((req, res, next) => {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id varchar UNIQUE;
     `);
 
-    await pool.query(`
-      UPDATE users SET role = 'admin' WHERE username = 'javohir1907' AND email = 'xolmatovjavohir911@gmail.com';
-    `);
+    try {
+      await pool.query(`
+        UPDATE users SET role = 'admin' WHERE email = 'xolmatovjavohir911@gmail.com';
+      `);
+    } catch (e) {
+      console.error("Admin setup failed:", e);
+    }
     
     // Also ensuring tables are handled here because Render might skip NPM start phase
     await pool.query(`

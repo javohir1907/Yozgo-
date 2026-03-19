@@ -57,15 +57,15 @@ export function startBot() {
   bot.onText(/^\/start$/, async (msg) => {
     if (!isAdmin(msg)) return;
     const text = 
-      "Boshqaruv paneliga xush kelibsiz.\\n\\n" +
-      "Buyruqlar ro'yxati:\\n\\n" +
-      "/stats - Barcha statistik ma'lumotlar\\n" +
-      "/foydalanuvchilar - Oxirgi 10 ta foydalanuvchi\\n\\n" +
-      "/reklama - Yangi reklama qo'shish\\n" +
-      "/reklama_list - Barcha reklamalar ro'yxati\\n\\n" +
-      "/musobaqa_yarat - Yangi musobaqa yaratish\\n" +
-      "/musobaqa_list - Barcha musobaqalar ro'yxati\\n\\n" +
-      "/xabar - Barcha foydalanuvchilarga xabar yuborish\\n" +
+      "Boshqaruv paneliga xush kelibsiz.\n\n" +
+      "Buyruqlar ro'yxati:\n\n" +
+      "/stats - Barcha statistik ma'lumotlar\n" +
+      "/foydalanuvchilar - Oxirgi 10 ta foydalanuvchi\n\n" +
+      "/reklama - Yangi reklama qo'shish\n" +
+      "/reklama_list - Barcha reklamalar ro'yxati\n\n" +
+      "/musobaqa_yarat - Yangi musobaqa yaratish\n" +
+      "/musobaqa_list - Barcha musobaqalar ro'yxati\n\n" +
+      "/xabar - Barcha foydalanuvchilarga xabar yuborish\n" +
       "/bekor - Har qanday jarayonni to'xtatish";
       
     const opts = {
@@ -97,7 +97,7 @@ export function startBot() {
       `);
       
       const maxWpmRecord = await db.execute(sql`
-        SELECT t.wpm, u.username, u.first_name 
+        SELECT t.wpm, u.email, u.first_name 
         FROM test_results t 
         JOIN users u ON t.user_id = u.id 
         ORDER BY t.wpm DESC 
@@ -108,20 +108,20 @@ export function startBot() {
       let maxWpmText = "Mavjud emas";
       if (maxWpmRecord.rows.length > 0) {
          const m = maxWpmRecord.rows[0] as any;
-         maxWpmText = `${m.wpm} (${m.first_name || m.username || 'Nomsiz foydalanuvchi'})`;
+         maxWpmText = `${m.wpm} (${m.first_name || m.email.split('@')[0]})`;
       }
 
       const text = 
-        "Batafsil Statistika:\\n\\n" +
-        `- Jami foydalanuvchilar: ${r.total_users} ta\\n` +
-        `- Bugun qo'shilganlar: ${r.today_users} ta\\n` +
-        `- Bu hafta qo'shilganlar: ${r.week_users} ta\\n` +
-        `- Bu oy qo'shilganlar: ${r.month_users} ta\\n\\n` +
-        `- Jami testlar: ${r.total_tests} ta\\n` +
-        `- Bugungi testlar: ${r.today_tests} ta\\n` +
-        `- O'rtacha WPM: ${r.avg_wpm}\\n` +
-        `- Eng yuqori WPM: ${maxWpmText}\\n\\n` +
-        `- Aktiv musobaqalar: ${r.active_comps} ta\\n` +
+        "Batafsil Statistika:\n\n" +
+        `- Jami foydalanuvchilar: ${r.total_users} ta\n` +
+        `- Bugun qo'shilganlar: ${r.today_users} ta\n` +
+        `- Bu hafta qo'shilganlar: ${r.week_users} ta\n` +
+        `- Bu oy qo'shilganlar: ${r.month_users} ta\n\n` +
+        `- Jami testlar: ${r.total_tests} ta\n` +
+        `- Bugungi testlar: ${r.today_tests} ta\n` +
+        `- O'rtacha WPM: ${r.avg_wpm}\n` +
+        `- Eng yuqori WPM: ${maxWpmText}\n\n` +
+        `- Aktiv musobaqalar: ${r.active_comps} ta\n` +
         `- Jami o'tkazilgan musobaqalar: ${r.total_comps} ta`;
 
       bot?.sendMessage(chatId, text, { parse_mode: "HTML" });
@@ -140,7 +140,7 @@ export function startBot() {
     try {
       const usersList = await db.execute(sql`
         SELECT 
-          u.id, u.username, u.first_name, u.email, u.created_at,
+          u.id, u.first_name, u.email, u.created_at,
           (SELECT count(*) FROM test_results t WHERE t.user_id = u.id) as total_tests,
           (SELECT max(wpm) FROM test_results t WHERE t.user_id = u.id) as max_wpm
         FROM users u
@@ -156,11 +156,11 @@ export function startBot() {
       for (const u of usersList.rows as any[]) {
          const dateStr = new Date(u.created_at).toLocaleString('uz-UZ');
          const text = 
-           `- ID: ${u.id}\\n` +
-           `- Ismi: ${u.first_name || u.username || 'Nomsiz'}\\n` +
-           `- Email: ${u.email}\\n` +
-           `- Ro'yxatdan o'tgan sana: ${dateStr}\\n` +
-           `- Jami testlari soni: ${u.total_tests || 0} ta\\n` +
+           `- ID: ${u.id}\n` +
+           `- Ismi: ${u.first_name || u.email.split('@')[0]}\n` +
+           `- Email: ${u.email}\n` +
+           `- Ro'yxatdan o'tgan sana: ${dateStr}\n` +
+           `- Jami testlari soni: ${u.total_tests || 0} ta\n` +
            `- Eng yuqori WPM natijasi: ${u.max_wpm || 0}`;
          await bot?.sendMessage(chatId, text);
       }
@@ -187,8 +187,8 @@ export function startBot() {
     if (textInfo) {
        userStates[msg.chat.id] = { type: 'xabar', text: textInfo };
        const confirmMsg = 
-          "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\\n\\n" +
-          `${textInfo}\\n\\n` +
+          "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\n\n" +
+          `${textInfo}\n\n` +
           "Tasdiqlaysizmi?";
        const opts = {
           reply_markup: {
@@ -209,14 +209,14 @@ export function startBot() {
   bot.onText(/^\/reklama$/, (msg) => {
     if (!isAdmin(msg)) return;
     userStates[msg.chat.id] = { type: 'reklama', step: 'title' };
-    bot?.sendMessage(msg.chat.id, "Yangi reklama.\\n\\n1. Homiy nomi yoki sarlavhani kiriting:", { parse_mode: "HTML" });
+    bot?.sendMessage(msg.chat.id, "Yangi reklama.\n\n1. Homiy nomi yoki sarlavhani kiriting:", { parse_mode: "HTML" });
   });
 
   // ========== MUSOBAQA CREATION ==========
   bot.onText(/^\/musobaqa_yarat$/, (msg) => {
     if (!isAdmin(msg)) return;
     userStates[msg.chat.id] = { type: 'musobaqa', step: 'title' };
-    bot?.sendMessage(msg.chat.id, "Yangi musobaqa yaratish.\\n\\n1. Musobaqa nomini kiriting:", { parse_mode: "HTML" });
+    bot?.sendMessage(msg.chat.id, "Yangi musobaqa yaratish.\n\n1. Musobaqa nomini kiriting:", { parse_mode: "HTML" });
   });
 
   bot.on('message', async (msg) => {
@@ -226,8 +226,8 @@ export function startBot() {
 
     if (state.type === 'xabar') {
        const confirmMsg = 
-          "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\\n\\n" +
-          `${msg.text}\\n\\n` +
+          "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\n\n" +
+          `${msg.text}\n\n` +
           "Tasdiqlaysizmi?";
        state.text = msg.text;
        const opts = {
@@ -258,10 +258,10 @@ export function startBot() {
         state.step = 'confirm';
         
         const preview = 
-          `Homiy nomi: ${state.title}\\n` +
-          `Rasm havolasi: ${state.imageUrl}\\n` +
-          `Havola URL: ${state.linkUrl}\\n` +
-          `Tavsif: ${state.description}\\n\\n` +
+          `Homiy nomi: ${state.title}\n` +
+          `Rasm havolasi: ${state.imageUrl}\n` +
+          `Havola URL: ${state.linkUrl}\n` +
+          `Tavsif: ${state.description}\n\n` +
           "Ushbu reklamani tasdiqlaysizmi?";
 
         const opts = {
@@ -280,18 +280,18 @@ export function startBot() {
         state.title = msg.text;
         state.step = 'date';
         bot?.sendMessage(msg.chat.id, 
-          "2. Sanani kiriting.\\n\\n" +
-          "Istalgan formatda yozishingiz mumkin. Masalan:\\n" +
-          "- 2026-04-01\\n" +
-          "- 01.04.2026\\n" +
-          "- 1 aprel 2026\\n\\n" +
+          "2. Sanani kiriting.\n\n" +
+          "Istalgan formatda yozishingiz mumkin. Masalan:\n" +
+          "- 2026-04-01\n" +
+          "- 01.04.2026\n" +
+          "- 1 aprel 2026\n\n" +
           "Agar noto'g'ri bo'lsa, tizim o'zi xabar beradi."
         );
       } else if (state.step === 'date') {
         const d = parseUzbekDate(msg.text);
         if (!d) {
           bot?.sendMessage(msg.chat.id, 
-            "Kiritilgan sana formati noto'g'ri. Iltimos to'g'ri sanani kiriting.\\n\\n" +
+            "Kiritilgan sana formati noto'g'ri. Iltimos to'g'ri sanani kiriting.\n\n" +
             "To'g'ri namuna: 01.04.2026 yoki 2026-04-01"
           );
           return;
@@ -299,7 +299,7 @@ export function startBot() {
         state.date = d.toISOString();
         state.step = 'prize';
         bot?.sendMessage(msg.chat.id, 
-          `Sanasi qabul qilindi: ${d.toLocaleDateString('uz-UZ')}\\n\\n` +
+          `Sanasi qabul qilindi: ${d.toLocaleDateString('uz-UZ')}\n\n` +
           `3. Musobaqa sovrinini kiriting:`
         );
       } else if (state.step === 'prize') {
@@ -307,9 +307,9 @@ export function startBot() {
         state.step = 'confirm';
 
         const preview = 
-          `Musobaqa nomi: ${state.title}\\n` +
-          `Sanasi: ${new Date(state.date).toLocaleDateString('uz-UZ')}\\n` +
-          `Sovrin: ${state.prize}\\n\\n` +
+          `Musobaqa nomi: ${state.title}\n` +
+          `Sanasi: ${new Date(state.date).toLocaleDateString('uz-UZ')}\n` +
+          `Sovrin: ${state.prize}\n\n` +
           "Barcha ma'lumotlar to'g'rimi?";
 
         const opts = {
@@ -350,7 +350,7 @@ export function startBot() {
           for (const u of t_users.rows) {
             try {
               if (u.telegram_id) {
-                 await bot?.sendMessage(u.telegram_id as number, `Xabar:\\n\\n${state.text}`);
+                 await bot?.sendMessage(u.telegram_id as number, `Xabar:\n\n${state.text}`);
                  success++;
               }
             } catch(e) {}
@@ -419,13 +419,13 @@ export function startBot() {
         const status = ad.isActive ? "Aktiv" : "Nofaol";
         const dateStr = ad.startDate ? new Date(ad.startDate).toLocaleString('uz-UZ') : 'Noma\'lum';
         const text = 
-          `- ID: ${ad.id}\\n` +
-          `- Homiy nomi: ${ad.title}\\n` +
-          `- Havola: ${ad.linkUrl}\\n` +
-          `- Qo'shilgan sana: ${dateStr}\\n` +
-          `- Click soni: ${ad.clicks || 0} marta\\n` +
-          `- Holati: ${status}\\n\\n` +
-          `Aktivlashtirish: /reklama_on ${ad.id}\\n` +
+          `- ID: ${ad.id}\n` +
+          `- Homiy nomi: ${ad.title}\n` +
+          `- Havola: ${ad.linkUrl}\n` +
+          `- Qo'shilgan sana: ${dateStr}\n` +
+          `- Click soni: ${ad.clicks || 0} marta\n` +
+          `- Holati: ${status}\n\n` +
+          `Aktivlashtirish: /reklama_on ${ad.id}\n` +
           `O'chirish: /reklama_off ${ad.id}`;
         await bot?.sendMessage(chatId, text);
       }
@@ -467,15 +467,15 @@ export function startBot() {
         else if (new Date(c.date) > now) status = "Kutilmoqda";
 
         let text = 
-          `- ID raqami: ${c.id}\\n` +
-          `- Nomi: ${c.title}\\n` +
-          `- Sanasi va vaqti: ${new Date(c.date).toLocaleString('uz-UZ')}\\n` +
-          `- Sovrini: ${c.prize}\\n` +
-          `- Ro'yxatdan o'tganlar soni: ${c.participantsCount || 0} kishi\\n` +
+          `- ID raqami: ${c.id}\n` +
+          `- Nomi: ${c.title}\n` +
+          `- Sanasi va vaqti: ${new Date(c.date).toLocaleString('uz-UZ')}\n` +
+          `- Sovrini: ${c.prize}\n` +
+          `- Ro'yxatdan o'tganlar soni: ${c.participantsCount || 0} kishi\n` +
           `- Holati: ${status}`;
           
-        if (c.winnerName) text += `\\n- G'olib: ${c.winnerName}`;
-        if (c.isActive) text += `\\n\\nG'olibni e'lon qilish va tugatish uchun:\\n/musobaqa_tugat ${c.id} FOYDALANUVCHI_ISMI`;
+        if (c.winnerName) text += `\n- G'olib: ${c.winnerName}`;
+        if (c.isActive) text += `\n\nG'olibni e'lon qilish va tugatish uchun:\n/musobaqa_tugat ${c.id} FOYDALANUVCHI_ISMI`;
         
         const opts = {
           reply_markup: c.isActive ? {
@@ -529,7 +529,7 @@ export function startBot() {
         const diffHrs = (new Date(c.date).getTime() - now.getTime()) / (1000 * 3600);
         if (diffHrs > 0 && diffHrs <= 1 && !alertedIds.has(c.id)) {
           alertedIds.add(c.id);
-          bot?.sendMessage(adminId, `Eslatma:\\n\\n${c.title} musobaqasi boshlanishiga 1 soat qoldi.`);
+          bot?.sendMessage(adminId, `Eslatma:\n\n${c.title} musobaqasi boshlanishiga 1 soat qoldi.`);
         }
       }
     } catch (e) {}
