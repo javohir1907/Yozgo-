@@ -183,6 +183,9 @@ export async function registerRoutes(
 
   // Admin middleware
   const isAdmin = async (req: any, res: any, next: any) => {
+    if (req.headers["x-bot-secret"] && process.env.BOT_SECRET && req.headers["x-bot-secret"] === process.env.BOT_SECRET) {
+      return next();
+    }
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
     const user = await storage.getUser(userId);
@@ -191,6 +194,28 @@ export async function registerRoutes(
     }
     next();
   };
+
+  app.get("/api/admin/bot-stats", isAdmin, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { sql } = await import("drizzle-orm");
+      
+      const totalUsers = await db.execute(sql`SELECT count(*) FROM users`);
+      const todayUsers = await db.execute(sql`SELECT count(*) FROM users WHERE date(created_at) = current_date`);
+      const activeBattles = await db.execute(sql`SELECT count(*) FROM battles WHERE status IN ('waiting', 'playing')`);
+      const todayTests = await db.execute(sql`SELECT count(*), COALESCE(round(avg(wpm)), 0) as avg_wpm FROM test_results WHERE date(created_at) = current_date`);
+      
+      res.json({
+        totalUsers: Number(totalUsers.rows[0].count),
+        todayUsers: Number(todayUsers.rows[0].count),
+        activeBattles: Number(activeBattles.rows[0].count),
+        todayTests: Number(todayTests.rows[0].count),
+        avgWpm: Number(todayTests.rows[0].avg_wpm)
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   app.post("/api/competitions", isAdmin, async (req, res) => {
     try {
@@ -203,6 +228,34 @@ export async function registerRoutes(
       } else {
         res.status(500).json({ message: "Internal server error" });
       }
+    }
+  });
+
+  app.get("/api/admin/bot-competitions", isAdmin, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { competitions } = await import("@shared/schema");
+      const { desc } = await import("drizzle-orm");
+      const list = await db.select().from(competitions).orderBy(desc(competitions.createdAt));
+      res.json(list);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.put("/api/admin/competitions/:id/tugat", isAdmin, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { competitions } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const { winnerName } = req.body;
+      const [updated] = await db.update(competitions)
+        .set({ isActive: false, winnerName })
+        .where(eq(competitions.id, req.params.id))
+        .returning();
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -243,10 +296,19 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/admin/advertisements/:id", isAdmin, async (req, res) => {
+  app.put("/api/admin/advertisements/:id/toggle", isAdmin, async (req, res) => {
     try {
-      const ad = await storage.toggleAdvertisement(req.params.id, false);
+      const ad = await storage.toggleAdvertisement(req.params.id, req.body.isActive);
       res.json(ad);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/advertisements/:id/click", async (req, res) => {
+    try {
+      await storage.trackAdClick(req.params.id);
+      res.json({ success: true });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }

@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest } from "@/lib/queryClient";
 import { useState, useEffect } from "react";
+import { Banner } from "@/components/banner";
 
 export default function LandingPage() {
   const { t } = useI18n();
@@ -165,13 +166,9 @@ export default function LandingPage() {
       </section>
 
       {ads && ads.length > 0 && (
-        <section className="bg-muted/50 py-6 border-b">
-          <div className="container px-4 flex justify-center gap-6 flex-wrap">
-            {ads.map((ad: any) => (
-              <a key={ad.id} href={ad.linkUrl} target="_blank" rel="noopener noreferrer" className="block w-full max-w-[400px] hover:scale-[1.02] transition-transform duration-300">
-                <img src={ad.imageUrl} alt={ad.title} className="w-full h-auto rounded-lg shadow-md border object-cover min-h-[100px]" />
-              </a>
-            ))}
+        <section className="bg-[#0f0f0f] py-8 border-b border-white/5">
+          <div className="container px-4 flex justify-center">
+            <Banner ads={ads} />
           </div>
         </section>
       )}
@@ -240,6 +237,11 @@ export default function LandingPage() {
         <section className="py-24 bg-card/10 border-t">
           <div className="container px-4">
             <h2 className="text-3xl font-bold mb-10 text-center">Yaqinda bo'ladigan musobaqalar</h2>
+            {ads && ads.length > 0 && (
+              <div className="mb-10 w-full flex justify-center">
+                <Banner ads={ads} />
+              </div>
+            )}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {competitions.map((comp: any) => (
                 <div key={comp.id} className="p-6 rounded-xl border bg-card hover:border-primary/50 transition-colors shadow-sm">

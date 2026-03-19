@@ -70,6 +70,7 @@ export interface IStorage {
   getActiveAdvertisements(): Promise<Advertisement[]>;
   getAllAdvertisements(): Promise<Advertisement[]>;
   toggleAdvertisement(id: string, isActive: boolean): Promise<Advertisement>;
+  trackAdClick(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -269,6 +270,15 @@ export class DatabaseStorage implements IStorage {
       .where(eq(advertisements.id, id))
       .returning();
     return updated;
+  }
+
+  async trackAdClick(id: string): Promise<void> {
+    const [ad] = await db.select().from(advertisements).where(eq(advertisements.id, id));
+    if (ad) {
+      await db.update(advertisements)
+        .set({ clicks: (ad.clicks || 0) + 1 })
+        .where(eq(advertisements.id, id));
+    }
   }
 }
 

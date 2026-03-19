@@ -10,6 +10,7 @@ export default function AdminPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -27,6 +28,7 @@ export default function AdminPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/advertisements"] });
       setTitle("");
+      setDescription("");
       setImageUrl("");
       setLinkUrl("");
       setStartDate("");
@@ -35,11 +37,12 @@ export default function AdminPage() {
   });
 
   const toggleAd = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("DELETE", `/api/admin/advertisements/${id}`);
+    mutationFn: async ({ id, isActive }: { id: string, isActive: boolean }) => {
+      await apiRequest("PUT", `/api/admin/advertisements/${id}/toggle`, { isActive });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/advertisements"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/advertisements"] });
     },
   });
 
@@ -56,11 +59,15 @@ export default function AdminPage() {
           <h2 className="text-xl font-semibold mb-4">Yangi reklama qo'shish</h2>
           <form onSubmit={(e) => {
             e.preventDefault();
-            createAd.mutate({ title, imageUrl, linkUrl, startDate, endDate });
+            createAd.mutate({ title, description, imageUrl, linkUrl, startDate, endDate });
           }} className="space-y-4">
             <div>
               <Label>Sarlavha (Title)</Label>
               <Input required value={title} onChange={e => setTitle(e.target.value)} />
+            </div>
+            <div>
+              <Label>Qisqa tavsif (Description)</Label>
+              <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Majburiy emas" />
             </div>
             <div>
               <Label>Rasm URL (Upload o'rniga link)</Label>
@@ -87,19 +94,29 @@ export default function AdminPage() {
           {isLoading ? <p>Yuklanmoqda...</p> : (
             <div className="space-y-4">
               {ads?.map((ad: any) => (
-                <div key={ad.id} className="p-4 border rounded flex justify-between items-center">
-                  <div>
+                <div key={ad.id} className="p-4 border rounded flex justify-between items-center bg-background/50">
+                  <div className="space-y-1">
                     <h3 className="font-bold">{ad.title}</h3>
-                    <p className="text-sm text-muted-foreground">{new Date(ad.startDate).toLocaleDateString()} - {new Date(ad.endDate).toLocaleDateString()}</p>
-                    <span className={`text-xs px-2 py-1 rounded ${ad.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {ad.description && <p className="text-xs text-muted-foreground">{ad.description}</p>}
+                    <div className="text-xs text-muted-foreground">
+                      {new Date(ad.startDate).toLocaleDateString()} - {new Date(ad.endDate).toLocaleDateString()}
+                    </div>
+                    <div className="text-xs font-semibold text-orange-500 mt-1">
+                      Ko'rishlar/O'tishlar: {ad.clicks || 0}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 items-end">
+                    <span className={`text-xs px-2 py-1 rounded font-medium ${ad.isActive ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'}`}>
                       {ad.isActive ? 'Faol' : 'O\'chirilgan'}
                     </span>
-                  </div>
-                  {ad.isActive && (
-                    <Button variant="destructive" size="sm" onClick={() => toggleAd.mutate(ad.id)}>
-                      O'chirish
+                    <Button 
+                      variant={ad.isActive ? "destructive" : "default"} 
+                      size="sm" 
+                      onClick={() => toggleAd.mutate({ id: ad.id, isActive: !ad.isActive })}
+                    >
+                      {ad.isActive ? "O'chirish" : "Yoqish"}
                     </Button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>

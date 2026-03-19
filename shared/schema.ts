@@ -57,6 +57,8 @@ export const competitions = pgTable("competitions", {
   title: text("title").notNull(),
   prize: text("prize"),
   date: timestamp("date").notNull(),
+  participantsCount: integer("participants_count").default(0),
+  winnerName: text("winner_name"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -64,35 +66,37 @@ export const competitions = pgTable("competitions", {
 export const advertisements = pgTable("advertisements", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
+  description: text("description"),
   imageUrl: text("image_url").notNull(),
   linkUrl: text("link_url").notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   isActive: boolean("is_active").default(true),
+  clicks: integer("clicks").default(0),
 });
 
-export const insertTestResultSchema = createInsertSchema(testResults).omit({ 
-  id: true, 
-  createdAt: true 
+export const insertTestResultSchema = createInsertSchema(testResults).omit({
+  id: true,
+  createdAt: true
 });
 
-export const insertLeaderboardEntrySchema = createInsertSchema(leaderboardEntries).omit({ 
-  id: true, 
-  updatedAt: true 
+export const insertLeaderboardEntrySchema = createInsertSchema(leaderboardEntries).omit({
+  id: true,
+  updatedAt: true
 });
 
-export const insertBattleSchema = createInsertSchema(battles).omit({ 
-  id: true, 
-  createdAt: true 
+export const insertBattleSchema = createInsertSchema(battles).omit({
+  id: true,
+  createdAt: true
 });
 
 export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
 export const insertCompetitionSchema = createInsertSchema(competitions).omit({ id: true, createdAt: true });
 export const insertAdvertisementSchema = createInsertSchema(advertisements).omit({ id: true });
 
-export const insertBattleParticipantSchema = createInsertSchema(battleParticipants).omit({ 
-  id: true, 
-  joinedAt: true 
+export const insertBattleParticipantSchema = createInsertSchema(battleParticipants).omit({
+  id: true,
+  joinedAt: true
 });
 
 export type TestResult = typeof testResults.$inferSelect;

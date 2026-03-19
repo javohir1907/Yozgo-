@@ -17,23 +17,34 @@ declare module "http" {
   }
 }
 
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'", "https://yozgo.uz"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://yozgo.uz"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://yozgo.uz", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https:", "https://yozgo.uz"],
+      connectSrc: ["'self'", "wss:", "ws:", "https:", "http:", "https://yozgo.uz"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      frameAncestors: ["'none'"],
+      requireTrustedTypesFor: ["'script'"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+  frameguard: {
+    action: 'deny',
+  },
+}));
+
+// Add Permissions-Policy since Helmet doesn't support it directly yet.
 app.use((req, res, next) => {
-  res.setHeader(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' wss: ws: https: http:; font-src 'self' https://fonts.gstatic.com data:; require-trusted-types-for 'script'; trusted-types default 'allow-duplicates'"
-  );
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
 });
-
-app.use(helmet({
-  contentSecurityPolicy: false, // We are setting this manually above
-  hsts: false, // We are setting this manually above
-  frameguard: false, // We are setting X-Frame-Options manually above
-  permittedCrossDomainPolicies: true,
-}));
 
 app.use(cors({
   origin: ["https://yozgo-frontend.onrender.com", "http://localhost:5000", "http://localhost:5173", "https://yozgo.uz", "https://www.yozgo.uz"],
@@ -127,18 +138,26 @@ app.use((req, res, next) => {
         title text NOT NULL,
         prize text,
         date timestamp NOT NULL,
+        participants_count integer DEFAULT 0,
+        winner_name text,
         is_active boolean DEFAULT true,
         created_at timestamp NOT NULL DEFAULT now()
       );
+      ALTER TABLE competitions ADD COLUMN IF NOT EXISTS participants_count integer DEFAULT 0;
+      ALTER TABLE competitions ADD COLUMN IF NOT EXISTS winner_name text;
       CREATE TABLE IF NOT EXISTS advertisements (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
         title text NOT NULL,
+        description text,
         image_url text NOT NULL,
         link_url text NOT NULL,
         start_date timestamp NOT NULL,
         end_date timestamp NOT NULL,
-        is_active boolean DEFAULT true
+        is_active boolean DEFAULT true,
+        clicks integer DEFAULT 0
       );
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS description text;
+      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS clicks integer DEFAULT 0;
     `);
     console.log("DB migration completed directly from index!");
   } catch (err) {
@@ -153,6 +172,11 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     console.error("Internal Server Error:", err);
+    if (status === 500) {
+      import("./telegram").then(({ sendTelegramAlert }) => {
+        sendTelegramAlert(`❌ <b>500 Xatolik!</b>\n\n<b>Yo'l:</b> ${_req.path}\n<b>Xato:</b> ${message}\n<pre>${err.stack?.substring(0, 500)}</pre>`);
+      });
+    }
 
     if (res.headersSent) {
       return next(err);

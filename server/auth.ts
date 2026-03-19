@@ -76,6 +76,10 @@ export function setupAuth(app: Express) {
 
       (req.session as any).userId = user.id;
       const { password: _, ...safeUser } = user;
+      
+      const { sendTelegramAlert } = await import("./telegram");
+      sendTelegramAlert(`🚨 <b>Yangi foydalanuvchi!</b>\n\n<b>Email:</b> ${email.toLowerCase()}\n<b>Nickname:</b> ${firstName ? firstName.trim() : "Yo'q"}`);
+      
       res.status(201).json(safeUser);
     } catch (error) {
       console.error("Registration error:", error);
