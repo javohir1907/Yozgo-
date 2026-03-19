@@ -9,6 +9,8 @@ import helmet from "helmet";
 import { pool } from "./db";
 
 const app = express();
+const { startBot } = require("./bot");
+startBot();
 const httpServer = createServer(app);
 
 declare module "http" {
