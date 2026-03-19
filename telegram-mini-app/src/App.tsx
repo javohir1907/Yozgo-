@@ -1,103 +1,92 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom'
-import { Home, Trophy, List, User as UserIcon } from 'lucide-react'
-import HomePage from './pages/Home'
-import CompetitionsPage from './pages/Competitions'
-import LeaderboardPage from './pages/Leaderboard'
-import ProfilePage from './pages/Profile'
-import { cn } from './lib/utils'
+import { Trophy, Swords, Bell, User } from 'lucide-react'
+import Home from './pages/Home'
+import Competitions from './pages/Competitions'
+import Notifications from './pages/Notifications'
+import Profile from './pages/Profile'
 
 export const API_URL = import.meta.env.VITE_API_BASE_URL || 'https://yozgo.uz/api';
 
-function AppContent() {
-  const [user, setUser] = useState<any>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
-  const location = useLocation();
+export default function App() {
+  const [activeTab, setActiveTab] = useState('home')
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const initData = (window as any).Telegram?.WebApp?.initData;
-    if (initData) {
-      fetch(`${API_URL}/auth/telegram`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.id) setUser(data);
-        else setError(data.message || 'Auth failed');
-      })
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+      tg.setHeaderColor?.('bg_color');
 
-      // Enable closing confirmation & expand
-      (window as any).Telegram?.WebApp?.expand();
-      (window as any).Telegram?.WebApp?.enableClosingConfirmation();
-      
-      // Update back button
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg) {
-        if (location.pathname !== '/') {
-          tg.BackButton.show();
-          tg.BackButton.onClick(() => window.history.back());
-        } else {
-          tg.BackButton.hide();
-        }
+      if (tg.initData) {
+        fetch(`${API_URL}/auth/telegram`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData })
+        })
+        .then(res => {
+          if (!res.ok) throw new Error('Auth failed');
+          return res.json();
+        })
+        .then(data => {
+          setUser(data.user);
+          setLoading(false);
+        })
+        .catch(err => {
+          setError(err.message);
+          setLoading(false);
+        });
+      } else {
+        // Fallback for non-telegram
+        setError("Faqat Telegram orqali kirish mumkin");
+        setLoading(false);
+      }
+
+      const rb = tg.BackButton;
+      if (activeTab !== 'home') {
+        rb.show();
+        rb.onClick(() => setActiveTab('home'));
+      } else {
+        rb.hide();
       }
     } else {
+      setError("Telegram Web App SDK topilmadi");
       setLoading(false);
-      setError("Please open via Telegram");
     }
-  }, [location.pathname]);
+  }, [activeTab]);
 
-  if (loading) return <div className="flex h-screen items-center justify-center text-primary"><div className="w-8 h-8 border-4 border-t-primary border-r-transparent rounded-full animate-spin"></div></div>;
-  if (error) return <div className="flex h-screen flex-col items-center justify-center p-4 text-center"><h2 className="text-xl font-bold mb-2">Error</h2><p className="text-red-500">{error}</p></div>;
-
-  const navItems = [
-    { path: '/', icon: Home, label: 'Bosh' },
-    { path: '/competitions', icon: List, label: 'Musobaqa' },
-    { path: '/leaderboard', icon: Trophy, label: 'Reyting' },
-    { path: '/profile', icon: UserIcon, label: 'Profil' },
-  ];
+  if (loading) return <div className="flex h-screen items-center justify-center text-primary font-bold animate-pulse">Yuklanmoqda...</div>;
+  if (error) return <div className="flex flex-col h-screen items-center justify-center p-4 text-center"><div className="text-red-500 mb-2">❌</div><p className="font-medium">{error}</p></div>;
 
   return (
-    <div className="flex flex-col min-h-[100dvh] pb-16 bg-background text-foreground">
-      <main className="flex-1 overflow-x-hidden p-4">
-        <Routes>
-          <Route path="/" element={<HomePage user={user} />} />
-          <Route path="/competitions" element={<CompetitionsPage user={user} />} />
-          <Route path="/leaderboard" element={<LeaderboardPage user={user} />} />
-          <Route path="/profile" element={<ProfilePage user={user} />} />
-        </Routes>
-      </main>
+    <div className="bg-background min-h-screen text-foreground pb-20">
+       <main className="p-4">
+         {activeTab === 'home' && <Home user={user} />}
+         {activeTab === 'competitions' && <Competitions user={user} />}
+         {activeTab === 'notifications' && <Notifications user={user} />}
+         {activeTab === 'profile' && <Profile user={user} />}
+       </main>
 
-      <nav className="fixed bottom-0 w-full bg-secondaryBg border-t border-primary/20 backdrop-blur-md">
-        <ul className="flex justify-around items-center h-16 px-2">
-          {navItems.map(({ path, icon: Icon, label }) => {
-            const isActive = location.pathname === path;
-            return (
-              <li key={path} className="flex-1">
-                <Link to={path} className={cn(
-                  "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
-                  isActive ? "text-primary" : "text-hint hover:text-foreground"
-                )}>
-                  <Icon className={cn("w-6 h-6", isActive && "animate-bounce")} />
-                  <span className="text-[10px] font-bold">{label}</span>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+       <nav className="fixed bottom-0 w-full bg-secondaryBg/90 backdrop-blur-xl border-t border-hint/10 pb-safe z-50">
+          <div className="flex justify-around items-center h-16">
+            <NavBtn icon={Trophy} label="Asosiy" active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
+            <NavBtn icon={Swords} label="Musobaqa" active={activeTab === 'competitions'} onClick={() => setActiveTab('competitions')} />
+            <NavBtn icon={Bell} label="Xabarlar" active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} />
+            <NavBtn icon={User} label="Profil" active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} />
+          </div>
+       </nav>
     </div>
   )
 }
 
-export default function App() {
+function NavBtn({ icon: Icon, label, active, onClick }: { icon: any, label: string, active: boolean, onClick: () => void }) {
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <button onClick={onClick} className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${active ? 'text-primary' : 'text-hint hover:text-foreground'}`}>
+      <Icon className={`w-5 h-5 ${active ? 'fill-primary/20 scale-110' : ''}`} />
+      <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+      {label === "Xabarlar" && !active && <div className="absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+    </button>
   )
 }

@@ -193,6 +193,59 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/advertisements", async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { advertisements } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const ads = await db.select().from(advertisements).where(eq(advertisements.isActive, true));
+      res.json(ads);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/competitions/:id/register", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId as string;
+      const compId = req.params.id as string;
+      const { db } = await import("./db");
+      const { competitionParticipants, competitions } = await import("@shared/schema");
+      const { eq, and, sql } = await import("drizzle-orm");
+
+      const existing = await db.select().from(competitionParticipants)
+        .where(and(eq(competitionParticipants.competitionId, compId), eq(competitionParticipants.userId, userId)));
+      
+      if (existing.length > 0) {
+        return res.status(400).json({ message: "Siz allaqachon ro'yxatdan o'tgansiz!" });
+      }
+
+      await db.insert(competitionParticipants).values({
+        competitionId: compId,
+        userId: userId
+      });
+      await db.update(competitions)
+        .set({ participantsCount: sql`${competitions.participantsCount} + 1` })
+        .where(eq(competitions.id, compId));
+
+      res.status(200).json({ message: "Ro'yxatdan muvaffaqiyatli o'tdingiz!" });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { notifications } = await import("@shared/schema");
+      const { desc } = await import("drizzle-orm");
+      const notifs = await db.select().from(notifications).orderBy(desc(notifications.createdAt)).limit(50);
+      res.json(notifs);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Admin middleware
   const isAdmin = async (req: any, res: any, next: any) => {
     if (req.headers["x-bot-secret"] && process.env.BOT_SECRET && req.headers["x-bot-secret"] === process.env.BOT_SECRET) {

@@ -345,6 +345,11 @@ export function startBot() {
     if (query.data === 'x_yes' && state?.type === 'xabar') {
        await bot?.sendMessage(chatId, "Xabar yuborilmoqda...");
        try {
+          const { notifications } = require("@shared/schema");
+          await db.insert(notifications).values({
+            title: "Yozgo Administratori",
+            message: state.text
+          });
           const t_users = await db.execute(sql`SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL`);
           let success = 0;
           for (const u of t_users.rows) {

@@ -63,6 +63,20 @@ export const competitions = pgTable("competitions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const competitionParticipants = pgTable("competition_participants", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  competitionId: uuid("competition_id").references(() => competitions.id).notNull(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  registeredAt: timestamp("registered_at").defaultNow().notNull(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const advertisements = pgTable("advertisements", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),

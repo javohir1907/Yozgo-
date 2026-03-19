@@ -1,77 +1,128 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Trophy, Clock, Medal } from 'lucide-react'
+import { Calendar, Users, Target, ExternalLink } from 'lucide-react'
 import { API_URL } from '../App'
 
 export default function Home({ user }: { user: any }) {
-  const [competitions, setCompetitions] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [activeComp, setActiveComp] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [ads, setAds] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/competitions`).then(r => r.json()).then(setCompetitions).catch(console.error);
-    if(user?.id) fetch(`${API_URL}/profile/${user.id}`).then(r => r.json()).then(d => setStats(d.stats)).catch(console.error);
-  }, [user]);
+    Promise.all([
+      fetch(`${API_URL}/competitions`).then(r => r.json()),
+      fetch(`${API_URL}/advertisements`).then(r => r.json())
+    ])
+    .then(([comps, adsRes]) => {
+      if (comps && comps.length > 0) setActiveComp(comps[0]);
+      if (adsRes && adsRes.length > 0) setAds(adsRes);
+    })
+    .catch(console.error)
+    .finally(() => setLoading(false));
+  }, []);
+
+  const handleRegister = async () => {
+    try {
+      if (!user) return alert("Avval profilga kiring");
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg) {
+        tg.showConfirm(`${activeComp.title} ga ro'yxatdan o'tmoqchimisiz?`, async (confirmed: boolean) => {
+          if (confirmed) {
+            try {
+              const r = await fetch(`${API_URL}/competitions/${activeComp.id}/register`, { method: "POST" });
+              const resText = await r.json();
+              if (!r.ok) {
+                 tg.showAlert(resText.message || "Xatolik yuz berdi");
+              } else {
+                 tg.showAlert("Tabriklaymiz, muvaffaqiyatli ro'yxatdan o'tdingiz!");
+                 setActiveComp((prev: any) => ({ ...prev, participantsCount: (prev.participantsCount || 0) + 1 }));
+              }
+            } catch(e) {
+              tg.showAlert("Server bilan ulanishda xato");
+            }
+          }
+        });
+      }
+    } catch(e) {
+      alert("Xatolik");
+    }
+  };
+
+  if (loading) return null;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between pb-4 border-b border-primary/20">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-primary/20 rounded border border-primary text-primary flex items-center justify-center font-black text-xl">
-            Y
-          </div>
-          <h1 className="text-2xl font-black italic tracking-wider">YOZGO</h1>
-        </div>
-        <div className="w-8 h-8 rounded-full overflow-hidden border border-hint/30">
-          <img src={user?.profileImageUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user?.id} alt="Avatar" className="w-full h-full object-cover" />
-        </div>
+      <div className="flex justify-center py-4">
+        <h1 className="text-3xl font-black text-white">YOZG<span className="text-primary">O</span></h1>
       </div>
 
-      <div className="bg-gradient-to-br from-secondaryBg to-background p-5 rounded-2xl border border-primary/20 shadow-lg shadow-primary/5">
-        <h2 className="text-hint text-sm font-semibold mb-1">Mening Reytingim</h2>
-        <div className="flex items-end justify-between">
-          <div>
-            <span className="text-4xl font-black text-primary">{stats?.bestWpm || 0}</span>
-            <span className="text-sm text-hint ml-1 ml-1">WPM</span>
-          </div>
-          <div className="flex gap-4">
-             <div className="text-right">
-               <div className="text-xs text-hint uppercase font-bold">Aniqlik</div>
-               <div className="font-mono font-bold">{stats?.avgAccuracy || 0}%</div>
-             </div>
-             <div className="text-right">
-               <div className="text-xs text-hint uppercase font-bold">Testlar</div>
-               <div className="font-mono font-bold">{stats?.totalTests || 0}</div>
-             </div>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold flex items-center gap-2"><Trophy className="w-5 h-5 text-yellow-500" /> Aktiv Musobaqalar</h2>
-          <Link to="/competitions" className="text-xs text-primary font-bold uppercase hover:underline">Barchasi</Link>
-        </div>
-        
-        <div className="space-y-4">
-          {competitions.slice(0, 3).map(comp => (
-            <div key={comp.id} className="bg-secondaryBg p-4 rounded-xl border border-hint/10">
-              <h3 className="font-bold text-lg mb-2">{comp.title}</h3>
-              <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-hint mb-4">
-                 <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {new Date(comp.date).toLocaleDateString()}</span>
-                 {comp.prize && <span className="flex items-center gap-1 text-yellow-500"><Medal className="w-3.5 h-3.5" /> {comp.prize}</span>}
-              </div>
-              <button 
-                onClick={() => (window as any).Telegram?.WebApp?.openLink("https://yozgo.uz/battle")}
-                className="w-full py-2 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-lg border border-primary/30 transition-colors"
-               >
-                Ishtirok etish
-              </button>
+      <div className="space-y-3">
+        {activeComp ? (
+          <div className="bg-secondaryBg rounded-3xl p-6 border border-hint/10 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+            
+            <div className="flex items-center gap-2 mb-4">
+               <span className="animate-pulse w-2 h-2 rounded-full bg-primary" />
+               <span className="text-primary text-xs font-bold uppercase tracking-wider">Aktiv Musobaqa</span>
             </div>
-          ))}
-          {competitions.length === 0 && (
-             <p className="text-center text-hint text-sm py-4">Ayni vaqtda faol musobaqalar yo'q.</p>
-          )}
-        </div>
+
+            <h2 className="text-2xl font-black text-white mb-2 leading-tight">{activeComp.title}</h2>
+            
+            <div className="space-y-2 mb-6">
+               <div className="flex items-center gap-2 text-sm text-hint">
+                  <Calendar className="w-4 h-4" />
+                  <span>{new Date(activeComp.date).toLocaleString('uz-UZ')}</span>
+               </div>
+               <div className="flex items-center gap-2 text-sm text-hint">
+                  <Target className="w-4 h-4 text-orange-400" />
+                  <span className="font-bold text-orange-400">{activeComp.prize}</span>
+               </div>
+               <div className="flex items-center gap-2 text-sm text-hint">
+                  <Users className="w-4 h-4 text-blue-400" />
+                  <span>{activeComp.participantsCount || 0} ishtirokchi</span>
+               </div>
+            </div>
+
+            <button 
+              onClick={handleRegister}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 px-6 rounded-xl transition-all active:scale-[0.98] shadow-lg shadow-primary/20"
+            >
+              Ro'yxatdan o'tish
+            </button>
+          </div>
+        ) : (
+          <div className="bg-secondaryBg rounded-3xl p-8 text-center border border-hint/10">
+            <div className="w-16 h-16 bg-hint/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-8 h-8 text-hint/50" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Hozircha musobaqa yo'q</h3>
+            <p className="text-hint text-sm">Yangi musobaqalar haqida tez orada e'lon beramiz. Kuzatib boring!</p>
+          </div>
+        )}
+
+        {ads.length > 0 && (
+          <div className="mt-8 space-y-4">
+             {ads.map((ad, idx) => (
+                <a 
+                  key={idx} 
+                  href={ad.linkUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="block bg-secondaryBg rounded-2xl overflow-hidden border border-hint/5 active:scale-[0.98] transition-transform"
+                >
+                  <img src={ad.imageUrl} alt={ad.title} className="w-full h-32 object-cover" />
+                  <div className="p-4 flex justify-between items-center">
+                    <div>
+                      <h4 className="font-bold text-white text-sm">{ad.title}</h4>
+                      <p className="text-xs text-hint line-clamp-1">{ad.description || 'Homiylarimizga tashrif buyuring'}</p>
+                    </div>
+                    <div className="bg-primary/10 text-primary p-2 rounded-lg">
+                      <ExternalLink className="w-4 h-4" />
+                    </div>
+                  </div>
+                </a>
+             ))}
+          </div>
+        )}
       </div>
     </div>
   )

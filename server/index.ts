@@ -150,6 +150,19 @@ app.use((req, res, next) => {
         is_active boolean DEFAULT true,
         created_at timestamp NOT NULL DEFAULT now()
       );
+      CREATE TABLE IF NOT EXISTS competition_participants (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        competition_id uuid REFERENCES competitions(id) NOT NULL,
+        user_id varchar REFERENCES users(id) NOT NULL,
+        registered_at timestamp NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS notifications (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        title text NOT NULL,
+        message text NOT NULL,
+        created_at timestamp NOT NULL DEFAULT now()
+      );
+
       ALTER TABLE competitions ADD COLUMN IF NOT EXISTS participants_count integer DEFAULT 0;
       ALTER TABLE competitions ADD COLUMN IF NOT EXISTS winner_name text;
       CREATE TABLE IF NOT EXISTS advertisements (
