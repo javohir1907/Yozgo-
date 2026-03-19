@@ -1,8 +1,17 @@
+import sys
 import os
 import requests
 import json
 from datetime import datetime
 from dotenv import load_dotenv
+
+# Polyfill for 'imghdr' module removed in Python 3.13
+# python-telegram-bot v13 internals still try to import it.
+class FakeImghdr:
+    def what(self, *args, **kwargs):
+        return None
+sys.modules['imghdr'] = FakeImghdr()
+
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Updater,
