@@ -110,6 +110,12 @@ export async function registerRoutes(
     try {
       const data = insertBattleSchema.parse(req.body);
       const battle = await storage.createBattle(data);
+      
+      try {
+        const { sendRoomCreatedMessage } = require("./bot");
+        sendRoomCreatedMessage(battle.code);
+      } catch(e) {}
+
       res.status(201).json(battle);
     } catch (error) {
       if (error instanceof z.ZodError) {

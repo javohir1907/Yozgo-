@@ -359,6 +359,20 @@ export function startBot() {
        }
        delete userStates[chatId];
     }
+    
+    if (query.data?.startsWith('br_battle_')) {
+       const code = query.data.replace('br_battle_', '');
+       await bot?.sendMessage(chatId, "Foydalanuvchilarga jo'natilmoqda...");
+       try {
+          const { broadcastFromUserBot } = require("./userBot");
+          const url = `https://yozgo.uz/battle?code=${code}`;
+          const bText = `🏆 JANG (BATTLE) XONASI YARATILDI!\n\nXona kodi: ${code}\nKirish uchun: ${url}\n\nDarhol kiring va raqobatlashamiz!`;
+          const result = await broadcastFromUserBot(bText);
+          bot?.sendMessage(chatId, result.text);
+       } catch (e) {
+          bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any)?.message);
+       }
+    }
 
     if (query.data === 'r_yes' && state?.type === 'reklama') {
       await bot?.sendMessage(chatId, "Yuklanmoqda...");
@@ -533,3 +547,33 @@ export function startBot() {
     } catch (e) {}
   }, 10 * 60 * 1000); // 10 mins
 }
+
+export const sendRoomCreatedMessage = (code: string) => {
+  if (!bot) return;
+  const adminIdStr = process.env.ADMIN_TELEGRAM_ID;
+  const adminId = adminIdStr ? parseInt(adminIdStr, 10) : 0;
+  if (!adminId) return;
+
+  const url = `https://yozgo.uz/battle?code=${code}`;
+  const text = 
+    `Yangi xona yaratildi!\n` +
+    `Xona kodi: ${code}\n` +
+    `Ishtirokchilar: 0\n` +
+    `Havola: ${url}`;
+
+  const opts = {
+    parse_mode: 'HTML' as const,
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: "Kodni nusxalash", copy_text: { text: code } } as any,
+          { text: "Foydalanuvchi botiga yuborish", callback_data: `br_battle_${code}` }
+        ]
+      ]
+    }
+  };
+
+  try {
+    bot.sendMessage(adminId, text, opts).catch(() => {});
+  } catch (e) {}
+};
