@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, uuid, boolean, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, uuid, boolean, varchar, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { users } from "./models/auth";
@@ -106,7 +106,9 @@ export const roomAccessCodes = pgTable("room_access_codes", {
   isUsed: boolean("is_used").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   usedAt: timestamp("used_at"),
-});
+}, (t) => ({
+  unqRoomUser: unique("room_user_unique").on(t.roomId, t.userId)
+}));
 
 export const adminMessages = pgTable("admin_messages", {
   id: uuid("id").primaryKey().defaultRandom(),

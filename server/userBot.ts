@@ -1,13 +1,17 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { db } from './db';
 import { users, battles, roomAccessCodes, adminMessages } from '@shared/schema';
-import { isNotNull, sql, eq } from 'drizzle-orm';
+import { isNotNull, sql, eq, and } from 'drizzle-orm';
 import crypto from 'crypto';
 import { getAdminBot } from './bot';
 
 let userBot: TelegramBot | null = null;
 const MINI_APP_URL = process.env.VITE_API_BASE_URL?.replace('/api', '') || "https://yozgo.uz";
 const userStates: Record<number, any> = {};
+
+export function getUserBot() {
+  return userBot;
+}
 
 export function startUserBot() {
   const token = process.env.USER_BOT_TOKEN;
@@ -196,12 +200,20 @@ export async function generateAndSendRoomCode(battleId: string, telegramId: numb
     return;
   }
 
-  const code = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 characters
-  await db.insert(roomAccessCodes).values({
-    roomId: battleId,
-    userId: userId,
-    code: code
-  });
+  const [existingCode] = await db.select()
+    .from(roomAccessCodes)
+    .where(and(eq(roomAccessCodes.roomId, battleId), eq(roomAccessCodes.userId, userId)));
+
+  let code = existingCode?.code;
+
+  if (!code) {
+    code = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 characters
+    await db.insert(roomAccessCodes).values({
+      roomId: battleId,
+      userId: userId,
+      code: code
+    });
+  }
 
   const text = `🎉 Sizning kirish kodingiz: <b>${code}</b>\n\nBu kodni saytga kirish uchun ishlating. Kod bir martalik!`;
   userBot?.sendMessage(telegramId, text, {

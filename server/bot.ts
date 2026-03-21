@@ -393,13 +393,20 @@ export function startBot() {
     
     if (query.data?.startsWith('br_battle_')) {
        const code = query.data.replace('br_battle_', '');
-       await bot?.sendMessage(chatId, "Foydalanuvchilarga jo'natilmoqda...");
+       await bot?.sendMessage(chatId, "Kanalga yuborilmoqda...");
        try {
-          const { broadcastFromUserBot } = require("./userBot");
-          const url = `https://yozgo.uz/battle?code=${code}`;
-          const bText = `🏆 JANG (BATTLE) XONASI YARATILDI!\n\nXona kodi: ${code}\nKirish uchun: ${url}\n\nDarhol kiring va raqobatlashamiz!`;
-          const result = await broadcastFromUserBot(bText);
-          bot?.sendMessage(chatId, result.text);
+          const { getUserBot } = require("./userBot");
+          const userBotInstance = getUserBot();
+          
+          if (!userBotInstance) {
+            throw new Error("Yozgo User Bot ishlamayapti.");
+          }
+
+          const url = `https://yozgo.uz/battle`;
+          const bText = `🏆 JANG (BATTLE) XONASI YARATILDI!\n\nXona kodi: <b>${code}</b>\n\nXonaga kirish individual kodingizni olish uchun botimizga kiring: @yozgo_bot\n\nJangga kirish sayti: ${url}\n\nDarhol qatnashing va raqobatlashamiz!`;
+          
+          await userBotInstance.sendMessage('@yozgo_uz', bText, { parse_mode: 'HTML' });
+          bot?.sendMessage(chatId, "Barcha ma'lumotlar @yozgo_uz kanaliga muvaffaqiyatli yuborildi! ✅");
        } catch (e) {
           bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any)?.message);
        }

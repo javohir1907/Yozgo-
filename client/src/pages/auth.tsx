@@ -59,7 +59,11 @@ export default function AuthPage() {
       if (isLogin) {
         await login({ email, password });
       } else {
-        await register({ email, password, firstName: firstName || undefined });
+        if (!firstName || firstName.length < 4) {
+          setError("Nickname faqat kichik harf va raqamlardan iborat bo'lishi kerak, kamida 4 ta belgi");
+          return;
+        }
+        await register({ email, password, firstName });
       }
       setLocation("/typing-test");
     } catch (err: any) {
@@ -162,9 +166,15 @@ export default function AuthPage() {
                   <Input
                     id="firstName"
                     type="text"
-                    placeholder={t.auth?.namePlaceholder || "Your name (optional)"}
+                    placeholder={t.auth?.namePlaceholder || "Nickname (masalan: ali_99)"}
                     value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                      setFirstName(val);
+                    }}
+                    required={!isLogin}
+                    minLength={4}
+                    maxLength={20}
                     data-testid="input-firstname"
                     className={
                       !isLogin && firstName 

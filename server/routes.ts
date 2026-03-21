@@ -174,6 +174,14 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Xona yoki kirish kodi topilmadi." });
       }
 
+      if (!isAccessCode) {
+        // Enforce individual code for competition rooms
+        const existingCodes = await db.select({ id: roomAccessCodes.id }).from(roomAccessCodes).where(eq(roomAccessCodes.roomId, battle.id)).limit(1);
+        if (existingCodes.length > 0) {
+          return res.status(403).json({ message: "Bu musobaqa xonasi. Xonaga kirish uchun Telegram botdan olingan o'zingizning individual kodingizni qatordan foydalaning." });
+        }
+      }
+
       const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
       const ipStr = Array.isArray(ip) ? ip[0] : ip;
 

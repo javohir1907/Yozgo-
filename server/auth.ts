@@ -55,12 +55,13 @@ export function setupAuth(app: Express) {
         return res.status(409).json({ message: "An account with this email already exists" });
       }
 
-      // FIX: case-insensitive nickname uniqueness check (Ali vs ali vs ALI barchasi bir xil)
-      if (firstName && firstName.trim()) {
-        const [existingName] = await db.select().from(users).where(ilike(users.firstName, firstName.trim()));
-        if (existingName) {
-          return res.status(409).json({ message: "Bu nickname allaqachon band, boshqa nom tanlang" });
-        }
+      if (!firstName || typeof firstName !== 'string' || !/^[a-z0-9_]{4,20}$/.test(firstName)) {
+        return res.status(400).json({ message: "Nickname faqat kichik harf va raqamlardan iborat bo'lishi kerak, kamida 4 ta belgi" });
+      }
+
+      const [existingName] = await db.select().from(users).where(ilike(users.firstName, firstName.trim()));
+      if (existingName) {
+        return res.status(409).json({ message: "Bu nickname allaqachon band, boshqa nom tanlang" });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
