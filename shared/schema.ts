@@ -41,6 +41,8 @@ export const battleParticipants = pgTable("battle_participants", {
   wpm: integer("wpm"),
   accuracy: integer("accuracy"),
   isWinner: boolean("is_winner").default(false),
+  ipAddress: varchar("ip_address"),
+  agreedAt: timestamp("agreed_at"),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 
@@ -89,6 +91,31 @@ export const advertisements = pgTable("advertisements", {
   clicks: integer("clicks").default(0),
 });
 
+export const prizeWinners = pgTable("prize_winners", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  competitionId: uuid("competition_id").references(() => competitions.id).notNull(),
+  prizeGivenAt: timestamp("prize_given_at").defaultNow().notNull(),
+});
+
+export const roomAccessCodes = pgTable("room_access_codes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  roomId: uuid("room_id").references(() => battles.id).notNull(), // using battles.id
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  code: varchar("code").notNull().unique(),
+  isUsed: boolean("is_used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  usedAt: timestamp("used_at"),
+});
+
+export const adminMessages = pgTable("admin_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fromAdmin: boolean("from_admin").default(true).notNull(),
+  toUserId: varchar("to_user_id").references(() => users.id).notNull(),
+  message: text("message").notNull(),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+});
+
 export const insertTestResultSchema = createInsertSchema(testResults).omit({
   id: true,
   createdAt: true
@@ -135,3 +162,7 @@ export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
 
 export type Advertisement = typeof advertisements.$inferSelect;
 export type InsertAdvertisement = z.infer<typeof insertAdvertisementSchema>;
+
+export type PrizeWinner = typeof prizeWinners.$inferSelect;
+export type RoomAccessCode = typeof roomAccessCodes.$inferSelect;
+export type AdminMessage = typeof adminMessages.$inferSelect;

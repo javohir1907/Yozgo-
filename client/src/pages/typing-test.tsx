@@ -48,6 +48,14 @@ export default function TypingTestPage() {
     correctChars: number;
     incorrectChars: number;
   }) => {
+    import('react-ga4').then(ReactGA => {
+      ReactGA.default.event({
+        category: "TypingTest",
+        action: "completed",
+        value: stats.wpm
+      });
+    });
+
     if (user) {
       resultMutation.mutate({
         wpm: stats.wpm,
@@ -66,7 +74,7 @@ export default function TypingTestPage() {
     isActive,
     isFinished,
     stats,
-    wordStatuses,
+    history,
     handleInputChange,
     reset,
   } = useTypingTest({
@@ -115,7 +123,7 @@ export default function TypingTestPage() {
             onComplete={reset}
             isActive={true}
             currentIndex={currentIndex}
-            wordStatuses={wordStatuses}
+            history={history}
           />
 
           {/* FIX: "Boshlash uchun yozing" matni faqat isActive=false da ko'rinadi */}

@@ -140,6 +140,115 @@ export async function registerRoutes(
     }
   });
 
+  const ipCache = new Map<string, any>();
+  
+  app.post("/api/battles/join", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { battleCode, agreed } = req.body;
+      
+      if (!agreed) {
+        return res.status(400).json({ message: "Shartlarga rozi bo'lishingiz shart." });
+      }
+
+      const { db } = await import("./db");
+      const { battleParticipants, roomAccessCodes, users, battles } = await import("@shared/schema");
+      const { eq, and, ne } = await import("drizzle-orm");
+
+      let battle = await storage.getBattleByCode(battleCode);
+      let isAccessCode = false;
+      let codeEntry = null;
+
+      // Agar xona kodi to'g'ridan-to'g'ri topilmasa, bu accessCode bo'lishi mumkin
+      if (!battle) {
+        const [foundCode] = await db.select().from(roomAccessCodes).where(eq(roomAccessCodes.code, battleCode));
+        if (foundCode) {
+          isAccessCode = true;
+          codeEntry = foundCode;
+          const [foundBattle] = await db.select().from(battles).where(eq(battles.id, foundCode.roomId));
+          battle = foundBattle;
+        }
+      }
+
+      if (!battle) {
+        return res.status(404).json({ message: "Xona yoki kirish kodi topilmadi." });
+      }
+
+      const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+      const ipStr = Array.isArray(ip) ? ip[0] : ip;
+
+      // 1. IP and VPN Check
+      if (ipStr !== '127.0.0.1' && ipStr !== '::1' && ipStr !== 'unknown') {
+        let ipData = ipCache.get(ipStr);
+        if (!ipData) {
+          try {
+            const resp = await fetch(`http://ip-api.com/json/${ipStr}?fields=proxy,hosting,vpn`);
+            if (resp.ok) {
+              ipData = await resp.json();
+              ipCache.set(ipStr, ipData);
+            }
+          } catch(e) {}
+        }
+        
+        if (ipData && (ipData.proxy || ipData.hosting || ipData.vpn)) {
+          return res.status(403).json({ message: "VPN yoki Proxy aniqlandi. Iltimos o'chiring va qayta urinib ko'ring." });
+        }
+
+        // Check if IP is already used by another user in this room
+        const existingIpUsers = await db.select().from(battleParticipants)
+          .where(and(eq(battleParticipants.battleId, battle.id), eq(battleParticipants.ipAddress, ipStr)));
+        
+        const otherUserSameIp = existingIpUsers.find(p => p.userId !== userId);
+        if (otherUserSameIp) {
+          try {
+            const { sendBotMessage } = require("./bot");
+            const [user1] = await db.select().from(users).where(eq(users.id, userId));
+            const [user2] = await db.select().from(users).where(eq(users.id, otherUserSameIp.userId));
+            sendBotMessage(`🚫 Bir xil IP dan 2 akkaunt urinishi:\nIP: ${ipStr}\nUser 1: ${user1?.firstName || user1?.email}\nUser 2: ${user2?.firstName || user2?.email}`);
+          } catch(e) {}
+          return res.status(403).json({ message: "Ushbu IP orqali boshqa foydalanuvchi xonaga kirgan. Qoidalar buzildi." });
+        }
+      }
+
+      // 2. Individual Code Check (If accessCode is provided or required)
+      if (isAccessCode && codeEntry) {
+        if (codeEntry.userId !== userId) {
+          return res.status(403).json({ message: "Bu kod boshqa foydalanuvchiga tegishli." });
+        }
+
+        if (codeEntry.isUsed) {
+          return res.status(400).json({ message: "Bu kod allaqachon foydalanilgan." });
+        }
+
+        await db.update(roomAccessCodes)
+          .set({ isUsed: true, usedAt: new Date() })
+          .where(eq(roomAccessCodes.id, codeEntry.id));
+      }
+
+      // Add or update participant
+      const existingPart = await db.select().from(battleParticipants)
+        .where(and(eq(battleParticipants.battleId, battle.id), eq(battleParticipants.userId, userId)));
+      
+      if (existingPart.length === 0) {
+        await db.insert(battleParticipants).values({
+          battleId: battle.id,
+          userId,
+          ipAddress: ipStr,
+          agreedAt: new Date()
+        });
+      } else {
+        await db.update(battleParticipants)
+          .set({ ipAddress: ipStr, agreedAt: new Date() })
+          .where(eq(battleParticipants.id, existingPart[0].id));
+      }
+
+      res.status(200).json({ success: true, roomCode: battle.code });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Reviews
   app.get("/api/reviews", async (req, res) => {
     try {

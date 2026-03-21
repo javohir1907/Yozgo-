@@ -258,6 +258,27 @@ export class BattleManager {
           isWinner: true
         });
       }
+
+      try {
+        const { db } = await import("./db");
+        const { prizeWinners, users } = await import("@shared/schema");
+        const { eq } = await import("drizzle-orm");
+        
+        const existingPrizes = await db.select().from(prizeWinners).where(eq(prizeWinners.userId, winnerId));
+        const [winnerUser] = await db.select().from(users).where(eq(users.id, winnerId));
+
+        if (existingPrizes.length > 0) {
+          const lastPrizeDate = new Date(existingPrizes[0].prizeGivenAt).toLocaleDateString('uz-UZ');
+          const { sendWarningToAdmin } = require("./bot");
+          sendWarningToAdmin(`⚠️ Bu foydalanuvchi avval ham sovrin yutgan:\nIsm: ${winnerUser?.firstName || winnerUser?.email}\nSana: ${lastPrizeDate}`);
+        }
+
+        // We also show winner to admin bot for 4.1 communication (done later)
+        const { sendWinnerToAdmin } = require("./bot");
+        sendWinnerToAdmin(winnerId, winnerUser?.firstName || winnerUser?.email || "Noma'lum");
+      } catch (e) {
+        console.error("Failed to check prize winner:", e);
+      }
     }
 
     this.io.to(code).emit('battle-end', {

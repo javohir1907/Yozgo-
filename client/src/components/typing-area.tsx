@@ -9,7 +9,7 @@ interface TypingAreaProps {
   onComplete: () => void;
   isActive: boolean;
   currentIndex: number;
-  wordStatuses?: WordStatus[];
+  history?: string[];
 }
 
 interface WordBoxProps {
@@ -17,16 +17,15 @@ interface WordBoxProps {
   wordIdx: number;
   isActive: boolean;
   isPast: boolean;
-  userInput: string;
-  status?: WordStatus;
+  typedWord: string; // The word the user actually typed (past or current)
 }
 
 const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
-  word, wordIdx, isActive, isPast, userInput, status
+  word, wordIdx, isActive, isPast, typedWord
 }, ref) => {
   if (!isActive && !isPast) {
     return (
-      <span className="relative whitespace-nowrap text-muted-foreground/50 transition-colors" data-testid={`word-${wordIdx}`}>
+      <span ref={ref} className="relative whitespace-nowrap text-muted-foreground/50 transition-colors" data-testid={`word-${wordIdx}`}>
         {word}
       </span>
     );
@@ -35,31 +34,25 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
   const renderChar = (char: string, charIdx: number) => {
     let colorClass = "text-muted-foreground/50";
 
-    if (isPast) {
-      colorClass = (status === "correct" || !status) ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400 opacity-90";
-    } else if (isActive) {
-      if (charIdx < userInput.length) {
-        colorClass = userInput[charIdx] === char
-          ? "text-primary dark:text-primary drop-shadow-sm"
-          : "text-red-500 underline decoration-red-500/50 decoration-2 font-bold";
+    if (charIdx < typedWord.length) {
+      // User has typed something for this position
+      const typedChar = typedWord[charIdx];
+      if (typedChar === char) {
+        colorClass = "text-green-500 dark:text-green-400 font-medium";
+      } else {
+        colorClass = "text-red-500 dark:text-red-400 font-bold";
       }
+    } else if (isPast) {
+      // User completely missed this char (skipped with space)
+      colorClass = "text-red-500 underline decoration-red-500/50 decoration-2 font-bold opacity-80";
     }
-
-    const isCaretPosition = isActive && charIdx === userInput.length;
 
     return (
       <span
         key={`${wordIdx}-${charIdx}`}
-        className={cn("relative transition-colors duration-75", colorClass)}
+        className={cn("transition-colors duration-75", colorClass)}
       >
-        {isCaretPosition && (
-          <span
-            className="absolute -left-[1px] top-[10%] w-[3px] h-[80%] bg-primary animate-[blink_1s_step-end_infinite] rounded-full z-10"
-            style={{ boxShadow: "0 0 8px var(--primary)" }}
-            data-testid="typing-caret"
-          />
-        )}
-        {char}
+        {charIdx < typedWord.length && typedWord[charIdx] !== char && !isPast ? typedWord[charIdx] : char}
       </span>
     );
   };
@@ -69,15 +62,29 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
       ref={ref}
       className={cn(
         "relative whitespace-nowrap transition-all duration-200",
-        isActive && "bg-primary/5 rounded-md px-1 -mx-1",
-        isPast && status === "incorrect" && "underline decoration-red-500/50 decoration-2 underline-offset-4 opacity-80"
+        isActive && "bg-primary/5 rounded-md px-1 -mx-1"
       )}
       data-testid={`word-${wordIdx}`}
     >
+      {/* Caret */}
+      {isActive && (
+        <span 
+          className="absolute top-[10%] w-[3px] h-[80%] bg-primary animate-[blink_1s_step-end_infinite] rounded-full z-10 transition-transform duration-100 ease-out"
+          style={{ 
+            transform: `translateX(calc(${typedWord.length}ch - 1px))`,
+            boxShadow: "0 0 8px var(--primary)",
+            left: "0.25rem" // Adjust to match the padding of container if necessary, but font is mono so it should align.
+          }}
+          data-testid="typing-caret"
+        />
+      )}
+
+      {/* Word Characters */}
       {word.split("").map((char, charIdx) => renderChar(char, charIdx))}
 
-      {isActive && userInput.length > word.length &&
-        userInput.slice(word.length).split("").map((char, charIdx) => (
+      {/* Extra characters typed beyond word length */}
+      {typedWord.length > word.length &&
+        typedWord.slice(word.length).split("").map((char, charIdx) => (
           <span
             key={`extra-${charIdx}`}
             className="text-red-500 underline decoration-red-500/50 font-bold opacity-80"
@@ -86,17 +93,6 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
           </span>
         ))
       }
-
-      {isActive && userInput.length >= word.length && (
-        <span className="relative">
-          {userInput.length === word.length && (
-             <span
-             className="absolute -left-[1px] top-[10%] w-[3px] h-[80%] bg-primary animate-[blink_1s_step-end_infinite] rounded-full z-10"
-             style={{ boxShadow: "0 0 8px var(--primary)" }}
-           />
-          )}
-        </span>
-      )}
     </span>
   );
 }));
@@ -110,7 +106,7 @@ export function TypingArea({
   onComplete,
   isActive,
   currentIndex,
-  wordStatuses,
+  history = [],
 }: TypingAreaProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -196,21 +192,29 @@ export function TypingArea({
         className="flex flex-wrap gap-x-3 gap-y-3 text-[1.7rem] font-mono leading-relaxed select-none px-2"
         style={{
           transform: `translateY(${offsetY}px)`,
-          transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)", 
+          transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)", 
         }}
       >
-        {words.map((word, wordIdx) => (
-          <WordBox
-            key={wordIdx}
-            ref={wordIdx === currentIndex ? activeWordRef : null}
-            word={word}
-            wordIdx={wordIdx}
-            isActive={wordIdx === currentIndex}
-            isPast={wordIdx < currentIndex}
-            userInput={wordIdx === currentIndex ? userInput : ""}
-            status={wordStatuses?.[wordIdx]}
-          />
-        ))}
+        {words.map((word, wordIdx) => {
+          let typedWord = "";
+          if (wordIdx < currentIndex) {
+            typedWord = history[wordIdx] || "";
+          } else if (wordIdx === currentIndex) {
+            typedWord = userInput;
+          }
+
+          return (
+            <WordBox
+              key={wordIdx}
+              ref={wordIdx === currentIndex ? activeWordRef : null}
+              word={word}
+              wordIdx={wordIdx}
+              isActive={wordIdx === currentIndex}
+              isPast={wordIdx < currentIndex}
+              typedWord={typedWord}
+            />
+          );
+        })}
       </div>
     </div>
   );

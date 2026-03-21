@@ -16,6 +16,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function BattlePage() {
   const { user } = useAuth();
@@ -33,6 +35,12 @@ export default function BattlePage() {
   const [attemptTimer, setAttemptTimer] = useState<number | null>(null);
   const [totalTimer, setTotalTimer] = useState<number | null>(null);
   const [isAttemptActive, setIsAttemptActive] = useState(false);
+  const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
+  
+  const [showTerms, setShowTerms] = useState(false);
+  const [isAgreed, setIsAgreed] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
   
   // Settings (State managed by admin, synced via room object basically)
   const [testDuration, setTestDuration] = useState(30);
@@ -40,9 +48,6 @@ export default function BattlePage() {
   const [maxAttempts, setMaxAttempts] = useState(5);
   const [language, setLanguage] = useState("uz");
   const [adminParticipates, setAdminParticipates] = useState(true);
-  
-  const [totalKeystrokes, setTotalKeystrokes] = useState(0);
-  const [correctKeystrokes, setCorrectKeystrokes] = useState(0);
 
   const { 
     room, 
@@ -118,12 +123,12 @@ export default function BattlePage() {
     if (!battleStart || totalTimer === 0) return;
     setIsAttemptActive(true);
     setAttemptTimer(battleStart.settings.testDuration);
+    setAttemptStartTime(Date.now());
     setUserInput("");
     setCurrentIndex(0);
     setWpm(0);
     setAccuracy(100);
-    setTotalKeystrokes(0);
-    setCorrectKeystrokes(0);
+    setHistory([]);
   };
 
   const endAttempt = () => {
@@ -162,44 +167,97 @@ export default function BattlePage() {
 
   const joinBattle = () => {
     if (inputCode.trim()) {
-      setBattleCode(inputCode.trim().toUpperCase());
+      setShowTerms(true);
     }
   };
 
-  const handleInputChange = useCallback((value: string) => {
-    if (!isAttemptActive) return;
-
-    const currentWord = battleStart.words[currentIndex];
-    let curTotal = totalKeystrokes;
-    let curCorrect = correctKeystrokes;
-
-    if (value.length > userInput.length) {
-      curTotal += 1;
-      const addedChar = value[value.length - 1];
-      const targetChar = (currentWord + " ")[value.length - 1]; // includes space
-      if (addedChar === targetChar) curCorrect += 1;
+  const confirmJoin = async () => {
+    if (!isAgreed) return;
+    setIsJoining(true);
+    try {
+      const res = await fetch("/api/battles/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          battleCode: inputCode.trim().toUpperCase(),
+          agreed: isAgreed
+        })
+      });
+      const data = await res.json();
       
-      setTotalKeystrokes(curTotal);
-      setCorrectKeystrokes(curCorrect);
+      if (!res.ok) {
+        throw new Error(data.message || "Xatolik yuz berdi");
+      }
+      
+      setShowTerms(false);
+      setBattleCode(data.roomCode); // Backend qaytargan asl xona kodi
+    } catch (err: any) {
+      toast({
+        title: "Xatolik",
+        description: err.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsJoining(false);
     }
-    
-    // Monkeyspeed exact WPM formula: (correctChars / 5) / minutes
-    const timeElapsedMins = (battleStart.settings.testDuration - (attemptTimer || 0)) / 60;
-    const exactWpm = timeElapsedMins > 0 ? Math.round((curCorrect / 5) / timeElapsedMins) : 0;
-    const exactAcc = curTotal > 0 ? Math.round((curCorrect / curTotal) * 100) : 100;
+  };
+
+  const updateStats = useCallback((currHistory: string[], currInput: string, currIndex: number) => {
+    if (!battleStart || !attemptStartTime) return;
+    let corKeys = 0;
+    let totKeys = 0;
+
+    for (let i = 0; i < currHistory.length; i++) {
+      const hWord = currHistory[i];
+      const actualWord = battleStart.words[i];
+      totKeys += hWord.length + 1; 
+      if (hWord === actualWord) {
+        corKeys += actualWord.length + 1;
+      } else {
+        for (let j = 0; j < hWord.length; j++) {
+          if (hWord[j] === actualWord[j]) corKeys++;
+        }
+        corKeys++; 
+      }
+    }
+
+    const actualWord = battleStart.words[currIndex];
+    if (currInput.length > 0) {
+      totKeys += currInput.length;
+      for (let j = 0; j < currInput.length; j++) {
+        if (currInput[j] === actualWord[j]) corKeys++;
+      }
+    }
+
+    const elapsedMs = Date.now() - attemptStartTime;
+    const timeElapsedMins = elapsedMs / 60000;
+    const exactWpm = timeElapsedMins > 0 ? Math.round((corKeys / 5) / timeElapsedMins) : 0;
+    const exactAcc = totKeys > 0 ? Math.round((corKeys / totKeys) * 100) : 100;
 
     setWpm(exactWpm);
     setAccuracy(exactAcc);
+    
+    sendProgress(Math.min(Math.round((currIndex / 50) * 100), 100), exactWpm);
+  }, [battleStart, attemptStartTime, sendProgress]);
 
-    if (value === currentWord + " ") {
+  const handleInputChange = useCallback((value: string) => {
+    if (!isAttemptActive || !battleStart) return;
+
+    if (value.endsWith(" ")) {
+      const currentTyped = value.slice(0, -1);
+      const newHistory = [...history, currentTyped];
+      setHistory(newHistory);
+      setUserInput("");
+      
       const newIndex = currentIndex + 1;
       setCurrentIndex(newIndex);
-      setUserInput("");
-      sendProgress(Math.min(Math.round((newIndex / 50) * 100), 100), exactWpm);
+      
+      updateStats(newHistory, "", newIndex);
     } else {
       setUserInput(value);
+      updateStats(history, value, currentIndex);
     }
-  }, [isAttemptActive, currentIndex, battleStart, attemptTimer, sendProgress, userInput, totalKeystrokes, correctKeystrokes]);
+  }, [isAttemptActive, currentIndex, battleStart, history, updateStats]);
 
   const handleAdminStart = () => {
     startBattle({
@@ -284,6 +342,40 @@ export default function BattlePage() {
             </CardContent>
           </Card>
         </div>
+
+        <Dialog open={showTerms} onOpenChange={setShowTerms}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Musobaqa Shartlari</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <ul className="text-sm text-muted-foreground space-y-3 list-disc list-inside">
+                <li>Agar texnik nosozlik yuzaga kelsa, sovrinlar berilmaydi.</li>
+                <li>Cheating aniqlansa, natijangiz bekor qilinadi va xonadan chiqarilasiz.</li>
+                <li>Har bir foydalanuvchi faqat 1 marta sovrin olishi mumkin.</li>
+                <li>VPN orqali kirish taqiqlanadi (Tizim avtomatik tekshiradi).</li>
+              </ul>
+              <div className="flex items-center space-x-2 border-t pt-4">
+                <Checkbox id="terms" checked={isAgreed} onCheckedChange={(checked) => setIsAgreed(checked as boolean)} />
+                <label
+                  htmlFor="terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Bu shartlarga roziman
+                </label>
+              </div>
+            </div>
+            <DialogFooter className="sm:justify-end">
+              <Button type="button" variant="secondary" onClick={() => setShowTerms(false)}>
+                Bekor qilish
+              </Button>
+              <Button type="button" onClick={confirmJoin} disabled={!isAgreed || isJoining}>
+                {isJoining ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Roziman - Kirish
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -440,6 +532,7 @@ export default function BattlePage() {
                     onComplete={() => {}}
                     isActive={isAttemptActive}
                     currentIndex={currentIndex}
+                    history={history}
                   />
                 </div>
               </div>

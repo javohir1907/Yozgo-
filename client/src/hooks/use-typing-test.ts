@@ -18,7 +18,7 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
   const [timeLeft, setTimeLeft] = useState<number>(mode);
   const [isActive, setIsActive] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
-  const [wordStatuses, setWordStatuses] = useState<WordStatus[]>([]);
+  const [history, setHistory] = useState<string[]>([]);
 
   // FIX: correctChars faqat to'liq to'g'ri so'zlarni emas, har bir to'g'ri belgi hisoblanadi
   const correctCharsRef = useRef(0);
@@ -37,7 +37,7 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     const shuffled = [...list].sort(() => Math.random() - 0.5);
     const repeated = Array(5).fill(shuffled).flat();
     setWords(repeated);
-    setWordStatuses(new Array(repeated.length).fill("pending"));
+    setHistory([]);
   }, [language]);
 
   const reset = useCallback(() => {
@@ -147,17 +147,10 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
         // Ortiqcha yoki kam harflar
         if (typedWord.length > word.length) {
           incorrectCharsRef.current += typedWord.length - word.length;
-        } else if (typedWord.length < word.length) {
-          incorrectCharsRef.current += word.length - typedWord.length;
         }
       }
 
-      setWordStatuses(prev => {
-        const next = [...prev];
-        next[currentIndex] = isCorrect ? "correct" : "incorrect";
-        return next;
-      });
-
+      setHistory(prev => [...prev, typedWord]);
       setCurrentIndex(prev => prev + 1);
       setUserInput("");
       updateLiveStats();
@@ -196,7 +189,7 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       correctChars: correctCharsRef.current,
       incorrectChars: incorrectCharsRef.current,
     },
-    wordStatuses,
+    history,
     handleInputChange,
     reset,
   };

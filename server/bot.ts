@@ -7,6 +7,10 @@ import { storage } from './storage';
 let bot: TelegramBot | null = null;
 const userStates: Record<number, any> = {};
 
+export function getAdminBot() {
+  return bot;
+}
+
 function parseUzbekDate(input: string): Date | null {
   try {
     const clean = input.trim();
@@ -44,7 +48,7 @@ export function startBot() {
   const adminId = adminIdStr ? parseInt(adminIdStr, 10) : 0;
 
   bot = new TelegramBot(token, { polling: true });
-  console.log("Telegram Bot successfully started in node backend");
+  console.log("Telegram Admin Bot successfully started in node backend");
 
   const isAdmin = (msg: TelegramBot.Message) => {
     if (msg.chat.id !== adminId) {
@@ -322,6 +326,33 @@ export function startBot() {
         };
         bot?.sendMessage(msg.chat.id, preview, opts);
       }
+    } else if (state.type === 'msg_winner') {
+      try {
+        const { sendMessageToWinner, getUserIdByTelegram } = require("./userBot");
+        // Save to DB
+        const { db } = require("./db");
+        const { adminMessages } = require("@shared/schema");
+        await db.insert(adminMessages).values({
+          fromAdmin: true,
+          toUserId: state.winnerUserId,
+          message: msg.text
+        });
+
+        // Try getting telegram ID of user
+        const { sql } = require("drizzle-orm");
+        const uRes = await db.execute(sql`SELECT telegram_id FROM users WHERE id = ${state.winnerUserId}`);
+        const tId = uRes.rows[0]?.telegram_id;
+        
+        if (tId) {
+          await sendMessageToWinner(tId, msg.text);
+          bot?.sendMessage(msg.chat.id, "Xabar g'olibga yuborildi.");
+        } else {
+          bot?.sendMessage(msg.chat.id, "Foydalanuvchining Telegram ID si topilmadi. U botdan kirmagan bo'lishi mumkin.");
+        }
+      } catch (e: any) {
+        bot?.sendMessage(msg.chat.id, "Xatolik: " + e.message);
+      }
+      delete userStates[msg.chat.id];
     }
   });
 
@@ -416,6 +447,33 @@ export function startBot() {
        } catch (e) {
           bot?.sendMessage(chatId, "Xato: " + (e as any).message);
        }
+    }
+
+    if (query.data?.startsWith('msg_winner_')) {
+      const winnerUserId = query.data.replace('msg_winner_', '');
+      userStates[chatId] = { type: 'msg_winner', winnerUserId };
+      bot?.sendMessage(chatId, "G'olibga jo'natiladigan xabar matnini kiriting:", { parse_mode: "HTML" });
+    }
+
+    if (query.data?.startsWith('verify_y_')) {
+      const payload = query.data.replace('verify_y_', '');
+      const [battleId, tgId] = payload.split('|');
+      bot?.sendMessage(chatId, "Tasdiqlandi va kod jo'natilmoqda...");
+      try {
+        const { generateAndSendRoomCode } = require("./userBot");
+        await generateAndSendRoomCode(battleId, parseInt(tgId, 10));
+      } catch(e: any) {
+        bot?.sendMessage(chatId, "Xato: " + e.message);
+      }
+    }
+
+    if (query.data?.startsWith('verify_n_')) {
+      const tgId = query.data.replace('verify_n_', '');
+      bot?.sendMessage(chatId, "Rad etildi.");
+      try {
+        const { sendMessageToWinner } = require("./userBot");
+        await sendMessageToWinner(parseInt(tgId, 10), "Sizning obunangiz rad etildi, iltimos qayta tekshiring va shartlarni to'liq bajaring.");
+      } catch(e) {}
     }
   });
 
@@ -554,20 +612,19 @@ export const sendRoomCreatedMessage = (code: string) => {
   const adminId = adminIdStr ? parseInt(adminIdStr, 10) : 0;
   if (!adminId) return;
 
-  const url = `https://yozgo.uz/battle?code=${code}`;
   const text = 
-    `Yangi xona yaratildi!\n` +
-    `Xona kodi: ${code}\n` +
-    `Ishtirokchilar: 0\n` +
-    `Havola: ${url}`;
+    `🏆 Musobaqa boshlanmoqda!\n\n` +
+    `Ishtirok etish uchun xona kodi: ${code}\n\n` +
+    `Botga yozib kodingizni oling: @yozgo_robot\n`; 
+    // Updated to match the requested format
 
   const opts = {
     parse_mode: 'HTML' as const,
     reply_markup: {
       inline_keyboard: [
         [
-          { text: "Kodni nusxalash", copy_text: { text: code } } as any,
-          { text: "Foydalanuvchi botiga yuborish", callback_data: `br_battle_${code}` }
+          { text: "📢 Xabarni nusxalash", copy_text: { text } } as any,
+          { text: "Kanalga yuborish", callback_data: `br_battle_${code}` }
         ]
       ]
     }
@@ -576,4 +633,33 @@ export const sendRoomCreatedMessage = (code: string) => {
   try {
     bot.sendMessage(adminId, text, opts).catch(() => {});
   } catch (e) {}
+};
+
+export const sendBotMessage = (message: string) => {
+  if (!bot) return;
+  const adminIdStr = process.env.ADMIN_TELEGRAM_ID;
+  const adminId = adminIdStr ? parseInt(adminIdStr, 10) : 0;
+  if (!adminId) return;
+  bot.sendMessage(adminId, message);
+};
+
+export const sendWarningToAdmin = (message: string) => {
+  sendBotMessage(message);
+};
+
+export const sendWinnerToAdmin = (userId: string, name: string) => {
+  if (!bot) return;
+  const adminIdStr = process.env.ADMIN_TELEGRAM_ID;
+  const adminId = adminIdStr ? parseInt(adminIdStr, 10) : 0;
+  if (!adminId) return;
+
+  const text = `🎉 G'olib aniqlandi: ${name}\nID: ${userId}\nU bilan bog'lanish yoki xabar yozish uchun ma'lumotlarini kutishingiz mumkin.`;
+  const opts = {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "✉️ G'olibga xabar yozish", callback_data: `msg_winner_${userId}` }]
+      ]
+    }
+  };
+  bot.sendMessage(adminId, text, opts);
 };
