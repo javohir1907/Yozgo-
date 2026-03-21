@@ -141,7 +141,49 @@ export async function registerRoutes(
   });
 
   const ipCache = new Map<string, any>();
-  
+  app.post("/api/battles/validate-code", isAuthenticated, async (req, res) => {
+    try {
+      const { db } = await import("./db");
+      const { battles, roomAccessCodes } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const { battleCode } = req.body;
+      const userId = (req.session as any).userId;
+
+      let battle = await storage.getBattleByCode(battleCode);
+      let isAccessCode = false;
+
+      if (!battle) {
+        const [foundCode] = await db.select().from(roomAccessCodes).where(eq(roomAccessCodes.code, battleCode));
+        if (foundCode) {
+          if (foundCode.userId !== userId) {
+            return res.status(403).json({ message: "Bu kod boshqa foydalanuvchiga tegishli." });
+          }
+          if (foundCode.isUsed) {
+            return res.status(400).json({ message: "Bu kod allaqachon foydalanilgan." });
+          }
+          isAccessCode = true;
+          const [foundBattle] = await db.select().from(battles).where(eq(battles.id, foundCode.roomId));
+          battle = foundBattle;
+        }
+      }
+
+      if (!battle) {
+        return res.status(404).json({ message: "Xona yoki kirish kodi topilmadi." });
+      }
+
+      if (!isAccessCode) {
+        const existingCodes = await db.select({ id: roomAccessCodes.id }).from(roomAccessCodes).where(eq(roomAccessCodes.roomId, battle.id)).limit(1);
+        if (existingCodes.length > 0) {
+          return res.status(403).json({ message: "Bu musobaqa xonasi. Xonaga kirish uchun Telegram botdan olingan o'zingizning individual kodingizni qatordan foydalaning." });
+        }
+      }
+
+      res.status(200).json({ success: true });
+    } catch (e) {
+      res.status(500).json({ message: "Xatolik" });
+    }
+  });
+
   app.post("/api/battles/join", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.session as any).userId;

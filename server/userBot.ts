@@ -48,8 +48,8 @@ export function startUserBot() {
     
     const text = 
       `Assalomu alaykum, ${msg.chat.first_name || 'foydalanuvchi'}! 🦁\n\n` +
-      `YOZGO — O'zbekistonning birinchi va yagona terma-yozishraqobat platformasiga xush kelibsiz!\n\n` +
-      `Masobaqaga qo'shilish uchun xona kodini botga yuboring yoki quyidagi tugmani bosing.`;
+      `YOZGO — O'zbekistonning birinchi va yagona terma-yozish raqobat platformasiga xush kelibsiz!\n\n` +
+      `Musobaqada ishtirok etish uchun xona kodini botga yuboring (masalan: OHSVEW).`;
 
     const opts = {
       reply_markup: {
@@ -124,41 +124,34 @@ export function startUserBot() {
       const battleId = query.data.replace('check_subs_', '');
       try {
         const uId = query.from.id;
-        // Check Telegram Channel Subscription (requires bot to be an admin in the channel)
-        try {
-          const chatMember = await userBot?.getChatMember('@yozgo_uz', uId);
-          if (chatMember && ['left', 'kicked'].includes(chatMember.status)) {
-             userBot?.answerCallbackQuery(query.id, { text: "Kanalga a'zo bo'lmadingiz!", show_alert: true });
-             return;
-          }
-        } catch(e) {
-          // Ignore if bot is not admin or channel does not exist - assume valid for now or skip checking
+        const isSubscribed = await checkSubscription(chatId, uId);
+        
+        if (!isSubscribed) {
+          userBot?.answerCallbackQuery(query.id, { text: "Yolg'on! Hali kanalga a'zo bo'lmadingiz! ❌", show_alert: true });
+          return;
         }
 
-        userBot?.sendMessage(chatId, "Tekshirish adminga yuborildi, biroz kuting...");
-        
-        // Notify admin for manual verify
-        const adminBot = getAdminBot();
-        const adminIdStr = process.env.ADMIN_TELEGRAM_ID;
-        if (adminBot && adminIdStr) {
-          const text = `O'yinchi (${query.from.first_name || 'User'}) YouTube/Instagram shartini bajardimi deb so'ramoqda\nBattle ID: ${battleId}`;
-          adminBot.sendMessage(parseInt(adminIdStr, 10), text, {
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  { text: "✅ Tasdiqlash", callback_data: `verify_y_${battleId}|${uId}` },
-                  { text: "❌ Rad etish", callback_data: `verify_n_${uId}` }
-                ]
-              ]
-            }
-          });
-        }
+        userBot?.answerCallbackQuery(query.id, { text: "A'zoligingiz tasdiqlandi! ✅" });
+        await generateAndSendRoomCode(battleId, uId);
       } catch (err: any) {
         userBot?.sendMessage(chatId, "Xatolik: " + err.message);
       }
-      userBot?.answerCallbackQuery(query.id);
     }
   });
+}
+
+// Check subscription wrapper
+async function checkSubscription(chatId: number, tgUserId: number) {
+  try {
+    const chatMember = await userBot?.getChatMember('@yozgo_uz', tgUserId);
+    if (!chatMember || ['left', 'kicked'].includes(chatMember.status)) {
+      return false;
+    }
+    return true;
+  } catch (e) {
+    // Cannot access or user not found => not subscribed
+    return false;
+  }
 }
 
 async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
@@ -176,18 +169,43 @@ async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
     return;
   }
 
-  // Check required subscriptions UI
-  const text = 
-    `Quyidagi shartlarni bajaring:\n\n` +
-    `✅ Telegram: @yozgo_uz kanaliga a'zo bo'ling\n` +
-    `✅ YouTube va Instagram (havolalari musobaqa e'lonida berilgan) ga obuna bo'ling\n\n` +
-    `Barchasini bajarganingizdan so'ng pastdagi tugmani bosing.`;
+  const uRes = await db.execute(sql`SELECT id FROM users WHERE telegram_id = ${tgUserId.toString()}`);
+  let userId = uRes.rows[0]?.id as string;
 
-  userBot?.sendMessage(chatId, text, {
-    reply_markup: {
-      inline_keyboard: [[{ text: "Barchasini bajardim ✅", callback_data: `check_subs_${battle.id}` }]]
-    }
-  });
+  if (!userId) {
+    userBot?.sendMessage(chatId, "Siz tizimdan ro'yxatdan o'tmagansiz (Saytga Telegram bilan kiring)!");
+    return;
+  }
+
+  // Check if they already have an access code
+  const [existingCode] = await db.select()
+    .from(roomAccessCodes)
+    .where(and(eq(roomAccessCodes.roomId, battle.id), eq(roomAccessCodes.userId, userId)));
+
+  if (existingCode?.code) {
+     userBot?.sendMessage(chatId, `🎉 Sizning kirish kodingiz: <b>${existingCode.code}</b>\n\nBu kodni saytga kirish uchun yozing. Kod bir martalik!`, {
+        parse_mode: 'HTML',
+        reply_markup: { inline_keyboard: [[{ text: "📲 Jangga kirish", url: `${MINI_APP_URL}/battle` }]] }
+     });
+     return;
+  }
+
+  // Subscribe check
+  const isSubscribed = await checkSubscription(chatId, tgUserId);
+  if (!isSubscribed) {
+     const text = `Avval @yozgo_uz kanaliga a'zo bo'ling! \nKeyin kodni tekshirish tugmasini bosing yoki xona kodini qaytadan yuboring.`;
+     userBot?.sendMessage(chatId, text, {
+       reply_markup: {
+         inline_keyboard: [
+            [{ text: "✅ Kanalga ulanish", url: "https://t.me/yozgo_uz" }],
+            [{ text: "🔄 Tekshirish", callback_data: `check_subs_${battle.id}` }]
+         ]
+       }
+     });
+     return;
+  }
+
+  await generateAndSendRoomCode(battle.id, tgUserId);
 }
 
 export async function generateAndSendRoomCode(battleId: string, telegramId: number) {

@@ -165,9 +165,32 @@ export default function BattlePage() {
     }
   };
 
-  const joinBattle = () => {
+  const joinBattle = async () => {
     if (inputCode.trim()) {
-      setShowTerms(true);
+      setIsJoining(true);
+      try {
+        const checkRes = await fetch("/api/battles/validate-code", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ battleCode: inputCode.trim().toUpperCase() })
+        });
+        const checkData = await checkRes.json();
+        
+        if (!checkRes.ok) {
+          throw new Error(checkData.message || "Kod tekshirishda xatolik");
+        }
+        
+        // Code is correct for this room/user, open modal!
+        setShowTerms(true);
+      } catch (err: any) {
+        toast({
+          title: "Xona xatosi",
+          description: err.message,
+          variant: "destructive"
+        });
+      } finally {
+        setIsJoining(false);
+      }
     }
   };
 

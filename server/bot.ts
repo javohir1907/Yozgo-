@@ -621,17 +621,17 @@ export const sendRoomCreatedMessage = (code: string) => {
 
   const text = 
     `🏆 Musobaqa boshlanmoqda!\n\n` +
-    `Ishtirok etish uchun xona kodi: ${code}\n\n` +
-    `Botga yozib kodingizni oling: @yozgo_robot\n`; 
-    // Updated to match the requested format
+    `Ishtirok etish uchun xona kodi: <b>${code}</b>\n\n` +
+    `Botga yozib kodingizni oling: @yozgo_bot\n\n` +
+    `Saytga kirish: https://yozgo.uz/battle`;
 
   const opts = {
     parse_mode: 'HTML' as const,
     reply_markup: {
       inline_keyboard: [
         [
-          { text: "📢 Xabarni nusxalash", copy_text: { text } } as any,
-          { text: "Kanalga yuborish", callback_data: `br_battle_${code}` }
+          { text: "📢 @yozgo_uz kanalga yuborish", callback_data: `br_battle_${code}` },
+          { text: "📋 Nusxalash", copy_text: { text } } as any
         ]
       ]
     }
