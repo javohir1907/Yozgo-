@@ -82,6 +82,57 @@ async function createTables() {
       end_date timestamp NOT NULL,
       is_active boolean DEFAULT true
     );
+
+    CREATE TABLE IF NOT EXISTS test_results (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id varchar REFERENCES users(id),
+      wpm integer NOT NULL,
+      accuracy integer NOT NULL,
+      language text NOT NULL,
+      mode text NOT NULL,
+      created_at timestamp NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS leaderboard_entries (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id varchar REFERENCES users(id) NOT NULL,
+      wpm integer NOT NULL,
+      accuracy integer NOT NULL,
+      language text NOT NULL,
+      period text NOT NULL,
+      updated_at timestamp NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS battles (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      code text NOT NULL UNIQUE,
+      status text NOT NULL,
+      language text NOT NULL,
+      mode text NOT NULL,
+      created_at timestamp NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS battle_participants (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      battle_id uuid REFERENCES battles(id) NOT NULL,
+      user_id varchar REFERENCES users(id) NOT NULL,
+      wpm integer,
+      accuracy integer,
+      is_winner boolean DEFAULT false,
+      ip_address varchar,
+      agreed_at timestamp,
+      joined_at timestamp NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS room_access_codes (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      room_id uuid REFERENCES battles(id) NOT NULL,
+      user_id varchar REFERENCES users(id),
+      code text NOT NULL UNIQUE,
+      is_used boolean DEFAULT false,
+      used_at timestamp,
+      created_at timestamp NOT NULL DEFAULT now()
+    );
     `);
 
     console.log("Tables verify/create completed!");

@@ -178,6 +178,29 @@ export class BattleManager {
     
     await storage.updateBattleStatus(room.id, 'playing');
 
+    // Admin botga Ishtirokchilar va IP larni yuborish
+    try {
+      const participants = await storage.getBattleParticipants(room.id);
+      const { db } = await import("./db");
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+
+      let textMsg = `🚀 Musobaqa boshlandi!\n\nXona kodi: ${code}\n\n📊 Qatnashuvchilar ro'yxati va IP manzillari:\n`;
+      let tCount = 0;
+      for (const pt of participants) {
+        const [u] = await db.select().from(users).where(eq(users.id, pt.userId));
+        const label = u ? (u.firstName || u.email?.split('@')[0]) : "Noma'lum";
+        textMsg += `👤 ${label} - IP: ${pt.ipAddress || "Noma'lum"}\n`;
+        tCount++;
+      }
+      textMsg += `\n👥 Jami qatnashchilar: ${tCount} ta.`;
+
+      const { sendBotMessage } = require("./bot");
+      sendBotMessage(textMsg);
+    } catch (e) {
+      console.error("IP list reporting failed:", e);
+    }
+
     this.io.to(code).emit('battle-start', {
       settings: room.settings,
       startTime: room.startTime,
@@ -276,8 +299,27 @@ export class BattleManager {
         // We also show winner to admin bot for 4.1 communication (done later)
         const { sendWinnerToAdmin } = require("./bot");
         sendWinnerToAdmin(winnerId, winnerUser?.firstName || winnerUser?.email || "Noma'lum");
+        
+        // Final IP and Results Report
+        let textMsg = `🏁 Musobaqa yakunlandi!\n\nXona kodi: ${code}\n\n🏆 Final Natijalar va IP manzillar:\n`;
+        let tCount = 0;
+        for (const pt of participants) {
+          const [u] = await db.select().from(users).where(eq(users.id, pt.userId));
+          const label = u ? (u.firstName || u.email?.split('@')[0]) : "Noma'lum";
+          const finalWpm = pt.wpm ? `${pt.wpm} wpm (${pt.accuracy || 0}%)` : "0 wpm";
+          const ipData = pt.ipAddress || "Noma'lum";
+          let winMark = (pt.userId === winnerId) ? "👑 " : "👤 ";
+          
+          textMsg += `${winMark}${label} - IP: ${ipData} | Natija: ${finalWpm}\n`;
+          tCount++;
+        }
+        textMsg += `\n👥 Jami ishtirok etdi: ${tCount} ta.`;
+        
+        const { sendBotMessage } = require("./bot");
+        sendBotMessage(textMsg);
+
       } catch (e) {
-        console.error("Failed to check prize winner:", e);
+        console.error("Failed to check prize winner or send final IPs:", e);
       }
     }
 
