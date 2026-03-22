@@ -143,9 +143,7 @@ export function TypingArea({
   useEffect(() => {
     if (!activeWordRef.current || !containerRef.current || !wordsRef.current) return;
 
-    const container = containerRef.current;
     const activeWord = activeWordRef.current;
-    const containerRect = container.getBoundingClientRect();
 
     if (lineHeightRef.current === 0) {
       const firstWord = wordsRef.current.querySelector("span");
@@ -154,14 +152,15 @@ export function TypingArea({
       }
     }
 
-    const wordRect = activeWord.getBoundingClientRect();
-    const wordTop = wordRect.top - containerRect.top;
-
-    if (wordTop > lineHeightRef.current * 1.5 && lineHeightRef.current > 0) {
+    if (lineHeightRef.current > 0) {
+      const wordTop = activeWord.offsetTop;
       const currentLine = Math.floor(wordTop / lineHeightRef.current);
-      if (currentLine > lastLineRef.current) {
-        lastLineRef.current = currentLine;
-        setOffsetY(prev => prev - lineHeightRef.current);
+      
+      // MonkeyType style: 0th line and 1st line are visible. When reaching 2nd line, shift up by 1 line height.
+      if (currentLine >= 2) {
+        setOffsetY(-(currentLine - 1) * lineHeightRef.current);
+      } else {
+        setOffsetY(0);
       }
     }
   }, [currentIndex]);

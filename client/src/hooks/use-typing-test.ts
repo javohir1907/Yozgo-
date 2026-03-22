@@ -34,10 +34,27 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const generateWords = useCallback(() => {
-    const list = wordLists[language];
-    const shuffled = [...list].sort(() => Math.random() - 0.5);
-    const repeated = Array(5).fill(shuffled).flat();
-    setWords(repeated);
+    const pool = wordLists[language];
+    const generated: string[] = [];
+    
+    // Yengil va takrorlanmas tizim: har 500 ta so'z kerak bo'lsa
+    // hamma lug'atni aralashtirib qo'shamiz, lug'at tugasa yana aralashtirib qo'shamiz.
+    // Shunda bitta ekranda ayni bir so'z yaqin o'rinlarda umuman qaytarilmaydi!
+    while (generated.length < 500) {
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      
+      // Ikkita ketma-ket bir xil so'z tushib qolmasligi uchun kichik tekshiruv (ikki blok orasida)
+      if (generated.length > 0 && shuffled[0] === generated[generated.length - 1]) {
+        const temp = shuffled[0];
+        shuffled[0] = shuffled[1];
+        shuffled[1] = temp;
+      }
+      
+      generated.push(...shuffled);
+    }
+    
+    // Faqat oxirgi 500 tasini olamiz
+    setWords(generated.slice(0, 500));
     setHistory([]);
   }, [language]);
 
