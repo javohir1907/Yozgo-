@@ -146,17 +146,32 @@ export function TypingArea({
     const activeWord = activeWordRef.current;
 
     if (lineHeightRef.current === 0) {
-      const firstWord = wordsRef.current.querySelector("span");
-      if (firstWord) {
-        lineHeightRef.current = firstWord.getBoundingClientRect().height + 12; // gap-y-3
+      const firstWord = wordsRef.current.querySelector(".word-box") as HTMLElement;
+      const allWords = wordsRef.current.querySelectorAll(".word-box");
+      
+      if (firstWord && allWords.length > 0) {
+        const top0 = firstWord.offsetTop;
+        
+        // Find the first word that wrapped to the second line
+        for (let i = 1; i < allWords.length; i++) {
+          const el = allWords[i] as HTMLElement;
+          if (el.offsetTop > top0 + 10) {
+            lineHeightRef.current = el.offsetTop - top0;
+            break;
+          }
+        }
+
+        // Fallback agar baribir topilmasa (misol bir qatordan iborat holatda)
+        if (lineHeightRef.current === 0) {
+          lineHeightRef.current = firstWord.getBoundingClientRect().height + 12; // gap-y-3
+        }
       }
     }
 
     if (lineHeightRef.current > 0) {
       const wordTop = activeWord.offsetTop;
-      const currentLine = Math.floor(wordTop / lineHeightRef.current);
+      const currentLine = Math.round(wordTop / lineHeightRef.current);
       
-      // MonkeyType style: 0th line and 1st line are visible. When reaching 2nd line, shift up by 1 line height.
       if (currentLine >= 2) {
         setOffsetY(-(currentLine - 1) * lineHeightRef.current);
       } else {
