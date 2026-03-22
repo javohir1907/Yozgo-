@@ -67,7 +67,7 @@ export function startBot() {
       "/foydalanuvchilar - Oxirgi 10 ta foydalanuvchi\n\n" +
       "/reklama - Yangi reklama qo'shish\n" +
       "/reklama_list - Barcha reklamalar ro'yxati\n\n" +
-      "/musobaqa_yarat - Yangi musobaqa yaratish\n" +
+      "/musobaqa_och - Yangi musobaqa ochish\n" +
       "/musobaqa_list - Barcha musobaqalar ro'yxati\n\n" +
       "/xabar - Barcha foydalanuvchilarga xabar yuborish\n" +
       "/bekor - Har qanday jarayonni to'xtatish";
@@ -217,10 +217,10 @@ export function startBot() {
   });
 
   // ========== MUSOBAQA CREATION ==========
-  bot.onText(/^\/musobaqa_yarat$/, (msg) => {
+  bot.onText(/^\/musobaqa_och$/, (msg) => {
     if (!isAdmin(msg)) return;
     userStates[msg.chat.id] = { type: 'musobaqa', step: 'title' };
-    bot?.sendMessage(msg.chat.id, "Yangi musobaqa yaratish.\n\n1. Musobaqa nomini kiriting:", { parse_mode: "HTML" });
+    bot?.sendMessage(msg.chat.id, "Yangi musobaqa ochish.\n\n1. Musobaqa nomini kiriting:", { parse_mode: "HTML" });
   });
 
   bot.on('message', async (msg) => {
@@ -403,7 +403,7 @@ export function startBot() {
           }
 
           const url = `https://yozgo.uz/battle`;
-          const bText = `🏆 JANG (BATTLE) XONASI YARATILDI!\n\nAsosiy xona kodi:\n<code>${code}</code>\n<i>(Kodni ustiga bosib bemalol nusxalashingiz mumkin)</i>\n\nXonaga kirish individual kodingizni beruvchi bot: @yozgo_bot\n\nJangga kirish sayti: ${url}\n\nDarhol qatnashing va raqobatlashamiz!`;
+          const bText = `🏆 JANG (BATTLE) XONASI OCHILDI!\n\nAsosiy xona kodi:\n<code>${code}</code>\n<i>(Kodni ustiga bosib bemalol nusxalashingiz mumkin)</i>\n\nXonaga kirish individual kodingizni beruvchi bot: @yozgo_bot\n\nJangga kirish sayti: ${url}\n\nDarhol qatnashing va raqobatlashamiz!`;
           
           await userBotInstance.sendMessage('@yozgo_uz', bText, { parse_mode: 'HTML' });
           bot?.sendMessage(chatId, "Barcha ma'lumotlar @yozgo_uz kanaliga muvaffaqiyatli yuborildi! ✅");

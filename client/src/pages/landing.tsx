@@ -182,7 +182,7 @@ export default function LandingPage() {
             <h2 className="text-3xl font-bold mb-6 text-foreground">Biz Haqimizda</h2>
             <div className="space-y-4 text-muted-foreground md:text-lg leading-relaxed text-left">
               <p>
-                <strong className="text-orange-500 font-semibold text-xl">YOZGO</strong> — bu yozish tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus yaratilgan platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura ko'nikmalarini qiziqarli va raqobatbardosh usulda rivojlantirishga yordam berishdir.
+                <strong className="text-orange-500 font-semibold text-xl">YOZGO</strong> — bu yozish tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus ishlab chiqilgan platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura ko'nikmalarini qiziqarli va raqobatbardosh usulda rivojlantirishga yordam berishdir.
               </p>
               <p>
                 Loyiha qisqa vaqt ichida o'zbek tilidagi eng qulay yozish trenajyoriga aylandi. Biz foydalanuvchilar orasida musobaqalar o'tkazish, reyting tizimi orqali sog'lom raqobatni shakllantirish va yangi marralarni zabt etish imkoniyatini taqdim etamiz.

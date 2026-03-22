@@ -174,10 +174,16 @@ export default function BattlePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ battleCode: inputCode.trim().toUpperCase() })
         });
-        const checkData = await checkRes.json();
+        const checkTxt = await checkRes.text();
+        let checkData;
+        try {
+          checkData = JSON.parse(checkTxt);
+        } catch(e) {
+          throw new Error("Tarmoq yoki server bilan aloqa ulanmadi (Xatolik 500). Iltimos birozdan so'ng qayta urinib ko'ring.");
+        }
         
         if (!checkRes.ok) {
-          throw new Error(checkData.message || "Kod tekshirishda xatolik");
+          throw new Error(checkData?.message || "Kod tekshirishda xatolik");
         }
         
         // Code is correct for this room/user, open modal!
@@ -206,10 +212,16 @@ export default function BattlePage() {
           agreed: isAgreed
         })
       });
-      const data = await res.json();
+      const txt = await res.text();
+      let data;
+      try {
+        data = JSON.parse(txt);
+      } catch(e) {
+        throw new Error("Tarmoq ulanishida uzilishuzilish (Xatolik 500).");
+      }
       
       if (!res.ok) {
-        throw new Error(data.message || "Xatolik yuz berdi");
+        throw new Error(data?.message || "Xatolik yuz berdi");
       }
       
       setShowTerms(false);
@@ -353,11 +365,11 @@ export default function BattlePage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Play className="w-6 h-6 text-primary" />
-                Yangi Jang Yaratish
+                Yangi Jang Ochish
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-muted-foreground mb-2">Oldin jang sozlamalarini tasdiqlang, so'ngra xonangizni yarating va do'stlaringizni taklif qiling.</p>
+              <p className="text-muted-foreground mb-2">Oldin jang sozlamalarini tasdiqlang, so'ngra xonangizni oching va do'stlaringizni taklif qiling.</p>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -402,7 +414,7 @@ export default function BattlePage() {
               </div>
 
               <Button onClick={createBattle} disabled={isCreating} className="w-full h-12 text-lg font-bold mt-4 shadow-lg">
-                {isCreating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Xona yaratish"}
+                {isCreating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Xona ochish"}
               </Button>
             </CardContent>
           </Card>
