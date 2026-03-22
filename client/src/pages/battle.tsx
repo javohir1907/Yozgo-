@@ -150,8 +150,8 @@ export default function BattlePage() {
       await apiRequest("POST", "/api/battles", {
         code,
         status: "waiting",
-        language: "uz",
-        mode: "50",
+        language: language, // State orqali til olinadi
+        mode: testDuration.toString(), // State orqali muddat
       });
       setBattleCode(code);
     } catch (err) {
@@ -356,9 +356,52 @@ export default function BattlePage() {
                 Yangi Jang Yaratish
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-6">O'z xonangizni yarating va do'stlaringizni taklif qiling.</p>
-              <Button onClick={createBattle} disabled={isCreating} className="w-full h-12 text-lg font-bold">
+            <CardContent className="space-y-6">
+              <p className="text-muted-foreground mb-2">Oldin jang sozlamalarini tasdiqlang, so'ngra xonangizni yarating va do'stlaringizni taklif qiling.</p>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Sizning rolingiz:</Label>
+                  <select 
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={adminParticipates ? "true" : "false"}
+                    onChange={(e) => setAdminParticipates(e.target.value === "true")}
+                  >
+                    <option value="true" className="bg-background text-foreground">👑 Qatnashaman</option>
+                    <option value="false" className="bg-background text-foreground">👁️ Kuzatuvchiman</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Til:</Label>
+                  <select 
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as any)}
+                  >
+                    <option value="uz" className="bg-background text-foreground">🇺🇿 O'zbekcha</option>
+                    <option value="en" className="bg-background text-foreground">🇺🇸 English</option>
+                    <option value="ru" className="bg-background text-foreground">🇷🇺 Русский</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <Label>Test davomiyligi: {testDuration} soniya</Label>
+                  </div>
+                  <Slider value={[testDuration]} onValueChange={([v]) => setTestDuration(v)} min={15} max={60} step={5} />
+                </div>
+                
+                <div>
+                  <div className="flex justify-between mb-2">
+                    <Label>Umumiy vaqt: {totalTime} daqiqa</Label>
+                  </div>
+                  <Slider value={[totalTime]} onValueChange={([v]) => setTotalTime(v)} min={1} max={10} step={1} />
+                </div>
+              </div>
+
+              <Button onClick={createBattle} disabled={isCreating} className="w-full h-12 text-lg font-bold mt-4 shadow-lg">
                 {isCreating ? <Loader2 className="w-5 h-5 animate-spin" /> : "Xona yaratish"}
               </Button>
             </CardContent>
