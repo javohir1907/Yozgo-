@@ -11,6 +11,14 @@ import { pool } from "./db";
 const app = express();
 const httpServer = createServer(app);
 
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+});
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
