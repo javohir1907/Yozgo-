@@ -179,30 +179,27 @@ export async function registerRoutes(
       let battle = await storage.getBattleByCode(battleCode);
       let isAccessCode = false;
 
-      if (!battle) {
-        const [foundCode] = await db.select().from(roomAccessCodes).where(eq(roomAccessCodes.code, battleCode));
-        if (foundCode) {
-          if (foundCode.userId !== userId) {
-            return res.status(403).json({ message: "Bu kod boshqa foydalanuvchiga tegishli." });
-          }
-          if (foundCode.isUsed) {
-            return res.status(400).json({ message: "Bu kod allaqachon foydalanilgan." });
-          }
-          isAccessCode = true;
-          const [foundBattle] = await db.select().from(battles).where(eq(battles.id, foundCode.roomId));
-          battle = foundBattle;
+      // AccessCode tekshirish
+      const [foundCode] = await db.select().from(roomAccessCodes).where(eq(roomAccessCodes.code, battleCode));
+      if (foundCode) {
+        if (foundCode.isUsed) {
+          return res.status(400).json({ message: "Bu kod allaqachon foydalanilgan." });
         }
+        isAccessCode = true;
+        const [foundBattle] = await db.select().from(battles).where(eq(battles.id, foundCode.roomId));
+        battle = foundBattle;
       }
 
       if (!battle) {
         return res.status(404).json({ message: "Xona yoki kirish kodi topilmadi." });
       }
 
+      // Agar foydalanuvchi Asosiy xona kodini kiritmoqchi bo'lsa va xonada bot orqali kirish yoniq bo'lsa (code bor bo'lsa):
       if (!isAccessCode) {
-        const existingCodes = await db.select({ id: roomAccessCodes.id }).from(roomAccessCodes).where(eq(roomAccessCodes.roomId, battle.id)).limit(1);
-        if (existingCodes.length > 0) {
-          return res.status(403).json({ message: "Bu musobaqa xonasi. Xonaga kirish uchun Telegram botdan olingan o'zingizning individual kodingizni qatordan foydalaning." });
-        }
+        // Individual xonaga kirish yopiladi! (Admindan tashqari hamma Majburiy Telegram bot ishlatishi shart)
+        // Adminlarga ulab bo'lmaydi chunki admin createBattle() da avtomatik websockets dan kiradi! 
+        // Demak user quticha orqali kiryapsa OHSVEW deb yozishi taqiqlanadi!
+        return res.status(403).json({ message: "Siz musobaqa xonasining asosiy kodini kiritdingiz. \nXonaga qo'shilish uchun @yozgo_bot orqali aynan o'sha kodni yuboring va individual uzun kodingizni oling!" });
       }
 
       res.status(200).json({ success: true });
@@ -228,27 +225,22 @@ export async function registerRoutes(
       let isAccessCode = false;
       let codeEntry = null;
 
-      // Agar xona kodi to'g'ridan-to'g'ri topilmasa, bu accessCode bo'lishi mumkin
-      if (!battle) {
-        const [foundCode] = await db.select().from(roomAccessCodes).where(eq(roomAccessCodes.code, battleCode));
-        if (foundCode) {
-          isAccessCode = true;
-          codeEntry = foundCode;
-          const [foundBattle] = await db.select().from(battles).where(eq(battles.id, foundCode.roomId));
-          battle = foundBattle;
-        }
+      // AccessCode bo'lsa uni izlaymiz:
+      const [foundCode] = await db.select().from(roomAccessCodes).where(eq(roomAccessCodes.code, battleCode));
+      if (foundCode) {
+        isAccessCode = true;
+        codeEntry = foundCode;
+        const [foundBattle] = await db.select().from(battles).where(eq(battles.id, foundCode.roomId));
+        battle = foundBattle;
       }
 
       if (!battle) {
         return res.status(404).json({ message: "Xona yoki kirish kodi topilmadi." });
       }
 
+      // Asosiy kod bilan kirish umuman taqiqlanadi
       if (!isAccessCode) {
-        // Enforce individual code for competition rooms
-        const existingCodes = await db.select({ id: roomAccessCodes.id }).from(roomAccessCodes).where(eq(roomAccessCodes.roomId, battle.id)).limit(1);
-        if (existingCodes.length > 0) {
-          return res.status(403).json({ message: "Bu musobaqa xonasi. Xonaga kirish uchun Telegram botdan olingan o'zingizning individual kodingizni qatordan foydalaning." });
-        }
+        return res.status(403).json({ message: "Siz musobaqa xonasining asosiy kodini kiritdingiz. \nXonaga qo'shilish uchun @yozgo_bot orqali aynan o'sha kodni yuboring va individual uzun kodingizni oling!" });
       }
 
       const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
@@ -278,7 +270,7 @@ export async function registerRoutes(
         const otherUserSameIp = existingIpUsers.find(p => p.userId !== userId);
         if (otherUserSameIp) {
           try {
-            const { sendBotMessage } = require("./bot");
+            const { sendBotMessage } = await import("./bot");
             const [user1] = await db.select().from(users).where(eq(users.id, userId));
             const [user2] = await db.select().from(users).where(eq(users.id, otherUserSameIp.userId));
             sendBotMessage(`🚫 Bir xil IP dan 2 akkaunt urinishi:\nIP: ${ipStr}\nUser 1: ${user1?.firstName || user1?.email}\nUser 2: ${user2?.firstName || user2?.email}`);
@@ -287,12 +279,8 @@ export async function registerRoutes(
         }
       }
 
-      // 2. Individual Code Check (If accessCode is provided or required)
+      // 2. Individual Code Check
       if (isAccessCode && codeEntry) {
-        if (codeEntry.userId !== userId) {
-          return res.status(403).json({ message: "Bu kod boshqa foydalanuvchiga tegishli." });
-        }
-
         if (codeEntry.isUsed) {
           return res.status(400).json({ message: "Bu kod allaqachon foydalanilgan." });
         }

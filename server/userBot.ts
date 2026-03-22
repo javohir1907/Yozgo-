@@ -132,7 +132,7 @@ export function startUserBot() {
         }
 
         userBot?.answerCallbackQuery(query.id, { text: "A'zoligingiz tasdiqlandi! ✅" });
-        await generateAndSendRoomCode(battleId, uId);
+        await generateAndSendRoomCode(battleId, uId, chatId);
       } catch (err: any) {
         userBot?.sendMessage(chatId, "Xatolik: " + err.message);
       }
@@ -169,27 +169,6 @@ async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
     return;
   }
 
-  const uRes = await db.execute(sql`SELECT id FROM users WHERE telegram_id = ${tgUserId.toString()}`);
-  let userId = uRes.rows[0]?.id as string;
-
-  if (!userId) {
-    userBot?.sendMessage(chatId, "Siz tizimdan ro'yxatdan o'tmagansiz (Saytga Telegram bilan kiring)!");
-    return;
-  }
-
-  // Check if they already have an access code
-  const [existingCode] = await db.select()
-    .from(roomAccessCodes)
-    .where(and(eq(roomAccessCodes.roomId, battle.id), eq(roomAccessCodes.userId, userId)));
-
-  if (existingCode?.code) {
-     userBot?.sendMessage(chatId, `🎉 Sizning kirish kodingiz: <b>${existingCode.code}</b>\n\nBu kodni saytga kirish uchun yozing. Kod bir martalik!`, {
-        parse_mode: 'HTML',
-        reply_markup: { inline_keyboard: [[{ text: "📲 Jangga kirish", url: `${MINI_APP_URL}/battle` }]] }
-     });
-     return;
-  }
-
   // Subscribe check
   const isSubscribed = await checkSubscription(chatId, tgUserId);
   if (!isSubscribed) {
@@ -205,39 +184,33 @@ async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
      return;
   }
 
-  await generateAndSendRoomCode(battle.id, tgUserId);
+  await generateAndSendRoomCode(battle.id, tgUserId, chatId);
 }
 
-export async function generateAndSendRoomCode(battleId: string, telegramId: number) {
-  // Find user by telegram ID
-  const uRes = await db.execute(sql`SELECT id FROM users WHERE telegram_id = ${telegramId.toString()}`);
-  let userId = uRes.rows[0]?.id as string;
+export async function generateAndSendRoomCode(battleId: string, telegramId: number, chatId: number) {
+  // DB relations require a valid userId, so we just attach it to any existing user
+  // Since we removed user validation for codes on the backend, it acts as a global bearer token!
+  const [firstUser] = await db.select().from(users).limit(1);
+  const dummyUserId = firstUser?.id;
   
-  if (!userId) {
-    userBot?.sendMessage(telegramId, "Siz tizimdan ro'yxatdan o'tmagansiz (Saytda Telegram bilan kirishni tanlang)!");
+  if (!dummyUserId) {
+    userBot?.sendMessage(chatId, "Tizimda xatolik yuz berdi.");
     return;
   }
 
-  const [existingCode] = await db.select()
-    .from(roomAccessCodes)
-    .where(and(eq(roomAccessCodes.roomId, battleId), eq(roomAccessCodes.userId, userId)));
+  const code = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 characters
+  await db.insert(roomAccessCodes).values({
+    roomId: battleId,
+    userId: dummyUserId,
+    code: code
+  });
 
-  let code = existingCode?.code;
-
-  if (!code) {
-    code = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 characters
-    await db.insert(roomAccessCodes).values({
-      roomId: battleId,
-      userId: userId,
-      code: code
-    });
-  }
-
-  const text = `🎉 Sizning kirish kodingiz: <b>${code}</b>\n\nBu kodni saytga kirish uchun ishlating. Kod bir martalik!`;
-  userBot?.sendMessage(telegramId, text, {
-    parse_mode: 'HTML',
+  const text = `🎉 Sizning kirish kodingiz:\n\n\`${code}\`\n\n👆 Yuqoridagi kod ustiga bir marta bossangiz avtomatik nusxalanadi (copy bo'ladi).\nKodni saytdagi maydonga kiritib jangga qo'shiling. Kod bir martalik!`;
+  
+  userBot?.sendMessage(chatId, text, {
+    parse_mode: 'Markdown',
     reply_markup: {
-      inline_keyboard: [[{ text: "📲 Jangga kirish", url: `${MINI_APP_URL}/battle` }]]
+      inline_keyboard: [[{ text: "📲 Jangga kirish", web_app: { url: `${MINI_APP_URL}/battle` } }]]
     }
   });
 }
