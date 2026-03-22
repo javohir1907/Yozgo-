@@ -202,8 +202,10 @@ app.use((req, res, next) => {
         status text NOT NULL,
         language text NOT NULL,
         mode text NOT NULL,
+        creator_id varchar REFERENCES users(id),
         created_at timestamp NOT NULL DEFAULT now()
       );
+      ALTER TABLE battles ADD COLUMN IF NOT EXISTS creator_id varchar REFERENCES users(id);
 
       CREATE TABLE IF NOT EXISTS battle_participants (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

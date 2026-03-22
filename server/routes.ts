@@ -133,10 +133,13 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/battles", async (req, res) => {
+  app.post("/api/battles", isAuthenticated, async (req, res) => {
     try {
+      const userId = (req.session as any).userId;
       const data = insertBattleSchema.parse(req.body);
-      const battle = await storage.createBattle(data);
+      
+      const battleData = { ...data, creatorId: userId };
+      const battle = await storage.createBattle(battleData);
       
       try {
         const { sendRoomCreatedMessage } = require("./bot");

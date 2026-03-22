@@ -114,7 +114,7 @@ export class BattleManager {
         code: battle.code,
         language: battle.language,
         mode: battle.mode,
-        adminId: user.id, // The first person to "join" the room in memory is typically the creator
+        adminId: battle.creatorId || user.id, // Enforces the creator as the room admin, falling back to first user
         players: new Map(),
         status: battle.status as any,
         settings: {

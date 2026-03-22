@@ -31,6 +31,7 @@ export const battles = pgTable("battles", {
   status: text("status").notNull(), // 'waiting', 'playing', 'finished'
   language: text("language").notNull(),
   mode: text("mode").notNull(),
+  creatorId: varchar("creator_id").references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
