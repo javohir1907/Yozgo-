@@ -142,23 +142,39 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     if (!word) return;
 
     if (value.endsWith(" ")) {
-      const typedWord = value.trim();
+      const currentTyped = value.slice(0, -1);
 
-      if (typedWord.length === 0) {
-        setUserInput("");
-        return;
+      // Tezkor yozishda: State birdaniga yangilanib probel bilan qo'shilib qolgan harflarni hisoblash
+      if (currentTyped.length > userInput.length) {
+        const addedLen = currentTyped.length - userInput.length;
+        allKeystrokesRef.current += addedLen;
+        for (let i = userInput.length; i < currentTyped.length; i++) {
+          const targetChar = word[i];
+          const typedChar = currentTyped[i];
+          if (targetChar !== undefined && typedChar === targetChar) {
+            correctCharsRef.current += 1;
+          }
+        }
+      } else if (currentTyped.length < userInput.length) {
+        for (let i = currentTyped.length; i < userInput.length; i++) {
+          const targetChar = word[i];
+          const deletedChar = userInput[i];
+          if (targetChar !== undefined && deletedChar === targetChar) {
+            correctCharsRef.current -= 1;
+          }
+        }
       }
 
       // Probel bosildi -> bitta tugma
       allKeystrokesRef.current += 1;
 
       // Agar so'z to'liq to'g'ri bo'lsa, probel ham to'g'ri belgi sifatida hisoblanadi
-      const isCorrect = typedWord === word;
+      const isCorrect = currentTyped === word;
       if (isCorrect) {
         correctCharsRef.current += 1;
       }
 
-      setHistory(prev => [...prev, typedWord]);
+      setHistory(prev => [...prev, currentTyped]);
       setCurrentIndex(prev => prev + 1);
       setUserInput("");
       updateLiveStats();

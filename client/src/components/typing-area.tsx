@@ -192,6 +192,7 @@ export function TypingArea({
       onComplete();
     }
     if (e.key === "Backspace" && userInput.length === 0 && onGoBack) {
+      e.preventDefault(); // OLDINI OLAMIZ: Brauzer o'zining "Delete" qoidalari orqali oldingi so'zni (qayta o'rnatilganida) o'chirib yubormasligi shart.
       onGoBack();
     }
   };
