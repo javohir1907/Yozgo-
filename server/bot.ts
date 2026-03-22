@@ -403,7 +403,7 @@ export function startBot() {
           }
 
           const url = `https://yozgo.uz/battle`;
-          const bText = `🏆 JANG (BATTLE) XONASI YARATILDI!\n\nXona kodi: <b>${code}</b>\n\nXonaga kirish individual kodingizni olish uchun botimizga kiring: @yozgo_bot\n\nJangga kirish sayti: ${url}\n\nDarhol qatnashing va raqobatlashamiz!`;
+          const bText = `🏆 JANG (BATTLE) XONASI YARATILDI!\n\nAsosiy xona kodi:\n<code>${code}</code>\n<i>(Kodni ustiga bosib bemalol nusxalashingiz mumkin)</i>\n\nXonaga kirish individual kodingizni beruvchi bot: @yozgo_bot\n\nJangga kirish sayti: ${url}\n\nDarhol qatnashing va raqobatlashamiz!`;
           
           await userBotInstance.sendMessage('@yozgo_uz', bText, { parse_mode: 'HTML' });
           bot?.sendMessage(chatId, "Barcha ma'lumotlar @yozgo_uz kanaliga muvaffaqiyatli yuborildi! ✅");
@@ -621,8 +621,8 @@ export const sendRoomCreatedMessage = (code: string) => {
 
   const text = 
     `🏆 Musobaqa boshlanmoqda!\n\n` +
-    `Ishtirok etish uchun xona kodi: <b>${code}</b>\n\n` +
-    `Botga yozib kodingizni oling: @yozgo_bot\n\n` +
+    `Asosiy xona kodi:\n<code>${code}</code>\n<i>(Ustiga bosib nusxalashingiz mumkin)</i>\n\n` +
+    `Botdan kodingizni oling: @yozgo_bot\n\n` +
     `Saytga kirish: https://yozgo.uz/battle`;
 
   const opts = {
