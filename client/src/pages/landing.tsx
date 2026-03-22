@@ -72,14 +72,17 @@ export default function LandingPage() {
                     transition: { type: "spring", stiffness: 200, damping: 15 } 
                   }
                 }}
-                className="relative w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 md:w-32 md:h-32 flex items-center justify-center rounded-xl md:rounded-2xl bg-gradient-to-b from-[#333] to-[#1a1a1a] shadow-[inset_0_2px_4px_rgba(255,255,255,0.2),0_8px_0_#000,0_12px_24px_rgba(0,0,0,0.9)] border-2 border-gray-600/50 hover:-translate-y-1 hover:shadow-[inset_0_2px_6px_rgba(255,255,255,0.3),0_10px_0_#000,0_18px_30px_rgba(0,0,0,1)] transition-all cursor-default select-none"
+                className="relative w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 md:w-32 md:h-32 flex items-center justify-center rounded-xl md:rounded-[1.25rem] transition-all cursor-default select-none bg-[#1c1c1e] border border-[#111] shadow-[0_6px_0_#09090a,0_12px_20px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1)] hover:-translate-y-1 hover:shadow-[0_8px_0_#09090a,0_16px_24px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.1)] group"
               >
-                <span className="text-5xl sm:text-6xl md:text-8xl font-black drop-shadow-[0_0_8px_rgba(255,255,255,0.2)] font-mono text-white">
-                  {letter}
-                </span>
-                {(i === 1 || i === 3) && (
-                  <div className="absolute bottom-[10%] md:bottom-[12%] w-1/4 h-1 md:h-1.5 bg-[#444] rounded-full shadow-[inset_0_1px_1px_rgba(0,0,0,0.8),0_1px_0_rgba(255,255,255,0.1)]" />
-                )}
+                {/* The top surface of the keycap */}
+                <div className="absolute top-[8%] w-[80%] h-[75%] rounded-lg md:rounded-xl flex flex-col items-center justify-center bg-[#242426] border border-[#1a1a1c] shadow-[inset_0_1px_1px_rgba(255,255,255,0.05),inset_0_-2px_4px_rgba(0,0,0,0.3),0_2px_4px_rgba(0,0,0,0.4)] group-active:translate-y-[2px] transition-transform">
+                  <span className="text-4xl sm:text-5xl md:text-7xl font-semibold font-sans text-[#e4e4e6] leading-none mb-1 md:mb-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
+                    {letter}
+                  </span>
+                  {(i === 1 || i === 3) && (
+                    <div className="absolute bottom-[12%] w-[20%] h-[2px] md:h-[3px] bg-[#111] rounded-full shadow-[inset_0_1px_1px_rgba(0,0,0,0.8),0_1px_0_rgba(255,255,255,0.2)]" />
+                  )}
+                </div>
               </motion.div>
             ))}
           </motion.div>
@@ -343,7 +346,6 @@ export default function LandingPage() {
       <footer className="py-12 border-t mt-auto">
         <div className="container px-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3 font-bold text-xl">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-600 rounded-md flex items-center justify-center text-white font-black text-xl md:text-2xl shadow-sm border border-orange-400">Y</div>
             <span className="text-white text-2xl tracking-wider">YOZGO</span>
           </div>
           <p className="text-sm text-muted-foreground">
