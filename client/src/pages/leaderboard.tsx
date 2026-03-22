@@ -2,63 +2,58 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LanguageSelector, type Language } from "@/components/language-selector";
 import { Loader2, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/hooks/use-auth";
 
-interface LeaderboardEntry {
+export interface LeaderboardEntry {
   rank: number;
+  userId: string;
   username: string;
   avatarUrl?: string;
-  wpm: number;
+  avgWpm: number;
+  bestWpm: number;
   accuracy: number;
-  language: string;
-  date: string;
+  testCount: number;
+  totalSeconds: number;
 }
 
 export default function LeaderboardPage() {
-  const [period, setPeriod] = useState<string>("alltime");
-  const [language, setLanguage] = useState<Language>("en");
+  const [language, setLanguage] = useState<string>("all");
   const { t } = useI18n();
+  const { user } = useAuth();
 
   const { data: entries, isLoading } = useQuery<LeaderboardEntry[]>({
-    queryKey: [`/api/leaderboard?period=${period}&language=${language}`],
+    queryKey: [`/api/leaderboard?language=${language}`],
   });
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
-            <h1 className="text-4xl font-bold tracking-tight" data-testid="text-leaderboard-title">{t.leaderboard.title}</h1>
+            <h1 className="text-4xl font-bold tracking-tight" data-testid="text-leaderboard-title">Reyting</h1>
           </div>
           <p className="text-muted-foreground">
-            {t.leaderboard.subtitle}
+            Eng tez yozuvchilar qatorida o'z o'rningizni toping. Reytingga to'liq kirish uchun jami 2 soat (120 daqiqa) yozish tajribasiga ega bo'lishingiz kerak.
           </p>
         </header>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-muted/30 p-4 rounded-lg border">
           <Tabs 
-            value={period} 
-            onValueChange={setPeriod} 
+            value={language} 
+            onValueChange={setLanguage} 
             className="w-full md:w-auto"
           >
-            <TabsList data-testid="tabs-leaderboard-period">
-              <TabsTrigger value="daily" data-testid="button-period-daily">{t.leaderboard.daily}</TabsTrigger>
-              <TabsTrigger value="weekly" data-testid="button-period-weekly">{t.leaderboard.weekly}</TabsTrigger>
-              <TabsTrigger value="alltime" data-testid="button-period-alltime">{t.leaderboard.allTime}</TabsTrigger>
+            <TabsList data-testid="tabs-leaderboard-language">
+              <TabsTrigger value="all">Hammasi</TabsTrigger>
+              <TabsTrigger value="uz">UZ</TabsTrigger>
+              <TabsTrigger value="ru">RU</TabsTrigger>
+              <TabsTrigger value="en">EN</TabsTrigger>
             </TabsList>
           </Tabs>
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{t.leaderboard.language}</span>
-            <LanguageSelector 
-              currentLanguage={language} 
-              onLanguageChange={(lang) => setLanguage(lang)} 
-            />
-          </div>
         </div>
 
         <div className="min-h-[400px] relative">
@@ -82,7 +77,7 @@ export default function LeaderboardPage() {
                 transition={{ duration: 0.3 }}
               >
                 {entries && entries.length > 0 ? (
-                  <LeaderboardTable entries={entries} />
+                  <LeaderboardTable entries={entries} currentUserId={user?.id} />
                 ) : (
                   <div className="flex flex-col items-center justify-center py-20 text-center border rounded-lg bg-card">
                     <p className="text-muted-foreground">{t.leaderboard.noRecords}</p>

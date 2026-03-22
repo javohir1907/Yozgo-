@@ -53,21 +53,48 @@ export async function registerRoutes(
   app.get("/api/leaderboard", async (req, res) => {
     try {
       const querySchema = z.object({
-        period: z.enum(["daily", "weekly", "alltime"]).default("alltime"),
-        language: z.enum(["en", "ru", "uz"]).default("en"),
+        language: z.enum(["all", "en", "ru", "uz"]).default("all"),
       });
 
+      const { db } = await import("./db");
+      const { testResults, users } = await import("@shared/schema");
+      const { eq, sql, desc } = await import("drizzle-orm");
+
       const query = querySchema.parse(req.query);
-      const entries = await storage.getLeaderboard(query.period, query.language);
+
+      let conditions = undefined;
+      if (query.language !== "all") {
+        conditions = eq(testResults.language, query.language);
+      }
+
+      const rawRows = await db
+        .select({
+          userId: testResults.userId,
+          username: users.firstName,
+          email: users.email,
+          avatarUrl: users.profileImageUrl,
+          testCount: sql<number>`count(${testResults.id})::int`,
+          bestWpm: sql<number>`max(${testResults.wpm})::int`,
+          avgWpm: sql<number>`round(avg(${testResults.wpm}))::int`,
+          accuracy: sql<number>`round(avg(${testResults.accuracy}))::int`,
+          totalSeconds: sql<number>`sum(cast(${testResults.mode} as integer))::int`,
+        })
+        .from(testResults)
+        .innerJoin(users, eq(testResults.userId, users.id))
+        .where(conditions)
+        .groupBy(testResults.userId, users.id, users.firstName, users.email, users.profileImageUrl)
+        .orderBy(desc(sql`max(${testResults.wpm})`));
       
-      const transformedEntries = entries.map((entry, index) => ({
+      const transformedEntries = rawRows.map((u, index) => ({
         rank: index + 1,
-        username: entry.user.firstName || entry.user.email?.split('@')[0] || "Unknown",
-        avatarUrl: entry.user.profileImageUrl,
-        wpm: entry.wpm,
-        accuracy: entry.accuracy,
-        language: entry.language,
-        date: new Date(entry.updatedAt).toLocaleDateString(),
+        userId: u.userId,
+        username: u.username || u.email?.split('@')[0] || "Unknown",
+        avatarUrl: u.avatarUrl,
+        avgWpm: u.avgWpm,
+        bestWpm: u.bestWpm,
+        accuracy: u.accuracy,
+        testCount: u.testCount,
+        totalSeconds: u.totalSeconds,
       }));
 
       res.json(transformedEntries);
