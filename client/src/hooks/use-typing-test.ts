@@ -173,6 +173,27 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     }
   }, [isFinished, isActive, userInput, words, currentIndex, startTest, updateLiveStats]);
 
+  const handleGoBack = useCallback(() => {
+    // Agar xato qilib so'zni tugatib qo'ygan bo'lsa va backspace bosa (userInput bo'sh bo'lganda)
+    if (currentIndex > 0 && userInput.length === 0) {
+      const prevWordIdx = currentIndex - 1;
+      const prevWordTarget = words[prevWordIdx];
+      const prevInput = history[prevWordIdx];
+
+      // Faqat xato yozilgan so'z bo'lsagina orqaga qaytish mumkin
+      if (prevInput === prevWordTarget) return;
+
+      setHistory(prev => prev.slice(0, -1));
+      setCurrentIndex(prevWordIdx);
+      setUserInput(prevInput);
+      
+      // Probel bosilgan vaqtda faqat allKeystrokes oshgandi (chunki so'z xato edi). Probelni ayirib tashlaymiz.
+      allKeystrokesRef.current = Math.max(0, allKeystrokesRef.current - 1);
+      
+      updateLiveStats();
+    }
+  }, [currentIndex, userInput, history, words, updateLiveStats]);
+
   return {
     words,
     userInput,
@@ -188,6 +209,7 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     },
     history,
     handleInputChange,
+    handleGoBack,
     reset,
   };
 }

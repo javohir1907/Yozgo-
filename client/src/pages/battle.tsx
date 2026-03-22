@@ -282,6 +282,26 @@ export default function BattlePage() {
     }
   }, [isAttemptActive, currentIndex, battleStart, history, updateStats]);
 
+  const handleGoBack = useCallback(() => {
+    if (!isAttemptActive || !battleStart) return;
+
+    if (currentIndex > 0 && userInput.length === 0) {
+      const parentIdx = currentIndex - 1;
+      const prevWordTarget = battleStart.words[parentIdx];
+      const prevInput = history[parentIdx];
+
+      // Faqat xato qilingan bo'lsa orqaga qaytish mumkin
+      if (prevInput === prevWordTarget) return;
+
+      const newHistory = history.slice(0, -1);
+      setHistory(newHistory);
+      setCurrentIndex(parentIdx);
+      setUserInput(prevInput);
+      
+      updateStats(newHistory, prevInput, parentIdx);
+    }
+  }, [isAttemptActive, battleStart, currentIndex, userInput, history, updateStats]);
+
   const handleAdminStart = () => {
     startBattle({
       testDuration,
@@ -552,6 +572,7 @@ export default function BattlePage() {
                     words={battleStart.words}
                     userInput={userInput}
                     onInputChange={handleInputChange}
+                    onGoBack={handleGoBack}
                     onComplete={() => {}}
                     isActive={isAttemptActive}
                     currentIndex={currentIndex}

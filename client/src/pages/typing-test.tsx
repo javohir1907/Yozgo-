@@ -76,6 +76,7 @@ export default function TypingTestPage() {
     stats,
     history,
     handleInputChange,
+    handleGoBack,
     reset,
   } = useTypingTest({
     language,
@@ -120,6 +121,7 @@ export default function TypingTestPage() {
             words={words}
             userInput={userInput}
             onInputChange={handleInputChange}
+            onGoBack={handleGoBack}
             onComplete={reset}
             isActive={true}
             currentIndex={currentIndex}

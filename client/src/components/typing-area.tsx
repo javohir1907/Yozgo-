@@ -6,6 +6,7 @@ interface TypingAreaProps {
   words: string[];
   userInput: string;
   onInputChange: (value: string) => void;
+  onGoBack?: () => void;
   onComplete: () => void;
   isActive: boolean;
   currentIndex: number;
@@ -41,7 +42,7 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
       if (typedChar === char) {
         colorClass = "text-green-500 dark:text-green-400 font-medium";
       } else {
-        colorClass = "text-red-500 dark:text-red-400 font-bold";
+        colorClass = "text-red-500 dark:text-red-400 font-bold bg-red-500/10";
       }
     } else if (isPast) {
       colorClass = "text-red-500 underline decoration-red-500/50 decoration-2 font-bold opacity-80";
@@ -52,7 +53,7 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
         key={`${wordIdx}-${charIdx}`}
         className={cn("transition-colors duration-75 char-span inline-block", colorClass)}
       >
-        {charIdx < typedWord.length && typedWord[charIdx] !== char && !isPast ? typedWord[charIdx] : char}
+        {char}
       </span>
     );
   };
@@ -90,6 +91,7 @@ export function TypingArea({
   words,
   userInput,
   onInputChange,
+  onGoBack,
   onComplete,
   isActive,
   currentIndex,
@@ -174,6 +176,9 @@ export function TypingArea({
     if (e.key === "Tab") {
       e.preventDefault();
       onComplete();
+    }
+    if (e.key === "Backspace" && userInput.length === 0 && onGoBack) {
+      onGoBack();
     }
   };
 
