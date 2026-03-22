@@ -25,8 +25,10 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
 }, ref) => {
   if (!isActive && !isPast) {
     return (
-      <span ref={ref} className="relative whitespace-nowrap text-muted-foreground/50 transition-colors" data-testid={`word-${wordIdx}`}>
-        {word}
+      <span ref={ref} className="inline-block whitespace-nowrap text-muted-foreground/50 transition-colors word-box" data-testid={`word-${wordIdx}`}>
+        {word.split("").map((char, charIdx) => (
+          <span key={charIdx} className="char-span">{char}</span>
+        ))}
       </span>
     );
   }
@@ -35,7 +37,6 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
     let colorClass = "text-muted-foreground/50";
 
     if (charIdx < typedWord.length) {
-      // User has typed something for this position
       const typedChar = typedWord[charIdx];
       if (typedChar === char) {
         colorClass = "text-green-500 dark:text-green-400 font-medium";
@@ -43,14 +44,13 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
         colorClass = "text-red-500 dark:text-red-400 font-bold";
       }
     } else if (isPast) {
-      // User completely missed this char (skipped with space)
       colorClass = "text-red-500 underline decoration-red-500/50 decoration-2 font-bold opacity-80";
     }
 
     return (
       <span
         key={`${wordIdx}-${charIdx}`}
-        className={cn("transition-colors duration-75", colorClass)}
+        className={cn("transition-colors duration-75 char-span inline-block", colorClass)}
       >
         {charIdx < typedWord.length && typedWord[charIdx] !== char && !isPast ? typedWord[charIdx] : char}
       </span>
@@ -61,24 +61,11 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
     <span
       ref={ref}
       className={cn(
-        "relative whitespace-nowrap transition-all duration-200",
+        "inline-block whitespace-nowrap transition-all duration-200 word-box",
         isActive && "bg-primary/5 rounded-md px-1 -mx-1"
       )}
       data-testid={`word-${wordIdx}`}
     >
-      {/* Caret */}
-      {isActive && (
-        <span 
-          className="absolute top-[10%] w-[3px] h-[80%] bg-primary animate-[blink_1s_step-end_infinite] rounded-full z-10 transition-transform duration-100 ease-out"
-          style={{ 
-            transform: `translateX(calc(${typedWord.length}ch - 1px))`,
-            boxShadow: "0 0 8px var(--primary)",
-            left: "0.25rem" // Adjust to match the padding of container if necessary, but font is mono so it should align.
-          }}
-          data-testid="typing-caret"
-        />
-      )}
-
       {/* Word Characters */}
       {word.split("").map((char, charIdx) => renderChar(char, charIdx))}
 
@@ -87,7 +74,7 @@ const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
         typedWord.slice(word.length).split("").map((char, charIdx) => (
           <span
             key={`extra-${charIdx}`}
-            className="text-red-500 underline decoration-red-500/50 font-bold opacity-80"
+            className="text-red-500 underline decoration-red-500/50 font-bold opacity-80 char-span inline-block"
           >
             {char}
           </span>
@@ -114,6 +101,7 @@ export function TypingArea({
   const activeWordRef = useRef<HTMLSpanElement>(null);
 
   const [offsetY, setOffsetY] = useState(0);
+  const [caretPos, setCaretPos] = useState({ top: 0, left: 0 });
   const lineHeightRef = useRef(0);
   const lastLineRef = useRef(0);
 
@@ -122,6 +110,33 @@ export function TypingArea({
       inputRef.current?.focus();
     }
   }, [isActive]);
+
+  // Handle caret positioning
+  useEffect(() => {
+    if (!wordsRef.current || !activeWordRef.current) return;
+    
+    const wordEl = activeWordRef.current;
+    const chars = wordEl.querySelectorAll('.char-span');
+    const inputLen = userInput.length;
+    
+    let top = 0;
+    let left = 0;
+
+    if (inputLen < chars.length) {
+      const el = chars[inputLen] as HTMLElement;
+      top = el.offsetTop;
+      left = el.offsetLeft;
+    } else if (chars.length > 0) {
+      const el = chars[chars.length - 1] as HTMLElement;
+      top = el.offsetTop;
+      left = el.offsetLeft + el.offsetWidth;
+    } else {
+      top = wordEl.offsetTop;
+      left = wordEl.offsetLeft;
+    }
+
+    setCaretPos({ top, left });
+  }, [currentIndex, userInput]);
 
   useEffect(() => {
     if (!activeWordRef.current || !containerRef.current || !wordsRef.current) return;
@@ -189,12 +204,28 @@ export function TypingArea({
 
       <div
         ref={wordsRef}
-        className="flex flex-wrap gap-x-3 gap-y-3 text-[1.7rem] font-mono leading-relaxed select-none px-2"
+        className="flex flex-wrap gap-x-3 gap-y-3 text-[1.7rem] font-mono leading-relaxed select-none px-2 relative"
         style={{
           transform: `translateY(${offsetY}px)`,
           transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)", 
         }}
       >
+        {/* New precise caret */}
+        {isActive && (
+          <div
+            className="absolute rounded-full z-10 transition-all duration-75 ease-out shadow-[0_0_8px_var(--primary)] bg-primary"
+            style={{
+              top: `${caretPos.top}px`,
+              left: `${caretPos.left}px`,
+              width: "3px",
+              height: "1.4em", // Match character height roughly
+              animation: "blink 1s step-end infinite",
+              marginTop: "0.1em" // tiny tweak to align vertically with text
+            }}
+            data-testid="typing-caret"
+          />
+        )}
+
         {words.map((word, wordIdx) => {
           let typedWord = "";
           if (wordIdx < currentIndex) {

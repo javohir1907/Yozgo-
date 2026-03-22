@@ -20,9 +20,10 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
   const [isFinished, setIsFinished] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
 
-  // FIX: correctChars faqat to'liq to'g'ri so'zlarni emas, har bir to'g'ri belgi hisoblanadi
+  // FIX: correctChars  — faqat to'g'ri bosilgan harflar
+  // FIX: allKeystrokes — barcha bosilgan tugmalar (backspace hisoblanmaydi)
   const correctCharsRef = useRef(0);
-  const incorrectCharsRef = useRef(0);
+  const allKeystrokesRef = useRef(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const wpmRef = useRef(0);
@@ -50,7 +51,7 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     setIsActive(false);
     setIsFinished(false);
     correctCharsRef.current = 0;
-    incorrectCharsRef.current = 0;
+    allKeystrokesRef.current = 0;
     wpmRef.current = 0;
     accuracyRef.current = 100;
     startTimeRef.current = null;
@@ -66,10 +67,13 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     const elapsedMinutes = (Date.now() - startTimeRef.current) / 60000;
     if (elapsedMinutes <= 0) return;
 
-    // FIX: Standard WPM formula - har 5 belgi = 1 so'z
+    // FIX: WPM = (faqat to'g'ri harflar / 5) / o'tgan daqiqa
     const currentWpm = Math.round((correctCharsRef.current / 5) / elapsedMinutes);
-    const total = correctCharsRef.current + incorrectCharsRef.current;
-    const currentAccuracy = total === 0 ? 100 : Math.round((correctCharsRef.current / total) * 100);
+    
+    // FIX: Accuracy = (To'g'ri harflar / barcha bosilgan harflar) * 100
+    const currentAccuracy = allKeystrokesRef.current === 0 
+      ? 100 
+      : Math.round((correctCharsRef.current / allKeystrokesRef.current) * 100);
 
     wpmRef.current = Math.max(0, currentWpm);
     accuracyRef.current = currentAccuracy;
@@ -87,7 +91,7 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       wpm: wpmRef.current,
       accuracy: accuracyRef.current,
       correctChars: correctCharsRef.current,
-      incorrectChars: incorrectCharsRef.current,
+      incorrectChars: Math.max(0, allKeystrokesRef.current - correctCharsRef.current),
     });
   }, [onComplete, updateLiveStats]);
 
@@ -106,7 +110,6 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       });
     }, 1000);
 
-    // FIX: Stats har 100ms da yangilanadi (MonkeyType kabi real-time)
     statsIntervalRef.current = setInterval(() => {
       updateLiveStats();
     }, 100);
@@ -129,25 +132,13 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
         return;
       }
 
-      // FIX: So'z to'g'ri yoki noto'g'ri baholanadi
-      const isCorrect = typedWord === word;
+      // Probel bosildi -> bitta tugma
+      allKeystrokesRef.current += 1;
 
+      // Agar so'z to'liq to'g'ri bo'lsa, probel ham to'g'ri belgi sifatida hisoblanadi
+      const isCorrect = typedWord === word;
       if (isCorrect) {
-        correctCharsRef.current += word.length + 1; // +1 bo'sh joy uchun
-      } else {
-        // FIX: Noto'g'ri so'zdagi to'g'ri harflarni ham hisoblash
-        const minLen = Math.min(typedWord.length, word.length);
-        for (let i = 0; i < minLen; i++) {
-          if (typedWord[i] === word[i]) {
-            correctCharsRef.current += 1;
-          } else {
-            incorrectCharsRef.current += 1;
-          }
-        }
-        // Ortiqcha yoki kam harflar
-        if (typedWord.length > word.length) {
-          incorrectCharsRef.current += typedWord.length - word.length;
-        }
+        correctCharsRef.current += 1;
       }
 
       setHistory(prev => [...prev, typedWord]);
@@ -155,23 +146,29 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       setUserInput("");
       updateLiveStats();
     } else {
-      // FIX: Faqat yangi qo'shilgan belgini hisoblash (o'chirish hisoblanmaydi)
       if (value.length > userInput.length) {
-        const newCharIndex = value.length - 1;
-        const targetChar = word[newCharIndex];
-        const typedChar = value[newCharIndex];
+        // Harf qo'shildi
+        const addedLen = value.length - userInput.length;
+        allKeystrokesRef.current += addedLen;
 
-        if (targetChar !== undefined) {
-          if (typedChar === targetChar) {
+        for (let i = userInput.length; i < value.length; i++) {
+          const targetChar = word[i];
+          const typedChar = value[i];
+          if (targetChar !== undefined && typedChar === targetChar) {
             correctCharsRef.current += 1;
-          } else {
-            incorrectCharsRef.current += 1;
           }
-        } else {
-          // Ortiqcha belgi (so'zdan uzun)
-          incorrectCharsRef.current += 1;
+        }
+      } else if (value.length < userInput.length) {
+        // Backspace bosildi (allKeystrokes kamaymaydi!)
+        for (let i = value.length; i < userInput.length; i++) {
+          const targetChar = word[i];
+          const deletedChar = userInput[i];
+          if (targetChar !== undefined && deletedChar === targetChar) {
+            correctCharsRef.current -= 1; // Avval to'g'ri deb sanalgan harf o'chirildi, wpm dan ayriladi
+          }
         }
       }
+      
       setUserInput(value);
     }
   }, [isFinished, isActive, userInput, words, currentIndex, startTest, updateLiveStats]);
@@ -187,7 +184,7 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       wpm: displayStats.wpm,
       accuracy: displayStats.accuracy,
       correctChars: correctCharsRef.current,
-      incorrectChars: incorrectCharsRef.current,
+      incorrectChars: Math.max(0, allKeystrokesRef.current - correctCharsRef.current),
     },
     history,
     handleInputChange,
