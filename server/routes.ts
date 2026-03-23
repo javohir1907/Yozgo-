@@ -11,6 +11,9 @@ import {
 } from "@shared/schema";
 import { BattleManager } from "./battle-manager";
 import { setupAuth, isAuthenticated } from "./auth";
+import { db } from "./db";
+import { eq, sql, desc, and, ne } from "drizzle-orm";
+import { testResults, users, battles, roomAccessCodes, battleParticipants, competitions, advertisements, notifications, competitionParticipants } from "@shared/schema";
 
 export async function registerRoutes(httpServer: Server, app: Express): Promise<Server> {
   setupAuth(app);
@@ -59,10 +62,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         language: z.enum(["all", "en", "ru", "uz"]).default("all"),
       });
 
-      const { db } = await import("./db");
-      const { testResults, users } = await import("@shared/schema");
-      const { eq, sql, desc } = await import("drizzle-orm");
-
+                  
       const query = querySchema.parse(req.query);
 
       let conditions = undefined;
@@ -176,10 +176,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   const ipCache = new Map<string, any>();
   app.post("/api/battles/validate-code", isAuthenticated, async (req, res) => {
     try {
-      const { db } = await import("./db");
-      const { battles, roomAccessCodes } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      const { battleCode } = req.body;
+                        const { battleCode } = req.body;
       const userId = (req.session as any).userId;
 
       let battle = await storage.getBattleByCode(battleCode);
@@ -234,11 +231,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(400).json({ message: "Shartlarga rozi bo'lishingiz shart." });
       }
 
-      const { db } = await import("./db");
-      const { battleParticipants, roomAccessCodes, users, battles } =
-        await import("@shared/schema");
-      const { eq, and, ne } = await import("drizzle-orm");
-
+                  
       let battle = await storage.getBattleByCode(battleCode);
       let isAccessCode = false;
       let codeEntry = null;
@@ -415,10 +408,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/competitions/all", async (req, res) => {
     try {
-      const { db } = await import("./db");
-      const { competitions } = await import("@shared/schema");
-      const { desc } = await import("drizzle-orm");
-      const comps = await db.select().from(competitions).orderBy(desc(competitions.createdAt));
+                        const comps = await db.select().from(competitions).orderBy(desc(competitions.createdAt));
       res.json(comps);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
@@ -427,10 +417,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/advertisements", async (req, res) => {
     try {
-      const { db } = await import("./db");
-      const { advertisements } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      const ads = await db.select().from(advertisements).where(eq(advertisements.isActive, true));
+                        const ads = await db.select().from(advertisements).where(eq(advertisements.isActive, true));
       res.json(ads);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
@@ -441,10 +428,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = (req.session as any).userId as string;
       const compId = req.params.id as string;
-      const { db } = await import("./db");
-      const { competitionParticipants, competitions } = await import("@shared/schema");
-      const { eq, and, sql } = await import("drizzle-orm");
-
+                  
       const existing = await db
         .select()
         .from(competitionParticipants)
@@ -476,10 +460,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/notifications", async (req, res) => {
     try {
-      const { db } = await import("./db");
-      const { notifications } = await import("@shared/schema");
-      const { desc } = await import("drizzle-orm");
-      const notifs = await db
+                        const notifs = await db
         .select()
         .from(notifications)
         .orderBy(desc(notifications.createdAt))
@@ -510,9 +491,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/admin/bot-stats", isAdmin, async (req, res) => {
     try {
-      const { db } = await import("./db");
-      const { sql } = await import("drizzle-orm");
-
+            
       const totalUsers = await db.execute(sql`SELECT count(*) FROM users`);
       const todayUsers = await db.execute(
         sql`SELECT count(*) FROM users WHERE date(created_at) = current_date`
@@ -552,10 +531,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.get("/api/admin/bot-competitions", isAdmin, async (req, res) => {
     try {
-      const { db } = await import("./db");
-      const { competitions } = await import("@shared/schema");
-      const { desc } = await import("drizzle-orm");
-      const list = await db.select().from(competitions).orderBy(desc(competitions.createdAt));
+                        const list = await db.select().from(competitions).orderBy(desc(competitions.createdAt));
       res.json(list);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
@@ -564,10 +540,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   app.put("/api/admin/competitions/:id/tugat", isAdmin, async (req, res) => {
     try {
-      const { db } = await import("./db");
-      const { competitions } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-      const { winnerName } = req.body;
+                        const { winnerName } = req.body;
       const [updated] = await db
         .update(competitions)
         .set({ isActive: false, winnerName })
