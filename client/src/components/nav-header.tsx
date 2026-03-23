@@ -31,66 +31,71 @@ export function NavHeader() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-primary/30 bg-background/80 backdrop-blur-md shadow-[0_0_20px_rgba(0,240,255,0.1)]">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
-            <div className="flex gap-[0.35rem]">
-              {["Y", "O", "Z", "G", "O"].map((letter, i) => (
-                <div
-                  key={i}
-                  className="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-md bg-gradient-to-b from-[#333] to-[#1a1a1a] shadow-[inset_0_1px_2px_rgba(255,255,255,0.2),0_3px_0_#000,0_4px_8px_rgba(0,0,0,0.6)] border border-gray-600/50 cursor-pointer select-none transition-transform hover:-translate-y-[1px]"
-                >
-                  <span className="text-base sm:text-lg font-black drop-shadow-[0_0_2px_rgba(255,255,255,0.2)] font-mono text-white">
-                    {letter}
-                  </span>
-                  {(i === 1 || i === 3) && (
-                    <div className="absolute bottom-[10%] w-1/3 h-[2px] sm:h-[3px] bg-[#444] rounded-full shadow-[inset_0_1px_1px_rgba(0,0,0,0.8),0_1px_0_rgba(255,255,255,0.1)]" />
-                  )}
-                </div>
-              ))}
+          <Link href="/" className="flex items-center hover:opacity-90 transition-opacity group">
+            <div className="flex items-center gap-2 relative">
+              {/* HUD scanline effect behind logo */}
+              <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full scale-150 group-hover:bg-primary/40 transition-all duration-500"></div>
+              <span className="relative font-heading text-2xl font-black tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-400 to-primary drop-shadow-[0_0_8px_rgba(0,240,255,0.8)]">
+                YOZGO
+              </span>
+              <div className="h-4 w-1 bg-primary shadow-[0_0_8px_var(--primary)] animate-pulse"></div>
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Button
-                  variant="ghost"
-                  className={`gap-2 h-10 px-4 transition-colors ${
-                    location === item.href
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground"
-                  }`}
-                  data-testid={`link-nav-${item.href.replace("/", "")}`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  <span>{item.label}</span>
-                </Button>
-              </Link>
-            ))}
+          <nav className="hidden md:flex items-center gap-2">
+            {navItems.map((item) => {
+              const isActive = location === item.href;
+              return (
+                <Link key={item.href} href={item.href}>
+                  <Button
+                    variant="ghost"
+                    className={`relative gap-2 h-10 px-4 transition-all duration-300 uppercase tracking-widest font-sans text-xs ${
+                      isActive
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                    }`}
+                    data-testid={`link-nav-${item.href.replace("/", "")}`}
+                  >
+                    {isActive && (
+                      <div className="absolute top-0 left-0 w-full h-[2px] bg-primary shadow-[0_0_10px_var(--primary)]"></div>
+                    )}
+                    {isActive && (
+                      <div className="absolute bottom-0 left-0 w-full h-[1px] bg-primary/50"></div>
+                    )}
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </Button>
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 border-l border-primary/20 pl-4 relative">
+          {/* Decorative HUD dot */}
+          <div className="absolute -left-[2px] top-1/2 -translate-y-1/2 w-1 h-3 bg-primary/50"></div>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground"
+                className="text-muted-foreground hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/30 transition-all"
                 data-testid="button-ui-lang"
               >
-                <Globe className="w-5 h-5" />
+                <Globe className="w-4 h-4" />
                 <span className="sr-only">Language</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="border-primary/30 bg-background/95 backdrop-blur font-sans">
               {uiLangOptions.map((lang) => (
                 <DropdownMenuItem
                   key={lang.code}
                   onClick={() => setUILang(lang.code)}
-                  className={uiLang === lang.code ? "bg-accent text-accent-foreground" : ""}
+                  className={`uppercase tracking-wider text-xs ${uiLang === lang.code ? "bg-primary/20 text-primary font-bold" : "text-muted-foreground hover:text-primary"}`}
                   data-testid={`button-ui-lang-${lang.code}`}
                 >
                   {lang.label}
@@ -103,10 +108,10 @@ export function NavHeader() {
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground"
+              className="text-muted-foreground hover:text-primary hover:bg-primary/10 border border-transparent hover:border-primary/30 transition-all"
               data-testid="link-settings"
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-4 h-4 text-primary animate-[spin_10s_linear_infinite]" />
               <span className="sr-only">{t.nav.settings}</span>
             </Button>
           </Link>
@@ -116,38 +121,39 @@ export function NavHeader() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="relative h-10 w-10 rounded-full"
+                  className="relative h-10 w-10 rounded-none border border-primary/30 hover:border-primary/80 hover:shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all bg-background/50 overflow-hidden"
                   data-testid="button-user-menu"
                 >
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-full w-full rounded-none">
                     <AvatarImage
                       src={user?.profileImageUrl || undefined}
                       alt={user?.firstName || user?.email || "User"}
+                      className="opacity-80 mix-blend-screen"
                     />
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-transparent text-primary font-heading font-bold rounded-none">
                       {(user?.firstName || user?.email || "U").substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
+                  <div className="absolute bottom-0 right-0 w-2 h-2 bg-correct shadow-[0_0_5px_var(--correct)]"></div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
+              <DropdownMenuContent className="w-56 border-primary/30 bg-background/95 backdrop-blur font-sans" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal border-b border-primary/20 pb-2 mb-2">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
+                    <p className="text-sm font-bold text-primary tracking-wide uppercase">
                       {user?.firstName || user?.email}
                     </p>
-                    <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                    <p className="text-xs text-muted-foreground font-mono truncate">{user?.email}</p>
                   </div>
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
+                <DropdownMenuItem asChild className="hover:bg-primary/10 hover:text-primary uppercase tracking-wider text-xs">
                   <Link href="/profile" className="flex items-center w-full cursor-pointer">
                     <UserIcon className="mr-2 h-4 w-4" />
                     <span>{t.nav.profile}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className="text-destructive focus:text-destructive cursor-pointer"
+                  className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer uppercase tracking-wider text-xs mt-1"
                   onClick={() => logout()}
                   data-testid="button-logout"
                 >
@@ -158,7 +164,7 @@ export function NavHeader() {
             </DropdownMenu>
           ) : (
             <Link href="/auth">
-              <Button variant="default" size="sm" data-testid="button-login">
+              <Button size="sm" data-testid="button-login" className="font-heading uppercase tracking-widest bg-primary/20 text-primary border border-primary/50 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_20px_var(--primary)] transition-all">
                 {t.nav.signIn}
               </Button>
             </Link>
