@@ -33,8 +33,9 @@ export default function AuthPage() {
     setIsCheckingUsername(true);
     const delayDebounceFn = setTimeout(async () => {
       try {
+        const baseUrl = import.meta.env.VITE_API_URL || "";
         const res = await fetch(
-          `/api/auth/check-username?username=${encodeURIComponent(firstName.trim())}`
+          `${baseUrl}/api/auth/check-username?username=${encodeURIComponent(firstName.trim())}`
         );
         if (res.ok) {
           const data = await res.json();

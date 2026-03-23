@@ -186,7 +186,8 @@ export default function BattlePage() {
     if (inputCode.trim()) {
       setIsJoining(true);
       try {
-        const checkRes = await fetch("/api/battles/validate-code", {
+        const baseUrl = import.meta.env.VITE_API_URL || "";
+        const checkRes = await fetch(baseUrl + "/api/battles/validate-code", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ battleCode: inputCode.trim().toUpperCase() }),
@@ -223,7 +224,8 @@ export default function BattlePage() {
     if (!isAgreed) return;
     setIsJoining(true);
     try {
-      const res = await fetch("/api/battles/join", {
+      const baseUrl = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(baseUrl + "/api/battles/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
