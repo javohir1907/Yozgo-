@@ -1,12 +1,12 @@
-import { 
-  User, 
-  TestResult, 
-  InsertTestResult, 
-  LeaderboardEntry, 
-  InsertLeaderboardEntry, 
-  Battle, 
-  InsertBattle, 
-  BattleParticipant, 
+import {
+  User,
+  TestResult,
+  InsertTestResult,
+  LeaderboardEntry,
+  InsertLeaderboardEntry,
+  Battle,
+  InsertBattle,
+  BattleParticipant,
   InsertBattleParticipant,
   users,
   testResults,
@@ -21,7 +21,7 @@ import {
   Competition,
   InsertCompetition,
   Advertisement,
-  InsertAdvertisement
+  InsertAdvertisement,
 } from "@shared/schema";
 import { UpsertUser } from "@shared/models/auth";
 import { db } from "./db";
@@ -51,7 +51,7 @@ export interface IStorage {
   createBattle(battle: InsertBattle): Promise<Battle>;
   getBattleByCode(code: string): Promise<Battle | undefined>;
   updateBattleStatus(id: string, status: string): Promise<Battle>;
-  
+
   // Battle Participants
   addBattleParticipant(participant: InsertBattleParticipant): Promise<BattleParticipant>;
   getBattleParticipants(battleId: string): Promise<(BattleParticipant & { user: User })[]>;
@@ -81,7 +81,7 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     // Note: The schema in models/auth uses 'email' instead of 'username' for Replit Auth
-    // But common pattern is to use email as identifier. 
+    // But common pattern is to use email as identifier.
     // If the task specifically asks for username, we might need to adjust.
     // However, Replit Auth usually provides email.
     const [user] = await db.select().from(users).where(eq(users.email, username));
@@ -99,7 +99,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getTestResultsByUserId(userId: string): Promise<TestResult[]> {
-    return db.select()
+    return db
+      .select()
       .from(testResults)
       .where(eq(testResults.userId, userId))
       .orderBy(desc(testResults.createdAt));
@@ -113,7 +114,7 @@ export class DatabaseStorage implements IStorage {
 
     const totalTests = results.length;
     const totalWpm = results.reduce((acc, r) => acc + r.wpm, 0);
-    const bestWpm = Math.max(...results.map(r => r.wpm));
+    const bestWpm = Math.max(...results.map((r) => r.wpm));
     const totalAccuracy = results.reduce((acc, r) => acc + r.accuracy, 0);
 
     return {
@@ -125,25 +126,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLeaderboard(period: string, language: string) {
-    const results = await db.select({
-      entry: leaderboardEntries,
-      user: users,
-    })
-    .from(leaderboardEntries)
-    .innerJoin(users, eq(leaderboardEntries.userId, users.id))
-    .where(
-      and(
-        eq(leaderboardEntries.period, period),
-        eq(leaderboardEntries.language, language)
-      )
-    )
-    .orderBy(desc(leaderboardEntries.wpm));
+    const results = await db
+      .select({
+        entry: leaderboardEntries,
+        user: users,
+      })
+      .from(leaderboardEntries)
+      .innerJoin(users, eq(leaderboardEntries.userId, users.id))
+      .where(and(eq(leaderboardEntries.period, period), eq(leaderboardEntries.language, language)))
+      .orderBy(desc(leaderboardEntries.wpm));
 
-    return results.map(r => ({ ...r.entry, user: r.user }));
+    return results.map((r) => ({ ...r.entry, user: r.user }));
   }
 
   async updateLeaderboardEntry(entry: InsertLeaderboardEntry): Promise<LeaderboardEntry> {
-    const [existing] = await db.select()
+    const [existing] = await db
+      .select()
       .from(leaderboardEntries)
       .where(
         and(
@@ -155,11 +153,12 @@ export class DatabaseStorage implements IStorage {
 
     if (existing) {
       if (entry.wpm > existing.wpm) {
-        const [updated] = await db.update(leaderboardEntries)
-          .set({ 
-            wpm: entry.wpm, 
+        const [updated] = await db
+          .update(leaderboardEntries)
+          .set({
+            wpm: entry.wpm,
             accuracy: entry.accuracy,
-            updatedAt: new Date() 
+            updatedAt: new Date(),
           })
           .where(eq(leaderboardEntries.id, existing.id))
           .returning();
@@ -183,7 +182,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateBattleStatus(id: string, status: string): Promise<Battle> {
-    const [updated] = await db.update(battles)
+    const [updated] = await db
+      .update(battles)
       .set({ status })
       .where(eq(battles.id, id))
       .returning();
@@ -196,19 +196,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBattleParticipants(battleId: string) {
-    const results = await db.select({
-      participant: battleParticipants,
-      user: users,
-    })
-    .from(battleParticipants)
-    .innerJoin(users, eq(battleParticipants.userId, users.id))
-    .where(eq(battleParticipants.battleId, battleId));
+    const results = await db
+      .select({
+        participant: battleParticipants,
+        user: users,
+      })
+      .from(battleParticipants)
+      .innerJoin(users, eq(battleParticipants.userId, users.id))
+      .where(eq(battleParticipants.battleId, battleId));
 
-    return results.map(r => ({ ...r.participant, user: r.user }));
+    return results.map((r) => ({ ...r.participant, user: r.user }));
   }
 
-  async updateBattleParticipant(id: string, data: Partial<BattleParticipant>): Promise<BattleParticipant> {
-    const [updated] = await db.update(battleParticipants)
+  async updateBattleParticipant(
+    id: string,
+    data: Partial<BattleParticipant>
+  ): Promise<BattleParticipant> {
+    const [updated] = await db
+      .update(battleParticipants)
       .set(data)
       .where(eq(battleParticipants.id, id))
       .returning();
@@ -222,16 +227,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRecentReviews(limitNum = 5) {
-    const results = await db.select({
-      review: reviews,
-      user: users,
-    })
-    .from(reviews)
-    .innerJoin(users, eq(reviews.userId, users.id))
-    .orderBy(desc(reviews.createdAt))
-    .limit(limitNum);
+    const results = await db
+      .select({
+        review: reviews,
+        user: users,
+      })
+      .from(reviews)
+      .innerJoin(users, eq(reviews.userId, users.id))
+      .orderBy(desc(reviews.createdAt))
+      .limit(limitNum);
 
-    return results.map(r => ({ ...r.review, user: r.user }));
+    return results.map((r) => ({ ...r.review, user: r.user }));
   }
 
   // Competitions
@@ -241,7 +247,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveCompetitions(): Promise<Competition[]> {
-    return db.select()
+    return db
+      .select()
       .from(competitions)
       .where(eq(competitions.isActive, true))
       .orderBy(competitions.date);
@@ -254,7 +261,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getActiveAdvertisements(): Promise<Advertisement[]> {
-    return db.select()
+    return db
+      .select()
       .from(advertisements)
       .where(eq(advertisements.isActive, true))
       .orderBy(desc(advertisements.startDate));
@@ -265,7 +273,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async toggleAdvertisement(id: string, isActive: boolean): Promise<Advertisement> {
-    const [updated] = await db.update(advertisements)
+    const [updated] = await db
+      .update(advertisements)
       .set({ isActive })
       .where(eq(advertisements.id, id))
       .returning();
@@ -275,7 +284,8 @@ export class DatabaseStorage implements IStorage {
   async trackAdClick(id: string): Promise<void> {
     const [ad] = await db.select().from(advertisements).where(eq(advertisements.id, id));
     if (ad) {
-      await db.update(advertisements)
+      await db
+        .update(advertisements)
         .set({ clicks: (ad.clicks || 0) + 1 })
         .where(eq(advertisements.id, id));
     }

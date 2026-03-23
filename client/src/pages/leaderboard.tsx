@@ -34,19 +34,18 @@ export default function LeaderboardPage() {
         <header className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
-            <h1 className="text-4xl font-bold tracking-tight" data-testid="text-leaderboard-title">Reyting</h1>
+            <h1 className="text-4xl font-bold tracking-tight" data-testid="text-leaderboard-title">
+              Reyting
+            </h1>
           </div>
           <p className="text-muted-foreground">
-            Eng tez yozuvchilar qatorida o'z o'rningizni toping. Reytingga to'liq kirish uchun jami 2 soat (120 daqiqa) yozish tajribasiga ega bo'lishingiz kerak.
+            Eng tez yozuvchilar qatorida o'z o'rningizni toping. Reytingga to'liq kirish uchun jami
+            2 soat (120 daqiqa) yozish tajribasiga ega bo'lishingiz kerak.
           </p>
         </header>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-muted/30 p-4 rounded-lg border">
-          <Tabs 
-            value={language} 
-            onValueChange={setLanguage} 
-            className="w-full md:w-auto"
-          >
+          <Tabs value={language} onValueChange={setLanguage} className="w-full md:w-auto">
             <TabsList data-testid="tabs-leaderboard-language">
               <TabsTrigger value="all">Hammasi</TabsTrigger>
               <TabsTrigger value="uz">UZ</TabsTrigger>
@@ -59,7 +58,7 @@ export default function LeaderboardPage() {
         <div className="min-h-[400px] relative">
           <AnimatePresence mode="wait">
             {isLoading ? (
-              <motion.div 
+              <motion.div
                 key="loading"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -67,7 +66,9 @@ export default function LeaderboardPage() {
                 className="flex flex-col items-center justify-center absolute inset-0"
               >
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="mt-2 text-sm text-muted-foreground">{t.leaderboard.fetchingRankings}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t.leaderboard.fetchingRankings}
+                </p>
               </motion.div>
             ) : (
               <motion.div

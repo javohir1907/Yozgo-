@@ -25,39 +25,49 @@ declare module "http" {
   }
 }
 
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'", "https://yozgo.uz"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://yozgo.uz"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://yozgo.uz", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "https:", "https://yozgo.uz"],
-      connectSrc: ["'self'", "wss:", "ws:", "https:", "http:", "https://yozgo.uz"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      frameAncestors: ["'none'"],
-      requireTrustedTypesFor: ["'script'"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'", "https://yozgo.uz"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://yozgo.uz"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://yozgo.uz", "https://fonts.googleapis.com"],
+        imgSrc: ["'self'", "data:", "https:", "https://yozgo.uz"],
+        connectSrc: ["'self'", "wss:", "ws:", "https:", "http:", "https://yozgo.uz"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+        frameAncestors: ["'none'"],
+        requireTrustedTypesFor: ["'script'"],
+      },
     },
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
-  frameguard: {
-    action: 'deny',
-  },
-}));
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    frameguard: {
+      action: "deny",
+    },
+  })
+);
 
 // Add Permissions-Policy since Helmet doesn't support it directly yet.
 app.use((req, res, next) => {
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   next();
 });
 
-app.use(cors({
-  origin: ["https://yozgo-frontend.onrender.com", "http://localhost:5000", "http://localhost:5173", "https://yozgo.uz", "https://www.yozgo.uz"],
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: [
+      "https://yozgo-frontend.onrender.com",
+      "http://localhost:5000",
+      "http://localhost:5173",
+      "https://yozgo.uz",
+      "https://www.yozgo.uz",
+    ],
+    credentials: true,
+  })
+);
 app.use(cookieParser());
 
 app.use(
@@ -65,7 +75,7 @@ app.use(
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     },
-  }),
+  })
 );
 app.use(express.urlencoded({ extended: false }));
 
@@ -113,10 +123,10 @@ app.use((req, res, next) => {
     // Tizimga faqat bir marta ishlaydigan va keyin o'zini bloklaydigan o'chirish logikasi:
     await pool.query(`CREATE TABLE IF NOT EXISTS _one_time_reset (done boolean);`);
     const resetCheck = await pool.query(`SELECT * FROM _one_time_reset;`);
-    
+
     if (resetCheck.rowCount === 0) {
       console.log("Running ONE-TIME users database wipe...");
-      // UUID ishlatilgani uchun sequence restart qilinmaydi va xato beradi! 
+      // UUID ishlatilgani uchun sequence restart qilinmaydi va xato beradi!
       // CASCADE qilib barcha usersga bog'langan eski result/review larni ham tozalash:
       await pool.query(`TRUNCATE TABLE users CASCADE;`);
       await pool.query(`INSERT INTO _one_time_reset (done) VALUES (true);`);
@@ -135,7 +145,7 @@ app.use((req, res, next) => {
     } catch (e) {
       console.error("Admin setup failed:", e);
     }
-    
+
     // Also ensuring tables are handled here because Render might skip NPM start phase
     await pool.query(`
       CREATE TABLE IF NOT EXISTS reviews (
@@ -259,7 +269,9 @@ app.use((req, res, next) => {
     console.error("Internal Server Error:", err);
     if (status === 500) {
       import("./telegram").then(({ sendTelegramAlert }) => {
-        sendTelegramAlert(`❌ <b>500 Xatolik!</b>\n\n<b>Yo'l:</b> ${_req.path}\n<b>Xato:</b> ${message}\n<pre>${err.stack?.substring(0, 500)}</pre>`);
+        sendTelegramAlert(
+          `❌ <b>500 Xatolik!</b>\n\n<b>Yo'l:</b> ${_req.path}\n<b>Xato:</b> ${message}\n<pre>${err.stack?.substring(0, 500)}</pre>`
+        );
       });
     }
 
@@ -293,6 +305,6 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
-    },
+    }
   );
 })();

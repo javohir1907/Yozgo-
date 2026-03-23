@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Keyboard, AlertCircle } from "lucide-react";
+import { Keyboard, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 
 export default function AuthPage() {
@@ -13,6 +13,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [error, setError] = useState("");
@@ -28,11 +29,13 @@ export default function AuthPage() {
       setIsUsernameAvailable(null);
       return;
     }
-    
+
     setIsCheckingUsername(true);
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(firstName.trim())}`);
+        const res = await fetch(
+          `/api/auth/check-username?username=${encodeURIComponent(firstName.trim())}`
+        );
         if (res.ok) {
           const data = await res.json();
           setIsUsernameAvailable(data.available);
@@ -60,7 +63,9 @@ export default function AuthPage() {
         await login({ email, password });
       } else {
         if (!firstName || firstName.length < 4) {
-          setError("Nickname faqat kichik harf va raqamlardan iborat bo'lishi kerak, kamida 4 ta belgi");
+          setError(
+            "Nickname faqat kichik harf va raqamlardan iborat bo'lishi kerak, kamida 4 ta belgi"
+          );
           return;
         }
         await register({ email, password, firstName });
@@ -109,7 +114,14 @@ export default function AuthPage() {
                 <p className="text-sm text-muted-foreground">
                   Agar hisob mavjud bo'lsa, tez orada ko'rsatmalar yuboriladi.
                 </p>
-                <Button className="w-full" onClick={() => { setShowForgotPassword(false); setForgotSent(false); setForgotEmail(""); }}>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setForgotSent(false);
+                    setForgotEmail("");
+                  }}
+                >
                   {t.auth?.loginButton || "Sign In"}
                 </Button>
               </div>
@@ -126,7 +138,9 @@ export default function AuthPage() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">Yuborish</Button>
+                <Button type="submit" className="w-full">
+                  Yuborish
+                </Button>
                 <button
                   type="button"
                   className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -154,7 +168,9 @@ export default function AuthPage() {
             {isLogin ? t.auth?.login || "Sign In" : t.auth?.register || "Create Account"}
           </CardTitle>
           <CardDescription>
-            {isLogin ? t.auth?.loginDesc || "Sign in to track your progress" : t.auth?.registerDesc || "Create an account to save your results"}
+            {isLogin
+              ? t.auth?.loginDesc || "Sign in to track your progress"
+              : t.auth?.registerDesc || "Create an account to save your results"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -169,7 +185,7 @@ export default function AuthPage() {
                     placeholder={t.auth?.namePlaceholder || "Nickname (masalan: ali_99)"}
                     value={firstName}
                     onChange={(e) => {
-                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                      const val = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
                       setFirstName(val);
                     }}
                     required={!isLogin}
@@ -177,9 +193,13 @@ export default function AuthPage() {
                     maxLength={20}
                     data-testid="input-firstname"
                     className={
-                      !isLogin && firstName 
-                      ? (isUsernameAvailable === false ? "border-red-500 focus-visible:ring-red-500 pr-8" : (isUsernameAvailable === true ? "border-green-500 focus-visible:ring-green-500 pr-8" : ""))
-                      : ""
+                      !isLogin && firstName
+                        ? isUsernameAvailable === false
+                          ? "border-red-500 focus-visible:ring-red-500 pr-8"
+                          : isUsernameAvailable === true
+                            ? "border-green-500 focus-visible:ring-green-500 pr-8"
+                            : ""
+                        : ""
                     }
                   />
                   {!isLogin && firstName && !isCheckingUsername && isUsernameAvailable === true && (
@@ -189,8 +209,10 @@ export default function AuthPage() {
                   )}
                 </div>
                 {!isLogin && firstName && !isCheckingUsername && firstName.trim() !== "" && (
-                  <p className={`text-sm ${isUsernameAvailable === false ? 'text-red-500' : 'text-green-500'}`}>
-                    {isUsernameAvailable === false ? 'Bu nom band, boshqa nom tanlang' : '✓ Mavjud'}
+                  <p
+                    className={`text-sm ${isUsernameAvailable === false ? "text-red-500" : "text-green-500"}`}
+                  >
+                    {isUsernameAvailable === false ? "Bu nom band, boshqa nom tanlang" : "✓ Mavjud"}
                   </p>
                 )}
                 {!isLogin && firstName && isCheckingUsername && (
@@ -224,39 +246,84 @@ export default function AuthPage() {
                   </button>
                 )}
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="passwordholder"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                data-testid="input-password"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="passwordholder"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  data-testid="input-password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
             {error && (
-              <div className="flex items-center gap-2 text-sm text-destructive" data-testid="text-auth-error">
+              <div
+                className="flex items-center gap-2 text-sm text-destructive"
+                data-testid="text-auth-error"
+              >
                 <AlertCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>
             )}
-            <Button type="submit" className="w-full" disabled={isPending} data-testid="button-submit-auth">
-              {isPending ? (isLogin ? "Signing in..." : "Creating account...") : (isLogin ? t.auth?.loginButton || "Sign In" : t.auth?.registerButton || "Create Account")}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isPending}
+              data-testid="button-submit-auth"
+            >
+              {isPending
+                ? isLogin
+                  ? "Signing in..."
+                  : "Creating account..."
+                : isLogin
+                  ? t.auth?.loginButton || "Sign In"
+                  : t.auth?.registerButton || "Create Account"}
             </Button>
           </form>
           <div className="mt-6 text-center text-sm text-muted-foreground">
             {isLogin ? (
               <span>
                 {t.auth?.noAccount || "Don't have an account?"}{" "}
-                <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setIsLogin(false); setError(""); }} data-testid="button-switch-register">
+                <button
+                  type="button"
+                  className="text-primary hover:underline font-medium"
+                  onClick={() => {
+                    setIsLogin(false);
+                    setError("");
+                  }}
+                  data-testid="button-switch-register"
+                >
                   {t.auth?.registerLink || "Sign up"}
                 </button>
               </span>
             ) : (
               <span>
                 {t.auth?.hasAccount || "Already have an account?"}{" "}
-                <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setIsLogin(true); setError(""); }} data-testid="button-switch-login">
+                <button
+                  type="button"
+                  className="text-primary hover:underline font-medium"
+                  onClick={() => {
+                    setIsLogin(true);
+                    setError("");
+                  }}
+                  data-testid="button-switch-login"
+                >
                   {t.auth?.loginLink || "Sign in"}
                 </button>
               </span>

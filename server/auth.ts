@@ -7,7 +7,6 @@ import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
 import { eq, ilike } from "drizzle-orm";
 
-
 export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
 
@@ -55,11 +54,19 @@ export function setupAuth(app: Express) {
         return res.status(409).json({ message: "An account with this email already exists" });
       }
 
-      if (!firstName || typeof firstName !== 'string' || !/^[a-z0-9_]{4,20}$/.test(firstName)) {
-        return res.status(400).json({ message: "Nickname faqat kichik harf va raqamlardan iborat bo'lishi kerak, kamida 4 ta belgi" });
+      if (!firstName || typeof firstName !== "string" || !/^[a-z0-9_]{4,20}$/.test(firstName)) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Nickname faqat kichik harf va raqamlardan iborat bo'lishi kerak, kamida 4 ta belgi",
+          });
       }
 
-      const [existingName] = await db.select().from(users).where(ilike(users.firstName, firstName.trim()));
+      const [existingName] = await db
+        .select()
+        .from(users)
+        .where(ilike(users.firstName, firstName.trim()));
       if (existingName) {
         return res.status(409).json({ message: "Bu nickname allaqachon band, boshqa nom tanlang" });
       }
@@ -77,10 +84,12 @@ export function setupAuth(app: Express) {
 
       (req.session as any).userId = user.id;
       const { password: _, ...safeUser } = user;
-      
+
       const { sendTelegramAlert } = await import("./telegram");
-      sendTelegramAlert(`🚨 <b>Yangi foydalanuvchi!</b>\n\n<b>Email:</b> ${email.toLowerCase()}\n<b>Nickname:</b> ${firstName ? firstName.trim() : "Yo'q"}`);
-      
+      sendTelegramAlert(
+        `🚨 <b>Yangi foydalanuvchi!</b>\n\n<b>Email:</b> ${email.toLowerCase()}\n<b>Nickname:</b> ${firstName ? firstName.trim() : "Yo'q"}`
+      );
+
       res.status(201).json(safeUser);
     } catch (error) {
       console.error("Registration error:", error);
@@ -122,43 +131,54 @@ export function setupAuth(app: Express) {
 
       const crypto = await import("crypto");
       const urlParams = new URLSearchParams(initData);
-      const hash = urlParams.get('hash');
-      urlParams.delete('hash');
-      
+      const hash = urlParams.get("hash");
+      urlParams.delete("hash");
+
       const keys = Array.from(urlParams.keys()).sort();
-      const dataCheckString = keys.map(key => `${key}=${urlParams.get(key)}`).join('\\n');
-      
-      const secretKey = crypto.createHmac('sha256', 'WebAppData').update(process.env.TELEGRAM_BOT_TOKEN || '').digest();
-      const hmac = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-      
+      const dataCheckString = keys.map((key) => `${key}=${urlParams.get(key)}`).join("\\n");
+
+      const secretKey = crypto
+        .createHmac("sha256", "WebAppData")
+        .update(process.env.TELEGRAM_BOT_TOKEN || "")
+        .digest();
+      const hmac = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
+
       if (hmac !== hash) {
         return res.status(401).json({ message: "Telegram auth validation failed" });
       }
-      
-      const userStr = urlParams.get('user');
+
+      const userStr = urlParams.get("user");
       if (!userStr) return res.status(400).json({ message: "No user dat found" });
       const tgUser = JSON.parse(userStr);
-      
-      let [user] = await db.select().from(users).where(eq(users.telegramId, String(tgUser.id)));
-      
+
+      let [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.telegramId, String(tgUser.id)));
+
       if (!user) {
         // Find by username if email matching exists? Telegram gives username, first_name, last_name, photo_url
         // Let's create an auto-generated account
         const randomPass = crypto.randomBytes(16).toString("hex");
         const dummyEmail = `tg_${tgUser.id}@telegram.local`;
         const hashedPassword = await bcrypt.hash(randomPass, 10);
-        
-        [user] = await db.insert(users).values({
-          email: dummyEmail,
-          password: hashedPassword,
-          firstName: tgUser.first_name,
-          lastName: tgUser.last_name || null,
-          telegramId: String(tgUser.id),
-          profileImageUrl: tgUser.photo_url || null
-        }).returning();
-        
+
+        [user] = await db
+          .insert(users)
+          .values({
+            email: dummyEmail,
+            password: hashedPassword,
+            firstName: tgUser.first_name,
+            lastName: tgUser.last_name || null,
+            telegramId: String(tgUser.id),
+            profileImageUrl: tgUser.photo_url || null,
+          })
+          .returning();
+
         const { sendTelegramAlert } = await import("./telegram");
-        sendTelegramAlert(`🚨 <b>Yangi Telegram Foydalanuvchi qoshildi!</b>\\n\\n<b>ID:</b> ${tgUser.id}\\n<b>Ismi:</b> ${tgUser.first_name}`);
+        sendTelegramAlert(
+          `🚨 <b>Yangi Telegram Foydalanuvchi qoshildi!</b>\\n\\n<b>ID:</b> ${tgUser.id}\\n<b>Ismi:</b> ${tgUser.first_name}`
+        );
       }
 
       (req.session as any).userId = user.id;
@@ -198,7 +218,10 @@ export function setupAuth(app: Express) {
     }
 
     try {
-      const [existingName] = await db.select().from(users).where(ilike(users.firstName, username.trim()));
+      const [existingName] = await db
+        .select()
+        .from(users)
+        .where(ilike(users.firstName, username.trim()));
       if (existingName) {
         return res.json({ available: false });
       }

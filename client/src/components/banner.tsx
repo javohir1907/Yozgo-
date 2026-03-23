@@ -16,7 +16,7 @@ export function Banner({ ads }: { ads: Ad[] }) {
   const trackClickMutation = useMutation({
     mutationFn: async (id: string) => {
       await apiRequest("POST", `/api/advertisements/${id}/click`);
-    }
+    },
   });
 
   const handleLinkClick = (ad: Ad, e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -40,9 +40,9 @@ export function Banner({ ads }: { ads: Ad[] }) {
           </div>
 
           <div className="w-full sm:w-1/3 aspect-[21/9] sm:aspect-auto sm:h-32 bg-[#0a0a0a] relative overflow-hidden flex-shrink-0">
-            <img 
-              src={ad.imageUrl} 
-              alt={ad.title} 
+            <img
+              src={ad.imageUrl}
+              alt={ad.title}
               className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           </div>
@@ -52,11 +52,9 @@ export function Banner({ ads }: { ads: Ad[] }) {
               {ad.title}
             </h3>
             {ad.description && (
-              <p className="text-gray-400 text-sm line-clamp-1 mb-2">
-                {ad.description}
-              </p>
+              <p className="text-gray-400 text-sm line-clamp-1 mb-2">{ad.description}</p>
             )}
-            
+
             <div className="mt-auto self-start flex items-center gap-1.5 text-orange-200/70 text-sm font-semibold group-hover:text-orange-200 transition-colors">
               Batafsil <ExternalLink className="w-3.5 h-3.5" />
             </div>

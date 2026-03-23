@@ -6,9 +6,9 @@ export async function sendTelegramAlert(message: string) {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: adminId, text: message, parse_mode: 'HTML' })
+      body: JSON.stringify({ chat_id: adminId, text: message, parse_mode: "HTML" }),
     });
-  } catch(e) {
+  } catch (e) {
     console.error("Failed to send telegram alert:", e);
   }
 }

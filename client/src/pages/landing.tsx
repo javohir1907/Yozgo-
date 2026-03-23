@@ -28,19 +28,23 @@ export default function LandingPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/reviews"] });
       setComment("");
       setRating(5);
-    }
+    },
   });
 
   return (
     <div className="flex flex-col min-h-screen">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
         .font-bebas { font-family: 'Bebas Neue', display, sans-serif; letter-spacing: 0.05em; }
         .bg-dot-pattern {
           background-image: radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px);
           background-size: 24px 24px;
         }
-      `}} />
+      `,
+        }}
+      />
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden bg-[#0f0f0f] border-b border-white/5">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-[0.03] mix-blend-screen" />
@@ -51,11 +55,11 @@ export default function LandingPage() {
 
         <div className="container relative z-20 px-4 flex flex-col items-center justify-center pt-10">
           {/* Logo Keycaps */}
-          <motion.div 
+          <motion.div
             className="flex gap-3 md:gap-6 mb-12"
             variants={{
               hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
+              visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
             }}
             initial="hidden"
             animate="visible"
@@ -65,12 +69,12 @@ export default function LandingPage() {
                 key={i}
                 variants={{
                   hidden: { opacity: 0, y: -60, rotateX: 45 },
-                  visible: { 
-                    opacity: 1, 
-                    y: 0, 
+                  visible: {
+                    opacity: 1,
+                    y: 0,
                     rotateX: 0,
-                    transition: { type: "spring", stiffness: 200, damping: 15 } 
-                  }
+                    transition: { type: "spring", stiffness: 200, damping: 15 },
+                  },
                 }}
                 className="relative w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 md:w-32 md:h-32 flex items-center justify-center rounded-xl md:rounded-[1.25rem] transition-all cursor-default select-none bg-[#1c1c1e] border border-[#111] shadow-[0_6px_0_#09090a,0_12px_20px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1)] hover:-translate-y-1 hover:shadow-[0_8px_0_#09090a,0_16px_24px_rgba(0,0,0,0.7),inset_0_1px_1px_rgba(255,255,255,0.1)] group"
               >
@@ -89,11 +93,11 @@ export default function LandingPage() {
 
           {/* Texts */}
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
-            <motion.h1 
+            <motion.h1
               className="text-4xl md:text-6xl lg:text-7xl font-bebas text-white mb-4 drop-shadow-md whitespace-pre-wrap"
               variants={{
                 hidden: { opacity: 1 },
-                visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.8 } }
+                visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.8 } },
               }}
               initial="hidden"
               animate="visible"
@@ -103,7 +107,7 @@ export default function LandingPage() {
                   key={i}
                   variants={{
                     hidden: { opacity: 0 },
-                    visible: { opacity: 1 }
+                    visible: { opacity: 1 },
                   }}
                 >
                   {char === " " ? "\u00A0" : char}
@@ -111,11 +115,11 @@ export default function LandingPage() {
               ))}
             </motion.h1>
 
-            <motion.div 
+            <motion.div
               className="text-base md:text-2xl text-gray-400 font-medium mb-10 flex items-center justify-center min-h-[40px] flex-wrap max-w-[90%] whitespace-pre-wrap"
               variants={{
                 hidden: { opacity: 1 },
-                visible: { opacity: 1, transition: { staggerChildren: 0.03, delayChildren: 2.0 } }
+                visible: { opacity: 1, transition: { staggerChildren: 0.03, delayChildren: 2.0 } },
               }}
               initial="hidden"
               animate="visible"
@@ -125,13 +129,13 @@ export default function LandingPage() {
                   key={i}
                   variants={{
                     hidden: { opacity: 0 },
-                    visible: { opacity: 1 }
+                    visible: { opacity: 1 },
                   }}
                 >
                   {char === " " ? "\u00A0" : char}
                 </motion.span>
               ))}
-              <motion.span 
+              <motion.span
                 initial={{ opacity: 0 }}
                 animate={{ opacity: [0, 1, 0] }}
                 transition={{ repeat: Infinity, duration: 0.8, delay: 3.5 }}
@@ -140,24 +144,24 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Buttons */}
-            <motion.div 
+            <motion.div
               className="flex flex-col sm:flex-row gap-4 md:gap-6 justify-center w-full sm:w-auto px-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 3.5, duration: 0.5 }}
             >
               <Link href="/typing-test">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl bg-orange-600 hover:bg-orange-500 text-white border-b-[5px] border-orange-800 active:border-b-0 active:translate-y-[5px] transition-all"
                 >
                   Musobaqani boshlash
                 </Button>
               </Link>
               <Link href="/leaderboard">
-                <Button 
-                  size="lg" 
-                  variant="outline" 
+                <Button
+                  size="lg"
+                  variant="outline"
                   className="w-full sm:w-auto text-lg px-8 py-6 rounded-xl border-white/20 text-white hover:bg-white/10 hover:text-white transition-all bg-transparent backdrop-blur-sm"
                 >
                   Reyting
@@ -182,13 +186,20 @@ export default function LandingPage() {
             <h2 className="text-3xl font-bold mb-6 text-foreground">Biz Haqimizda</h2>
             <div className="space-y-4 text-muted-foreground md:text-lg leading-relaxed text-left">
               <p>
-                <strong className="text-orange-500 font-semibold text-xl">YOZGO</strong> — bu yozish tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus ishlab chiqilgan platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura ko'nikmalarini qiziqarli va raqobatbardosh usulda rivojlantirishga yordam berishdir.
+                <strong className="text-orange-500 font-semibold text-xl">YOZGO</strong> — bu yozish
+                tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus ishlab
+                chiqilgan platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura
+                ko'nikmalarini qiziqarli va raqobatbardosh usulda rivojlantirishga yordam berishdir.
               </p>
               <p>
-                Loyiha qisqa vaqt ichida o'zbek tilidagi eng qulay yozish trenajyoriga aylandi. Biz foydalanuvchilar orasida musobaqalar o'tkazish, reyting tizimi orqali sog'lom raqobatni shakllantirish va yangi marralarni zabt etish imkoniyatini taqdim etamiz.
+                Loyiha qisqa vaqt ichida o'zbek tilidagi eng qulay yozish trenajyoriga aylandi. Biz
+                foydalanuvchilar orasida musobaqalar o'tkazish, reyting tizimi orqali sog'lom
+                raqobatni shakllantirish va yangi marralarni zabt etish imkoniyatini taqdim etamiz.
               </p>
               <p>
-                Bizning jamoamiz texnologiya va ta'lim sohasiga qiziquvchi yosh dasturchilardan iborat. Har kuni platformani yanada qulay va zamonaviy qilish ustida ish olib boramiz.
+                Bizning jamoamiz texnologiya va ta'lim sohasiga qiziquvchi yosh dasturchilardan
+                iborat. Har kuni platformani yanada qulay va zamonaviy qilish ustida ish olib
+                boramiz.
               </p>
             </div>
           </div>
@@ -247,9 +258,14 @@ export default function LandingPage() {
             )}
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {competitions.map((comp: any) => (
-                <div key={comp.id} className="p-6 rounded-xl border bg-card hover:border-primary/50 transition-colors shadow-sm">
+                <div
+                  key={comp.id}
+                  className="p-6 rounded-xl border bg-card hover:border-primary/50 transition-colors shadow-sm"
+                >
                   <h3 className="text-xl font-bold mb-2">{comp.title}</h3>
-                  {comp.prize && <p className="text-amber-500 font-semibold mb-4">🏆 Sovrin: {comp.prize}</p>}
+                  {comp.prize && (
+                    <p className="text-amber-500 font-semibold mb-4">🏆 Sovrin: {comp.prize}</p>
+                  )}
                   <div className="flex items-center gap-2 text-muted-foreground mb-6">
                     <Clock className="w-4 h-4" />
                     <Countdown date={comp.date} />
@@ -267,7 +283,7 @@ export default function LandingPage() {
       <section className="py-24 bg-card/30 border-t">
         <div className="container px-4">
           <h2 className="text-3xl font-bold mb-10 text-center">Fikr va Mulohazalar</h2>
-          
+
           <div className="grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
             <div className="space-y-6">
               <h3 className="text-xl font-semibold mb-4">Foydalanuvchilarimiz nima deydi?</h3>
@@ -279,7 +295,10 @@ export default function LandingPage() {
                         <span className="font-semibold">{rev.user.username}</span>
                         <div className="flex text-yellow-500">
                           {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`w-4 h-4 ${i < rev.rating ? "fill-current" : "text-muted opacity-30"}`} />
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${i < rev.rating ? "fill-current" : "text-muted opacity-30"}`}
+                            />
                           ))}
                         </div>
                       </div>
@@ -288,7 +307,9 @@ export default function LandingPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground italic">Mijozlarimiz hozircha fikr qoldirishmagan.</p>
+                <p className="text-muted-foreground italic">
+                  Mijozlarimiz hozircha fikr qoldirishmagan.
+                </p>
               )}
             </div>
 
@@ -296,10 +317,13 @@ export default function LandingPage() {
               <div className="p-6 rounded-xl border bg-background shadow-md">
                 <h3 className="text-xl font-semibold mb-6">Fikr qoldirish</h3>
                 {user ? (
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    if(comment.trim()) submitReview.mutate({ rating, comment });
-                  }} className="space-y-4">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (comment.trim()) submitReview.mutate({ rating, comment });
+                    }}
+                    className="space-y-4"
+                  >
                     <div>
                       <label className="block text-sm font-medium mb-2">Baholang</label>
                       <div className="flex gap-1 mb-4">
@@ -310,14 +334,16 @@ export default function LandingPage() {
                             onClick={() => setRating(s)}
                             className="focus:outline-none transition-transform hover:scale-110"
                           >
-                            <Star className={`w-8 h-8 ${s <= rating ? "text-yellow-500 fill-current" : "text-muted opacity-30"}`} />
+                            <Star
+                              className={`w-8 h-8 ${s <= rating ? "text-yellow-500 fill-current" : "text-muted opacity-30"}`}
+                            />
                           </button>
                         ))}
                       </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-2">Izohingiz</label>
-                      <textarea 
+                      <textarea
                         className="w-full min-h-[100px] p-3 rounded-md border bg-transparent focus:ring-1 focus:ring-primary outline-none"
                         placeholder="Saytdan qanday taassurot oldingiz?"
                         value={comment}
@@ -331,7 +357,9 @@ export default function LandingPage() {
                   </form>
                 ) : (
                   <div className="text-center py-6">
-                    <p className="text-muted-foreground mb-4">Fikr qoldirish uchun tizimga kirishingiz kerak.</p>
+                    <p className="text-muted-foreground mb-4">
+                      Fikr qoldirish uchun tizimga kirishingiz kerak.
+                    </p>
                     <Link href="/auth">
                       <Button variant="outline">Tizimga kirish</Button>
                     </Link>
@@ -352,8 +380,20 @@ export default function LandingPage() {
             © {new Date().getFullYear()} YOZGO. {t.landing.footer}
           </p>
           <div className="flex gap-6">
-            <Link href="/settings" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-settings">{t.nav.settings}</Link>
-            <Link href="/leaderboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-leaderboard">{t.nav.leaderboard}</Link>
+            <Link
+              href="/settings"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="link-footer-settings"
+            >
+              {t.nav.settings}
+            </Link>
+            <Link
+              href="/leaderboard"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="link-footer-leaderboard"
+            >
+              {t.nav.leaderboard}
+            </Link>
           </div>
         </div>
       </footer>
@@ -361,7 +401,15 @@ export default function LandingPage() {
   );
 }
 
-function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
+function FeatureCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
   return (
     <div className="p-6 rounded-xl border bg-card hover-elevate transition-all">
       <div className="mb-4">{icon}</div>
@@ -372,11 +420,13 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
 }
 
 function Countdown({ date }: { date: string }) {
-  const [timeLeft, setTimeLeft] = useState<{days: number, hours: number, mins: number} | null>(null);
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; mins: number } | null>(
+    null
+  );
 
   useEffect(() => {
     const target = new Date(date).getTime();
-    
+
     // Initial evaluation
     const evaluateTime = () => {
       const distance = target - new Date().getTime();
@@ -387,11 +437,11 @@ function Countdown({ date }: { date: string }) {
       setTimeLeft({
         days: Math.floor(distance / (1000 * 60 * 60 * 24)),
         hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        mins: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))
+        mins: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
       });
       return true;
     };
-    
+
     if (evaluateTime()) {
       const interval = setInterval(() => {
         if (!evaluateTime()) clearInterval(interval);
@@ -401,8 +451,10 @@ function Countdown({ date }: { date: string }) {
   }, [date]);
 
   if (!timeLeft) return <span>Boshlanib bo'ldi yoku tugadi!</span>;
-  
+
   return (
-    <span className="font-medium">{timeLeft.days} kun, {timeLeft.hours} soat, {timeLeft.mins} daq.</span>
+    <span className="font-medium">
+      {timeLeft.days} kun, {timeLeft.hours} soat, {timeLeft.mins} daq.
+    </span>
   );
 }

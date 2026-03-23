@@ -1,7 +1,7 @@
 import React from "react";
 import { Switch, Route, useLocation } from "wouter";
-import ReactGA from 'react-ga4';
-ReactGA.initialize('G-56W2C1S1FV');
+import ReactGA from "react-ga4";
+ReactGA.initialize("G-56W2C1S1FV");
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -23,11 +23,11 @@ import { motion, AnimatePresence } from "framer-motion";
 
 function Router() {
   const [location] = useLocation();
-  
+
   React.useEffect(() => {
     ReactGA.send({ hitType: "pageview", page: location });
   }, [location]);
-  
+
   return (
     <AnimatePresence mode="wait">
       <motion.div

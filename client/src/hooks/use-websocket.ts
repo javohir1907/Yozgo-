@@ -19,41 +19,41 @@ export function useWebsocket(code: string | null, user: User | null) {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      transports: ['websocket', 'polling'],
+      transports: ["websocket", "polling"],
       withCredentials: true,
     });
-    
+
     socketRef.current = socket;
 
-    socket.on('connect', () => {
+    socket.on("connect", () => {
       setIsConnected(true);
-      socket.emit('join-room', { code, user });
+      socket.emit("join-room", { code, user });
     });
 
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
       setIsConnected(false);
     });
 
-    socket.on('room-update', (data) => {
+    socket.on("room-update", (data) => {
       setRoom(data.room);
     });
 
-    socket.on('battle-start', (data) => {
+    socket.on("battle-start", (data) => {
       setBattleStart(data);
       setBattleEnd(null);
     });
 
-    socket.on('leaderboard-update', (data) => {
-      setRoom((prev: any) => prev ? { ...prev, players: data.players } : null);
+    socket.on("leaderboard-update", (data) => {
+      setRoom((prev: any) => (prev ? { ...prev, players: data.players } : null));
       setLeadingPlayerId(data.leadingPlayerId);
     });
 
-    socket.on('battle-end', (data) => {
+    socket.on("battle-end", (data) => {
       setBattleEnd(data);
       setBattleStart(null);
     });
 
-    socket.on('error-message', (data) => {
+    socket.on("error-message", (data) => {
       setError(data.message);
     });
 
@@ -63,26 +63,26 @@ export function useWebsocket(code: string | null, user: User | null) {
   }, [code, user]);
 
   const startBattle = useCallback((settings: any) => {
-    socketRef.current?.emit('start-battle', { settings });
+    socketRef.current?.emit("start-battle", { settings });
   }, []);
 
   const submitResult = useCallback((wpm: number, accuracy: number, progress: number) => {
-    socketRef.current?.emit('submit-result', { wpm, accuracy, progress });
+    socketRef.current?.emit("submit-result", { wpm, accuracy, progress });
   }, []);
 
   const sendProgress = useCallback((progress: number, wpm: number) => {
-    socketRef.current?.emit('typing-progress', { progress, wpm });
+    socketRef.current?.emit("typing-progress", { progress, wpm });
   }, []);
 
-  return { 
-    room, 
-    battleStart, 
-    battleEnd, 
+  return {
+    room,
+    battleStart,
+    battleEnd,
     leadingPlayerId,
-    error, 
+    error,
     isConnected,
-    startBattle, 
-    submitResult, 
-    sendProgress 
+    startBattle,
+    submitResult,
+    sendProgress,
   };
 }

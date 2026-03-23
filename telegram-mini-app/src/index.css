@@ -4,8 +4,11 @@
 
 @layer base {
   body {
-    background-color: theme('colors.background');
-    color: theme('colors.foreground');
-    font-family: system-ui, -apple-system, sans-serif;
+    background-color: theme("colors.background");
+    color: theme("colors.foreground");
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
   }
 }

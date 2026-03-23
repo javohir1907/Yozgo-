@@ -50,8 +50,8 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
             const minutesLeft = Math.ceil((7200 - entry.totalSeconds) / 60);
 
             return (
-              <TableRow 
-                key={`${entry.rank}-${entry.userId}`} 
+              <TableRow
+                key={`${entry.rank}-${entry.userId}`}
                 className={cn(isCurrentUser && "bg-primary/10")}
                 data-testid={`row-user-${entry.username}`}
               >
@@ -62,8 +62,12 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-8 w-8">
-                        {entry.avatarUrl && <AvatarImage src={entry.avatarUrl} alt={entry.username} />}
-                        <AvatarFallback>{entry.username.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        {entry.avatarUrl && (
+                          <AvatarImage src={entry.avatarUrl} alt={entry.username} />
+                        )}
+                        <AvatarFallback>
+                          {entry.username.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                       <span className="font-medium" data-testid={`text-username-${entry.username}`}>
                         {entry.username}
@@ -73,18 +77,28 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
                       <div className="flex flex-col gap-1 text-xs text-muted-foreground w-full max-w-[200px]">
                         <div className="flex justify-between">
                           <span>Reytingga kirish</span>
-                          <span>{Math.round(progress)}% ({minutesLeft} daq qoldi)</span>
+                          <span>
+                            {Math.round(progress)}% ({minutesLeft} daq qoldi)
+                          </span>
                         </div>
                         <Progress value={progress} className="h-1.5" />
                       </div>
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-mono text-muted-foreground">{entry.avgWpm}</TableCell>
-                <TableCell className="text-right font-mono font-bold text-primary">{entry.bestWpm}</TableCell>
+                <TableCell className="text-right font-mono text-muted-foreground">
+                  {entry.avgWpm}
+                </TableCell>
+                <TableCell className="text-right font-mono font-bold text-primary">
+                  {entry.bestWpm}
+                </TableCell>
                 <TableCell className="text-right font-mono">{entry.accuracy}%</TableCell>
-                <TableCell className="text-right text-muted-foreground font-mono">{entry.testCount}</TableCell>
-                <TableCell className="text-right text-muted-foreground">{formatTime(entry.totalSeconds)}</TableCell>
+                <TableCell className="text-right text-muted-foreground font-mono">
+                  {entry.testCount}
+                </TableCell>
+                <TableCell className="text-right text-muted-foreground">
+                  {formatTime(entry.totalSeconds)}
+                </TableCell>
               </TableRow>
             );
           })}

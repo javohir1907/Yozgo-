@@ -42,29 +42,27 @@ export default function TypingTestPage() {
     },
   });
 
-  const onComplete = useCallback((stats: {
-    wpm: number;
-    accuracy: number;
-    correctChars: number;
-    incorrectChars: number;
-  }) => {
-    import('react-ga4').then(ReactGA => {
-      ReactGA.default.event({
-        category: "TypingTest",
-        action: "completed",
-        value: stats.wpm
+  const onComplete = useCallback(
+    (stats: { wpm: number; accuracy: number; correctChars: number; incorrectChars: number }) => {
+      import("react-ga4").then((ReactGA) => {
+        ReactGA.default.event({
+          category: "TypingTest",
+          action: "completed",
+          value: stats.wpm,
+        });
       });
-    });
 
-    if (user) {
-      resultMutation.mutate({
-        wpm: stats.wpm,
-        accuracy: stats.accuracy,
-        language,
-        mode: mode.toString(),
-      });
-    }
-  }, [user, language, mode, resultMutation]);
+      if (user) {
+        resultMutation.mutate({
+          wpm: stats.wpm,
+          accuracy: stats.accuracy,
+          language,
+          mode: mode.toString(),
+        });
+      }
+    },
+    [user, language, mode, resultMutation]
+  );
 
   const {
     words,
@@ -89,7 +87,6 @@ export default function TypingTestPage() {
       {!isFinished ? (
         <>
           <div className="w-full flex flex-col items-center gap-4 mb-12">
-
             {/* FIX: Til va rejim selektorlari - faqat test boshlanmagan vaqtda ko'rinadi */}
             {/* Pastga tushish animatsiyasi bilan yashiriladi */}
             <div
@@ -99,22 +96,12 @@ export default function TypingTestPage() {
                   : "max-h-40 opacity-100 translate-y-0"
               }`}
             >
-              <LanguageSelector
-                currentLanguage={language}
-                onLanguageChange={setLanguage}
-              />
-              <TimerModeSelector
-                currentMode={mode}
-                onModeChange={setMode}
-              />
+              <LanguageSelector currentLanguage={language} onLanguageChange={setLanguage} />
+              <TimerModeSelector currentMode={mode} onModeChange={setMode} />
             </div>
 
             {/* FIX: Stats har doim ko'rinadi, lekin test boshlanmasa 0 turadi */}
-            <StatsDisplay
-              wpm={stats.wpm}
-              accuracy={stats.accuracy}
-              timeLeft={timeLeft}
-            />
+            <StatsDisplay wpm={stats.wpm} accuracy={stats.accuracy} timeLeft={timeLeft} />
           </div>
 
           <TypingArea
@@ -134,9 +121,7 @@ export default function TypingTestPage() {
               isActive ? "opacity-0 pointer-events-none" : "opacity-100"
             }`}
           >
-            <p className="text-muted-foreground font-mono animate-pulse">
-              {t.typing.typeToStart}
-            </p>
+            <p className="text-muted-foreground font-mono animate-pulse">{t.typing.typeToStart}</p>
           </div>
         </>
       ) : (

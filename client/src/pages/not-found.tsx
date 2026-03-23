@@ -12,9 +12,7 @@ export default function NotFound() {
             <AlertCircle className="h-8 w-8 text-destructive" />
             <h1 className="text-2xl font-bold">404</h1>
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">
-            Page not found.
-          </p>
+          <p className="mt-4 text-sm text-muted-foreground">Page not found.</p>
           <Link href="/">
             <Button variant="outline" className="mt-4" data-testid="link-go-home">
               Home

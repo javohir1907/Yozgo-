@@ -41,7 +41,7 @@ interface ProfileData {
 export default function Profile() {
   const { user: authUser } = useAuth();
   const { t } = useI18n();
-  
+
   const { data, isLoading } = useQuery<ProfileData>({
     queryKey: ["/api/profile", authUser?.id],
     enabled: !!authUser?.id,
@@ -69,13 +69,11 @@ export default function Profile() {
 
   const { user, stats, recentResults } = data;
 
-  const chartData = [...recentResults]
-    .reverse()
-    .map((r) => ({
-      date: format(new Date(r.createdAt), "MMM d"),
-      wpm: r.wpm,
-      accuracy: r.accuracy,
-    }));
+  const chartData = [...recentResults].reverse().map((r) => ({
+    date: format(new Date(r.createdAt), "MMM d"),
+    wpm: r.wpm,
+    accuracy: r.accuracy,
+  }));
 
   return (
     <div className="container mx-auto p-8 space-y-8 animate-in fade-in duration-500">
@@ -87,7 +85,10 @@ export default function Profile() {
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground" data-testid="text-username">
+          <h1
+            className="text-4xl font-bold tracking-tight text-foreground"
+            data-testid="text-username"
+          >
             {user.username}
           </h1>
           <p className="text-muted-foreground mt-1 flex items-center gap-2">

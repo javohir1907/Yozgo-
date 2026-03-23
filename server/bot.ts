@@ -1,8 +1,8 @@
-import TelegramBot from 'node-telegram-bot-api';
-import { db } from './db';
-import { advertisements, competitions } from '@shared/schema';
-import { sql, eq, desc, isNotNull } from 'drizzle-orm';
-import { storage } from './storage';
+import TelegramBot from "node-telegram-bot-api";
+import { db } from "./db";
+import { advertisements, competitions } from "@shared/schema";
+import { sql, eq, desc, isNotNull } from "drizzle-orm";
+import { storage } from "./storage";
 
 let bot: TelegramBot | null = null;
 const userStates: Record<number, any> = {};
@@ -16,21 +16,34 @@ function parseUzbekDate(input: string): Date | null {
     const clean = input.trim();
     let match = clean.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/);
     if (match) return new Date(clean);
-    
+
     match = clean.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
-    if (match) return new Date(`${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}T00:00:00Z`);
+    if (match)
+      return new Date(
+        `${match[3]}-${match[2].padStart(2, "0")}-${match[1].padStart(2, "0")}T00:00:00Z`
+      );
 
     const map: Record<string, string> = {
-      'yanvar': '01', 'fevral': '02', 'mart': '03', 'aprel': '04', 'may': '05', 'iyun': '06',
-      'iyul': '07', 'avgust': '08', 'sentyabr': '09', 'oktyabr': '10', 'noyabr': '11', 'dekabr': '12'
+      yanvar: "01",
+      fevral: "02",
+      mart: "03",
+      aprel: "04",
+      may: "05",
+      iyun: "06",
+      iyul: "07",
+      avgust: "08",
+      sentyabr: "09",
+      oktyabr: "10",
+      noyabr: "11",
+      dekabr: "12",
     };
-    
+
     for (const [uz, num] of Object.entries(map)) {
       if (clean.toLowerCase().includes(uz)) {
         const dMatch = clean.match(/(\d{1,2})/);
         const yMatch = clean.match(/(\d{4})/);
         if (dMatch && yMatch) {
-           return new Date(`${yMatch[1]}-${num}-${dMatch[1].padStart(2, '0')}T00:00:00Z`);
+          return new Date(`${yMatch[1]}-${num}-${dMatch[1].padStart(2, "0")}T00:00:00Z`);
         }
       }
     }
@@ -52,7 +65,9 @@ export function startBot() {
 
   const isAdmin = (msg: TelegramBot.Message) => {
     if (msg.chat.id !== adminId) {
-      bot?.sendMessage(msg.chat.id, "Sizda bu botdan foydalanish huquqi yo'q.", { parse_mode: "HTML" });
+      bot?.sendMessage(msg.chat.id, "Sizda bu botdan foydalanish huquqi yo'q.", {
+        parse_mode: "HTML",
+      });
       return false;
     }
     return true;
@@ -60,7 +75,7 @@ export function startBot() {
 
   bot.onText(/^\/start$/, async (msg) => {
     if (!isAdmin(msg)) return;
-    const text = 
+    const text =
       "Boshqaruv paneliga xush kelibsiz.\n\n" +
       "Buyruqlar ro'yxati:\n\n" +
       "/stats - Barcha statistik ma'lumotlar\n" +
@@ -71,15 +86,21 @@ export function startBot() {
       "/musobaqa_list - Barcha musobaqalar ro'yxati\n\n" +
       "/xabar - Barcha foydalanuvchilarga xabar yuborish\n" +
       "/bekor - Har qanday jarayonni to'xtatish";
-      
+
     const opts = {
-      parse_mode: 'HTML' as const,
+      parse_mode: "HTML" as const,
       reply_markup: {
         inline_keyboard: [
-           [{ text: "Statistika", callback_data: "cmd_stats" }, { text: "Musobaqalar", callback_data: "cmd_musobaqa_list" }],
-           [{ text: "Reklamalar", callback_data: "cmd_reklama_list" }, { text: "Foydalanuvchilar", callback_data: "cmd_foydalanuvchilar" }]
-        ]
-      }
+          [
+            { text: "Statistika", callback_data: "cmd_stats" },
+            { text: "Musobaqalar", callback_data: "cmd_musobaqa_list" },
+          ],
+          [
+            { text: "Reklamalar", callback_data: "cmd_reklama_list" },
+            { text: "Foydalanuvchilar", callback_data: "cmd_foydalanuvchilar" },
+          ],
+        ],
+      },
     };
     bot?.sendMessage(msg.chat.id, text, opts);
   });
@@ -99,7 +120,7 @@ export function startBot() {
           (SELECT count(*) FROM competitions WHERE is_active = true) as active_comps,
           (SELECT count(*) FROM competitions) as total_comps
       `);
-      
+
       const maxWpmRecord = await db.execute(sql`
         SELECT t.wpm, u.email, u.first_name 
         FROM test_results t 
@@ -107,15 +128,15 @@ export function startBot() {
         ORDER BY t.wpm DESC 
         LIMIT 1
       `);
-      
+
       const r = stats.rows[0] as any;
       let maxWpmText = "Mavjud emas";
       if (maxWpmRecord.rows.length > 0) {
-         const m = maxWpmRecord.rows[0] as any;
-         maxWpmText = `${m.wpm} (${m.first_name || m.email.split('@')[0]})`;
+        const m = maxWpmRecord.rows[0] as any;
+        maxWpmText = `${m.wpm} (${m.first_name || m.email.split("@")[0]})`;
       }
 
-      const text = 
+      const text =
         "Batafsil Statistika:\n\n" +
         `- Jami foydalanuvchilar: ${r.total_users} ta\n` +
         `- Bugun qo'shilganlar: ${r.today_users} ta\n` +
@@ -138,7 +159,7 @@ export function startBot() {
     if (!isAdmin(msg)) return;
     sendStats(msg.chat.id);
   });
-  
+
   const sendUsersList = async (chatId: number) => {
     await bot?.sendMessage(chatId, "Yuklanmoqda...", { parse_mode: "HTML" });
     try {
@@ -151,22 +172,22 @@ export function startBot() {
         ORDER BY u.created_at DESC
         LIMIT 10
       `);
-      
+
       if (usersList.rows.length === 0) {
         bot?.sendMessage(chatId, "Foydalanuvchilar topilmadi.");
         return;
       }
 
       for (const u of usersList.rows as any[]) {
-         const dateStr = new Date(u.created_at).toLocaleString('uz-UZ');
-         const text = 
-           `- ID: ${u.id}\n` +
-           `- Ismi: ${u.first_name || u.email.split('@')[0]}\n` +
-           `- Email: ${u.email}\n` +
-           `- Ro'yxatdan o'tgan sana: ${dateStr}\n` +
-           `- Jami testlari soni: ${u.total_tests || 0} ta\n` +
-           `- Eng yuqori WPM natijasi: ${u.max_wpm || 0}`;
-         await bot?.sendMessage(chatId, text);
+        const dateStr = new Date(u.created_at).toLocaleString("uz-UZ");
+        const text =
+          `- ID: ${u.id}\n` +
+          `- Ismi: ${u.first_name || u.email.split("@")[0]}\n` +
+          `- Email: ${u.email}\n` +
+          `- Ro'yxatdan o'tgan sana: ${dateStr}\n` +
+          `- Jami testlari soni: ${u.total_tests || 0} ta\n` +
+          `- Eng yuqori WPM natijasi: ${u.max_wpm || 0}`;
+        await bot?.sendMessage(chatId, text);
       }
     } catch (e) {
       bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any).message);
@@ -189,79 +210,89 @@ export function startBot() {
     if (!isAdmin(msg)) return;
     const textInfo = match && match[1];
     if (textInfo) {
-       userStates[msg.chat.id] = { type: 'xabar', text: textInfo };
-       const confirmMsg = 
-          "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\n\n" +
-          `${textInfo}\n\n` +
-          "Tasdiqlaysizmi?";
-       const opts = {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "Ha, yuborish", callback_data: "x_yes" }],
-              [{ text: "Bekor qilish", callback_data: "m_no" }]
-            ]
-          }
-        };
-        bot?.sendMessage(msg.chat.id, confirmMsg, opts);
+      userStates[msg.chat.id] = { type: "xabar", text: textInfo };
+      const confirmMsg =
+        "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\n\n" +
+        `${textInfo}\n\n` +
+        "Tasdiqlaysizmi?";
+      const opts = {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Ha, yuborish", callback_data: "x_yes" }],
+            [{ text: "Bekor qilish", callback_data: "m_no" }],
+          ],
+        },
+      };
+      bot?.sendMessage(msg.chat.id, confirmMsg, opts);
     } else {
-      userStates[msg.chat.id] = { type: 'xabar' };
-      bot?.sendMessage(msg.chat.id, "Barcha foydalanuvchilarga jo'natiladigan xabar matnini kiriting:", { parse_mode: "HTML" });
+      userStates[msg.chat.id] = { type: "xabar" };
+      bot?.sendMessage(
+        msg.chat.id,
+        "Barcha foydalanuvchilarga jo'natiladigan xabar matnini kiriting:",
+        { parse_mode: "HTML" }
+      );
     }
   });
 
   // ========== REKLAMA CREATION ==========
   bot.onText(/^\/reklama$/, (msg) => {
     if (!isAdmin(msg)) return;
-    userStates[msg.chat.id] = { type: 'reklama', step: 'title' };
-    bot?.sendMessage(msg.chat.id, "Yangi reklama.\n\n1. Homiy nomi yoki sarlavhani kiriting:", { parse_mode: "HTML" });
+    userStates[msg.chat.id] = { type: "reklama", step: "title" };
+    bot?.sendMessage(msg.chat.id, "Yangi reklama.\n\n1. Homiy nomi yoki sarlavhani kiriting:", {
+      parse_mode: "HTML",
+    });
   });
 
   // ========== MUSOBAQA CREATION ==========
   bot.onText(/^\/musobaqa_och$/, (msg) => {
     if (!isAdmin(msg)) return;
-    userStates[msg.chat.id] = { type: 'musobaqa', step: 'title' };
-    bot?.sendMessage(msg.chat.id, "Yangi musobaqa ochish.\n\n1. Musobaqa nomini kiriting:", { parse_mode: "HTML" });
+    userStates[msg.chat.id] = { type: "musobaqa", step: "title" };
+    bot?.sendMessage(msg.chat.id, "Yangi musobaqa ochish.\n\n1. Musobaqa nomini kiriting:", {
+      parse_mode: "HTML",
+    });
   });
 
-  bot.on('message', async (msg) => {
-    if (!msg.text || msg.text.startsWith('/')) return;
+  bot.on("message", async (msg) => {
+    if (!msg.text || msg.text.startsWith("/")) return;
     const state = userStates[msg.chat.id];
     if (!state) return;
 
-    if (state.type === 'xabar') {
-       const confirmMsg = 
-          "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\n\n" +
-          `${msg.text}\n\n` +
-          "Tasdiqlaysizmi?";
-       state.text = msg.text;
-       const opts = {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "Ha, yuborish", callback_data: "x_yes" }],
-              [{ text: "Bekor qilish", callback_data: "m_no" }]
-            ]
-          }
-        };
-        bot?.sendMessage(msg.chat.id, confirmMsg, opts);
-    }
-    else if (state.type === 'reklama') {
-      if (state.step === 'title') {
+    if (state.type === "xabar") {
+      const confirmMsg =
+        "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\n\n" +
+        `${msg.text}\n\n` +
+        "Tasdiqlaysizmi?";
+      state.text = msg.text;
+      const opts = {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Ha, yuborish", callback_data: "x_yes" }],
+            [{ text: "Bekor qilish", callback_data: "m_no" }],
+          ],
+        },
+      };
+      bot?.sendMessage(msg.chat.id, confirmMsg, opts);
+    } else if (state.type === "reklama") {
+      if (state.step === "title") {
         state.title = msg.text;
-        state.step = 'image';
+        state.step = "image";
         bot?.sendMessage(msg.chat.id, "2. Reklama rasmi (URL orqali tashlang):");
-      } else if (state.step === 'image') {
+      } else if (state.step === "image") {
         state.imageUrl = msg.text;
-        state.step = 'link';
+        state.step = "link";
         bot?.sendMessage(msg.chat.id, "3. Havola (Bosganda qayerga o'tishi kerakligini kiriting):");
-      } else if (state.step === 'link') {
+      } else if (state.step === "link") {
         state.linkUrl = msg.text;
-        state.step = 'desc';
-        bot?.sendMessage(msg.chat.id, "4. Qisqa tavsif kiriting (majburiy emas, bo'sh qoldirish uchun nuqta qo'ying):");
-      } else if (state.step === 'desc') {
-        state.description = msg.text === '.' ? '' : msg.text;
-        state.step = 'confirm';
-        
-        const preview = 
+        state.step = "desc";
+        bot?.sendMessage(
+          msg.chat.id,
+          "4. Qisqa tavsif kiriting (majburiy emas, bo'sh qoldirish uchun nuqta qo'ying):"
+        );
+      } else if (state.step === "desc") {
+        state.description = msg.text === "." ? "" : msg.text;
+        state.step = "confirm";
+
+        const preview =
           `Homiy nomi: ${state.title}\n` +
           `Rasm havolasi: ${state.imageUrl}\n` +
           `Havola URL: ${state.linkUrl}\n` +
@@ -272,47 +303,49 @@ export function startBot() {
           reply_markup: {
             inline_keyboard: [
               [{ text: "Ha, joylash", callback_data: "r_yes" }],
-              [{ text: "Bekor qilish", callback_data: "r_no" }]
-            ]
-          }
+              [{ text: "Bekor qilish", callback_data: "r_no" }],
+            ],
+          },
         };
         bot?.sendMessage(msg.chat.id, preview, opts);
       }
-    } 
-    else if (state.type === 'musobaqa') {
-      if (state.step === 'title') {
+    } else if (state.type === "musobaqa") {
+      if (state.step === "title") {
         state.title = msg.text;
-        state.step = 'date';
-        bot?.sendMessage(msg.chat.id, 
+        state.step = "date";
+        bot?.sendMessage(
+          msg.chat.id,
           "2. Sanani kiriting.\n\n" +
-          "Istalgan formatda yozishingiz mumkin. Masalan:\n" +
-          "- 2026-04-01\n" +
-          "- 01.04.2026\n" +
-          "- 1 aprel 2026\n\n" +
-          "Agar noto'g'ri bo'lsa, tizim o'zi xabar beradi."
+            "Istalgan formatda yozishingiz mumkin. Masalan:\n" +
+            "- 2026-04-01\n" +
+            "- 01.04.2026\n" +
+            "- 1 aprel 2026\n\n" +
+            "Agar noto'g'ri bo'lsa, tizim o'zi xabar beradi."
         );
-      } else if (state.step === 'date') {
+      } else if (state.step === "date") {
         const d = parseUzbekDate(msg.text);
         if (!d) {
-          bot?.sendMessage(msg.chat.id, 
+          bot?.sendMessage(
+            msg.chat.id,
             "Kiritilgan sana formati noto'g'ri. Iltimos to'g'ri sanani kiriting.\n\n" +
-            "To'g'ri namuna: 01.04.2026 yoki 2026-04-01"
+              "To'g'ri namuna: 01.04.2026 yoki 2026-04-01"
           );
           return;
         }
         state.date = d.toISOString();
-        state.step = 'prize';
-        bot?.sendMessage(msg.chat.id, 
-          `Sanasi qabul qilindi: ${d.toLocaleDateString('uz-UZ')}\n\n` +
-          `3. Musobaqa sovrinini kiriting:`
+        state.step = "prize";
+        bot?.sendMessage(
+          msg.chat.id,
+          `Sanasi qabul qilindi: ${d.toLocaleDateString("uz-UZ")}\n\n` +
+            `3. Musobaqa sovrinini kiriting:`
         );
-      } else if (state.step === 'prize') {
+      } else if (state.step === "prize") {
         state.prize = msg.text;
-        state.step = 'confirm';
+        state.step = "confirm";
 
-        const preview = 
+        const preview =
           `Musobaqa nomi: ${state.title}\n` +
-          `Sanasi: ${new Date(state.date).toLocaleDateString('uz-UZ')}\n` +
+          `Sanasi: ${new Date(state.date).toLocaleDateString("uz-UZ")}\n` +
           `Sovrin: ${state.prize}\n\n` +
           "Barcha ma'lumotlar to'g'rimi?";
 
@@ -320,13 +353,13 @@ export function startBot() {
           reply_markup: {
             inline_keyboard: [
               [{ text: "Tasdiqlash", callback_data: "m_yes" }],
-              [{ text: "Bekor qilish", callback_data: "m_no" }]
-            ]
-          }
+              [{ text: "Bekor qilish", callback_data: "m_no" }],
+            ],
+          },
         };
         bot?.sendMessage(msg.chat.id, preview, opts);
       }
-    } else if (state.type === 'msg_winner') {
+    } else if (state.type === "msg_winner") {
       try {
         const { sendMessageToWinner, getUserIdByTelegram } = require("./userBot");
         // Save to DB
@@ -335,19 +368,24 @@ export function startBot() {
         await db.insert(adminMessages).values({
           fromAdmin: true,
           toUserId: state.winnerUserId,
-          message: msg.text
+          message: msg.text,
         });
 
         // Try getting telegram ID of user
         const { sql } = require("drizzle-orm");
-        const uRes = await db.execute(sql`SELECT telegram_id FROM users WHERE id = ${state.winnerUserId}`);
+        const uRes = await db.execute(
+          sql`SELECT telegram_id FROM users WHERE id = ${state.winnerUserId}`
+        );
         const tId = uRes.rows[0]?.telegram_id;
-        
+
         if (tId) {
           await sendMessageToWinner(tId, msg.text);
           bot?.sendMessage(msg.chat.id, "Xabar g'olibga yuborildi.");
         } else {
-          bot?.sendMessage(msg.chat.id, "Foydalanuvchining Telegram ID si topilmadi. U botdan kirmagan bo'lishi mumkin.");
+          bot?.sendMessage(
+            msg.chat.id,
+            "Foydalanuvchining Telegram ID si topilmadi. U botdan kirmagan bo'lishi mumkin."
+          );
         }
       } catch (e: any) {
         bot?.sendMessage(msg.chat.id, "Xatolik: " + e.message);
@@ -356,63 +394,66 @@ export function startBot() {
     }
   });
 
-  bot.on('callback_query', async (query) => {
+  bot.on("callback_query", async (query) => {
     if (!query.message) return;
     const chatId = query.message.chat.id;
     const state = userStates[chatId];
     bot?.answerCallbackQuery(query.id);
 
-    if (query.data === 'cmd_stats') return sendStats(chatId);
-    if (query.data === 'cmd_foydalanuvchilar') return sendUsersList(chatId);
-    if (query.data === 'cmd_musobaqa_list') return sendMusobaqaList(chatId);
-    if (query.data === 'cmd_reklama_list') return sendReklamaList(chatId);
+    if (query.data === "cmd_stats") return sendStats(chatId);
+    if (query.data === "cmd_foydalanuvchilar") return sendUsersList(chatId);
+    if (query.data === "cmd_musobaqa_list") return sendMusobaqaList(chatId);
+    if (query.data === "cmd_reklama_list") return sendReklamaList(chatId);
 
-    if (query.data === 'r_no' || query.data === 'm_no') {
+    if (query.data === "r_no" || query.data === "m_no") {
       delete userStates[chatId];
       bot?.sendMessage(chatId, "Bekor qilindi.");
       return;
     }
 
-    if (query.data === 'x_yes' && state?.type === 'xabar') {
-       await bot?.sendMessage(chatId, "Yuklanmoqda...");
-       try {
-          const { notifications } = require("@shared/schema");
-          await db.insert(notifications).values({
-            title: "Yozgo Administratori",
-            message: state.text
-          });
-          
-          const { broadcastFromUserBot } = require("./userBot");
-          const result = await broadcastFromUserBot(state.text);
-          bot?.sendMessage(chatId, result.text);
-       } catch (e) {
-          bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any)?.message);
-       }
-       delete userStates[chatId];
-    }
-    
-    if (query.data?.startsWith('br_battle_')) {
-       const code = query.data.replace('br_battle_', '');
-       await bot?.sendMessage(chatId, "Kanalga yuborilmoqda...");
-       try {
-          const { getUserBot } = require("./userBot");
-          const userBotInstance = getUserBot();
-          
-          if (!userBotInstance) {
-            throw new Error("Yozgo User Bot ishlamayapti.");
-          }
+    if (query.data === "x_yes" && state?.type === "xabar") {
+      await bot?.sendMessage(chatId, "Yuklanmoqda...");
+      try {
+        const { notifications } = require("@shared/schema");
+        await db.insert(notifications).values({
+          title: "Yozgo Administratori",
+          message: state.text,
+        });
 
-          const url = `https://yozgo.uz/battle`;
-          const bText = `🏆 JANG (BATTLE) XONASI OCHILDI!\n\nAsosiy xona kodi:\n<code>${code}</code>\n<i>(Kodni ustiga bosib bemalol nusxalashingiz mumkin)</i>\n\nXonaga kirish individual kodingizni beruvchi bot: @yozgo_bot\n\nJangga kirish sayti: ${url}\n\nDarhol qatnashing va raqobatlashamiz!`;
-          
-          await userBotInstance.sendMessage('@yozgo_uz', bText, { parse_mode: 'HTML' });
-          bot?.sendMessage(chatId, "Barcha ma'lumotlar @yozgo_uz kanaliga muvaffaqiyatli yuborildi! ✅");
-       } catch (e) {
-          bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any)?.message);
-       }
+        const { broadcastFromUserBot } = require("./userBot");
+        const result = await broadcastFromUserBot(state.text);
+        bot?.sendMessage(chatId, result.text);
+      } catch (e) {
+        bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any)?.message);
+      }
+      delete userStates[chatId];
     }
 
-    if (query.data === 'r_yes' && state?.type === 'reklama') {
+    if (query.data?.startsWith("br_battle_")) {
+      const code = query.data.replace("br_battle_", "");
+      await bot?.sendMessage(chatId, "Kanalga yuborilmoqda...");
+      try {
+        const { getUserBot } = require("./userBot");
+        const userBotInstance = getUserBot();
+
+        if (!userBotInstance) {
+          throw new Error("Yozgo User Bot ishlamayapti.");
+        }
+
+        const url = `https://yozgo.uz/battle`;
+        const bText = `🏆 JANG (BATTLE) XONASI OCHILDI!\n\nAsosiy xona kodi:\n<code>${code}</code>\n<i>(Kodni ustiga bosib bemalol nusxalashingiz mumkin)</i>\n\nXonaga kirish individual kodingizni beruvchi bot: @yozgo_bot\n\nJangga kirish sayti: ${url}\n\nDarhol qatnashing va raqobatlashamiz!`;
+
+        await userBotInstance.sendMessage("@yozgo_uz", bText, { parse_mode: "HTML" });
+        bot?.sendMessage(
+          chatId,
+          "Barcha ma'lumotlar @yozgo_uz kanaliga muvaffaqiyatli yuborildi! ✅"
+        );
+      } catch (e) {
+        bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any)?.message);
+      }
+    }
+
+    if (query.data === "r_yes" && state?.type === "reklama") {
       await bot?.sendMessage(chatId, "Yuklanmoqda...");
       try {
         await db.insert(advertisements).values({
@@ -422,7 +463,7 @@ export function startBot() {
           linkUrl: state.linkUrl,
           startDate: new Date(),
           endDate: new Date("2030-12-31T23:59:59.000Z"),
-          isActive: true
+          isActive: true,
         });
         bot?.sendMessage(chatId, "Reklama saytga muvaffaqiyatli qo'shildi.");
       } catch (e) {
@@ -431,13 +472,13 @@ export function startBot() {
       delete userStates[chatId];
     }
 
-    if (query.data === 'm_yes' && state?.type === 'musobaqa') {
+    if (query.data === "m_yes" && state?.type === "musobaqa") {
       await bot?.sendMessage(chatId, "Yuklanmoqda...");
       try {
         await storage.createCompetition({
-           title: state.title,
-           date: new Date(state.date),
-           prize: state.prize || null
+          title: state.title,
+          date: new Date(state.date),
+          prize: state.prize || null,
         });
         bot?.sendMessage(chatId, "Musobaqa saytga joylandi.");
       } catch (e) {
@@ -445,42 +486,47 @@ export function startBot() {
       }
       delete userStates[chatId];
     }
-    
-    if (query.data?.startsWith('comp_cancel_')) {
-       const id = query.data.replace('comp_cancel_', '');
-       try {
-          await db.delete(competitions).where(eq(competitions.id, id));
-          bot?.sendMessage(chatId, "Musobaqa o'chirildi.");
-       } catch (e) {
-          bot?.sendMessage(chatId, "Xato: " + (e as any).message);
-       }
+
+    if (query.data?.startsWith("comp_cancel_")) {
+      const id = query.data.replace("comp_cancel_", "");
+      try {
+        await db.delete(competitions).where(eq(competitions.id, id));
+        bot?.sendMessage(chatId, "Musobaqa o'chirildi.");
+      } catch (e) {
+        bot?.sendMessage(chatId, "Xato: " + (e as any).message);
+      }
     }
 
-    if (query.data?.startsWith('msg_winner_')) {
-      const winnerUserId = query.data.replace('msg_winner_', '');
-      userStates[chatId] = { type: 'msg_winner', winnerUserId };
-      bot?.sendMessage(chatId, "G'olibga jo'natiladigan xabar matnini kiriting:", { parse_mode: "HTML" });
+    if (query.data?.startsWith("msg_winner_")) {
+      const winnerUserId = query.data.replace("msg_winner_", "");
+      userStates[chatId] = { type: "msg_winner", winnerUserId };
+      bot?.sendMessage(chatId, "G'olibga jo'natiladigan xabar matnini kiriting:", {
+        parse_mode: "HTML",
+      });
     }
 
-    if (query.data?.startsWith('verify_y_')) {
-      const payload = query.data.replace('verify_y_', '');
-      const [battleId, tgId] = payload.split('|');
+    if (query.data?.startsWith("verify_y_")) {
+      const payload = query.data.replace("verify_y_", "");
+      const [battleId, tgId] = payload.split("|");
       bot?.sendMessage(chatId, "Tasdiqlandi va kod jo'natilmoqda...");
       try {
         const { generateAndSendRoomCode } = require("./userBot");
         await generateAndSendRoomCode(battleId, parseInt(tgId, 10));
-      } catch(e: any) {
+      } catch (e: any) {
         bot?.sendMessage(chatId, "Xato: " + e.message);
       }
     }
 
-    if (query.data?.startsWith('verify_n_')) {
-      const tgId = query.data.replace('verify_n_', '');
+    if (query.data?.startsWith("verify_n_")) {
+      const tgId = query.data.replace("verify_n_", "");
       bot?.sendMessage(chatId, "Rad etildi.");
       try {
         const { sendMessageToWinner } = require("./userBot");
-        await sendMessageToWinner(parseInt(tgId, 10), "Sizning obunangiz rad etildi, iltimos qayta tekshiring va shartlarni to'liq bajaring.");
-      } catch(e) {}
+        await sendMessageToWinner(
+          parseInt(tgId, 10),
+          "Sizning obunangiz rad etildi, iltimos qayta tekshiring va shartlarni to'liq bajaring."
+        );
+      } catch (e) {}
     }
   });
 
@@ -489,13 +535,13 @@ export function startBot() {
     try {
       const ads = await db.select().from(advertisements);
       if (!ads.length) {
-         bot?.sendMessage(chatId, "Reklamalar mavjud emas.");
-         return;
+        bot?.sendMessage(chatId, "Reklamalar mavjud emas.");
+        return;
       }
       for (const ad of ads) {
         const status = ad.isActive ? "Aktiv" : "Nofaol";
-        const dateStr = ad.startDate ? new Date(ad.startDate).toLocaleString('uz-UZ') : 'Noma\'lum';
-        const text = 
+        const dateStr = ad.startDate ? new Date(ad.startDate).toLocaleString("uz-UZ") : "Noma'lum";
+        const text =
           `- ID: ${ad.id}\n` +
           `- Homiy nomi: ${ad.title}\n` +
           `- Havola: ${ad.linkUrl}\n` +
@@ -507,7 +553,7 @@ export function startBot() {
         await bot?.sendMessage(chatId, text);
       }
     } catch (e) {
-       bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
+      bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
     }
   };
 
@@ -519,10 +565,13 @@ export function startBot() {
   bot.onText(/^\/reklama_(on|off)\s+(.+)$/, async (msg, match) => {
     if (!isAdmin(msg) || !match) return;
     const [, action, id] = match;
-    const isActive = action === 'on';
+    const isActive = action === "on";
     try {
       await storage.toggleAdvertisement(id, isActive);
-      bot?.sendMessage(msg.chat.id, `Reklama holati o'zgartirildi: ${isActive ? 'Aktiv' : "Nofaol"}`);
+      bot?.sendMessage(
+        msg.chat.id,
+        `Reklama holati o'zgartirildi: ${isActive ? "Aktiv" : "Nofaol"}`
+      );
     } catch (e) {
       bot?.sendMessage(msg.chat.id, "Xatolik: " + (e as any).message);
     }
@@ -533,36 +582,39 @@ export function startBot() {
     try {
       const comps = await db.select().from(competitions).orderBy(desc(competitions.createdAt));
       if (!comps.length) {
-         bot?.sendMessage(chatId, "Musobaqalar mavjud emas.");
-         return;
+        bot?.sendMessage(chatId, "Musobaqalar mavjud emas.");
+        return;
       }
-      
+
       const now = new Date();
       for (const c of comps) {
         let status = "Aktiv";
         if (!c.isActive) status = "Tugagan";
         else if (new Date(c.date) > now) status = "Kutilmoqda";
 
-        let text = 
+        let text =
           `- ID raqami: ${c.id}\n` +
           `- Nomi: ${c.title}\n` +
-          `- Sanasi va vaqti: ${new Date(c.date).toLocaleString('uz-UZ')}\n` +
+          `- Sanasi va vaqti: ${new Date(c.date).toLocaleString("uz-UZ")}\n` +
           `- Sovrini: ${c.prize}\n` +
           `- Ro'yxatdan o'tganlar soni: ${c.participantsCount || 0} kishi\n` +
           `- Holati: ${status}`;
-          
+
         if (c.winnerName) text += `\n- G'olib: ${c.winnerName}`;
-        if (c.isActive) text += `\n\nG'olibni e'lon qilish va tugatish uchun:\n/musobaqa_tugat ${c.id} FOYDALANUVCHI_ISMI`;
-        
+        if (c.isActive)
+          text += `\n\nG'olibni e'lon qilish va tugatish uchun:\n/musobaqa_tugat ${c.id} FOYDALANUVCHI_ISMI`;
+
         const opts = {
-          reply_markup: c.isActive ? {
-             inline_keyboard: [[{ text: "Bekor qilish", callback_data: `comp_cancel_${c.id}` }]]
-          } : undefined
+          reply_markup: c.isActive
+            ? {
+                inline_keyboard: [[{ text: "Bekor qilish", callback_data: `comp_cancel_${c.id}` }]],
+              }
+            : undefined,
         };
         await bot?.sendMessage(chatId, text, opts);
       }
     } catch (e) {
-       bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
+      bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
     }
   };
 
@@ -570,7 +622,7 @@ export function startBot() {
     if (!isAdmin(msg)) return;
     sendMusobaqaList(msg.chat.id);
   });
-  
+
   bot.onText(/^\/musobaqa_bekor\s+(.+)$/, async (msg, match) => {
     if (!isAdmin(msg) || !match) return;
     const id = match[1];
@@ -588,7 +640,10 @@ export function startBot() {
     const [, id, winnerName] = match;
     await bot?.sendMessage(msg.chat.id, "Yakunlanmoqda...");
     try {
-      await db.update(competitions).set({ isActive: false, winnerName }).where(eq(competitions.id, id));
+      await db
+        .update(competitions)
+        .set({ isActive: false, winnerName })
+        .where(eq(competitions.id, id));
       bot?.sendMessage(msg.chat.id, `Musobaqa tugatildi. G'olib: ${winnerName}`);
     } catch (e) {
       bot?.sendMessage(msg.chat.id, "Xatolik: " + (e as any).message);
@@ -597,20 +652,26 @@ export function startBot() {
 
   // Scheduled check every 10 min
   const alertedIds = new Set<string>();
-  setInterval(async () => {
-    try {
-      const comps = await db.select().from(competitions).where(eq(competitions.isActive, true));
-      const now = new Date();
-      for (const c of comps) {
-        if (!c.date) continue;
-        const diffHrs = (new Date(c.date).getTime() - now.getTime()) / (1000 * 3600);
-        if (diffHrs > 0 && diffHrs <= 1 && !alertedIds.has(c.id)) {
-          alertedIds.add(c.id);
-          bot?.sendMessage(adminId, `Eslatma:\n\n${c.title} musobaqasi boshlanishiga 1 soat qoldi.`);
+  setInterval(
+    async () => {
+      try {
+        const comps = await db.select().from(competitions).where(eq(competitions.isActive, true));
+        const now = new Date();
+        for (const c of comps) {
+          if (!c.date) continue;
+          const diffHrs = (new Date(c.date).getTime() - now.getTime()) / (1000 * 3600);
+          if (diffHrs > 0 && diffHrs <= 1 && !alertedIds.has(c.id)) {
+            alertedIds.add(c.id);
+            bot?.sendMessage(
+              adminId,
+              `Eslatma:\n\n${c.title} musobaqasi boshlanishiga 1 soat qoldi.`
+            );
+          }
         }
-      }
-    } catch (e) {}
-  }, 10 * 60 * 1000); // 10 mins
+      } catch (e) {}
+    },
+    10 * 60 * 1000
+  ); // 10 mins
 }
 
 export const sendRoomCreatedMessage = (code: string) => {
@@ -619,22 +680,22 @@ export const sendRoomCreatedMessage = (code: string) => {
   const adminId = adminIdStr ? parseInt(adminIdStr, 10) : 0;
   if (!adminId) return;
 
-  const text = 
+  const text =
     `🏆 Musobaqa boshlanmoqda!\n\n` +
     `Asosiy xona kodi:\n<code>${code}</code>\n<i>(Ustiga bosib nusxalashingiz mumkin)</i>\n\n` +
     `Botdan kodingizni oling: @yozgo_bot\n\n` +
     `Saytga kirish: https://yozgo.uz/battle`;
 
   const opts = {
-    parse_mode: 'HTML' as const,
+    parse_mode: "HTML" as const,
     reply_markup: {
       inline_keyboard: [
         [
           { text: "📢 @yozgo_uz kanalga yuborish", callback_data: `br_battle_${code}` },
-          { text: "📋 Nusxalash", copy_text: { text } } as any
-        ]
-      ]
-    }
+          { text: "📋 Nusxalash", copy_text: { text } } as any,
+        ],
+      ],
+    },
   };
 
   try {
@@ -664,9 +725,9 @@ export const sendWinnerToAdmin = (userId: string, name: string) => {
   const opts = {
     reply_markup: {
       inline_keyboard: [
-        [{ text: "✉️ G'olibga xabar yozish", callback_data: `msg_winner_${userId}` }]
-      ]
-    }
+        [{ text: "✉️ G'olibga xabar yozish", callback_data: `msg_winner_${userId}` }],
+      ],
+    },
   };
   bot.sendMessage(adminId, text, opts);
 };

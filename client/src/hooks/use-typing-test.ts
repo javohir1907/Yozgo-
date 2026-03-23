@@ -6,7 +6,12 @@ import type { TimerMode } from "@/components/timer-mode-selector";
 interface UseTypingTestProps {
   language: Language;
   mode: TimerMode;
-  onComplete: (stats: { wpm: number; accuracy: number; correctChars: number; incorrectChars: number }) => void;
+  onComplete: (stats: {
+    wpm: number;
+    accuracy: number;
+    correctChars: number;
+    incorrectChars: number;
+  }) => void;
 }
 
 export type WordStatus = "correct" | "incorrect" | "pending";
@@ -36,23 +41,23 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
   const generateWords = useCallback(() => {
     const pool = wordLists[language];
     const generated: string[] = [];
-    
+
     // Yengil va takrorlanmas tizim: har 500 ta so'z kerak bo'lsa
     // hamma lug'atni aralashtirib qo'shamiz, lug'at tugasa yana aralashtirib qo'shamiz.
     // Shunda bitta ekranda ayni bir so'z yaqin o'rinlarda umuman qaytarilmaydi!
     while (generated.length < 500) {
       const shuffled = [...pool].sort(() => Math.random() - 0.5);
-      
+
       // Ikkita ketma-ket bir xil so'z tushib qolmasligi uchun kichik tekshiruv (ikki blok orasida)
       if (generated.length > 0 && shuffled[0] === generated[generated.length - 1]) {
         const temp = shuffled[0];
         shuffled[0] = shuffled[1];
         shuffled[1] = temp;
       }
-      
+
       generated.push(...shuffled);
     }
-    
+
     // Faqat oxirgi 500 tasini olamiz
     setWords(generated.slice(0, 500));
     setHistory([]);
@@ -85,12 +90,13 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     if (elapsedMinutes <= 0) return;
 
     // FIX: WPM = (faqat to'g'ri harflar / 5) / o'tgan daqiqa
-    const currentWpm = Math.round((correctCharsRef.current / 5) / elapsedMinutes);
-    
+    const currentWpm = Math.round(correctCharsRef.current / 5 / elapsedMinutes);
+
     // FIX: Accuracy = (To'g'ri harflar / barcha bosilgan harflar) * 100
-    const currentAccuracy = allKeystrokesRef.current === 0 
-      ? 100 
-      : Math.round((correctCharsRef.current / allKeystrokesRef.current) * 100);
+    const currentAccuracy =
+      allKeystrokesRef.current === 0
+        ? 100
+        : Math.round((correctCharsRef.current / allKeystrokesRef.current) * 100);
 
     wpmRef.current = Math.max(0, currentWpm);
     accuracyRef.current = currentAccuracy;
@@ -132,79 +138,82 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     }, 100);
   }, [finishTest, updateLiveStats]);
 
-  const handleInputChange = useCallback((value: string) => {
-    if (isFinished) return;
-    if (!isActive && value.length > 0) {
-      startTest();
-    }
-
-    const word = words[currentIndex];
-    if (!word) return;
-
-    if (value.endsWith(" ")) {
-      const currentTyped = value.slice(0, -1);
-
-      // Tezkor yozishda: State birdaniga yangilanib probel bilan qo'shilib qolgan harflarni hisoblash
-      if (currentTyped.length > userInput.length) {
-        const addedLen = currentTyped.length - userInput.length;
-        allKeystrokesRef.current += addedLen;
-        for (let i = userInput.length; i < currentTyped.length; i++) {
-          const targetChar = word[i];
-          const typedChar = currentTyped[i];
-          if (targetChar !== undefined && typedChar === targetChar) {
-            correctCharsRef.current += 1;
-          }
-        }
-      } else if (currentTyped.length < userInput.length) {
-        for (let i = currentTyped.length; i < userInput.length; i++) {
-          const targetChar = word[i];
-          const deletedChar = userInput[i];
-          if (targetChar !== undefined && deletedChar === targetChar) {
-            correctCharsRef.current -= 1;
-          }
-        }
+  const handleInputChange = useCallback(
+    (value: string) => {
+      if (isFinished) return;
+      if (!isActive && value.length > 0) {
+        startTest();
       }
 
-      // Probel bosildi -> bitta tugma
-      allKeystrokesRef.current += 1;
+      const word = words[currentIndex];
+      if (!word) return;
 
-      // Agar so'z to'liq to'g'ri bo'lsa, probel ham to'g'ri belgi sifatida hisoblanadi
-      const isCorrect = currentTyped === word;
-      if (isCorrect) {
-        correctCharsRef.current += 1;
-      }
+      if (value.endsWith(" ")) {
+        const currentTyped = value.slice(0, -1);
 
-      setHistory(prev => [...prev, currentTyped]);
-      setCurrentIndex(prev => prev + 1);
-      setUserInput("");
-      updateLiveStats();
-    } else {
-      if (value.length > userInput.length) {
-        // Harf qo'shildi
-        const addedLen = value.length - userInput.length;
-        allKeystrokesRef.current += addedLen;
-
-        for (let i = userInput.length; i < value.length; i++) {
-          const targetChar = word[i];
-          const typedChar = value[i];
-          if (targetChar !== undefined && typedChar === targetChar) {
-            correctCharsRef.current += 1;
+        // Tezkor yozishda: State birdaniga yangilanib probel bilan qo'shilib qolgan harflarni hisoblash
+        if (currentTyped.length > userInput.length) {
+          const addedLen = currentTyped.length - userInput.length;
+          allKeystrokesRef.current += addedLen;
+          for (let i = userInput.length; i < currentTyped.length; i++) {
+            const targetChar = word[i];
+            const typedChar = currentTyped[i];
+            if (targetChar !== undefined && typedChar === targetChar) {
+              correctCharsRef.current += 1;
+            }
+          }
+        } else if (currentTyped.length < userInput.length) {
+          for (let i = currentTyped.length; i < userInput.length; i++) {
+            const targetChar = word[i];
+            const deletedChar = userInput[i];
+            if (targetChar !== undefined && deletedChar === targetChar) {
+              correctCharsRef.current -= 1;
+            }
           }
         }
-      } else if (value.length < userInput.length) {
-        // Backspace bosildi (allKeystrokes kamaymaydi!)
-        for (let i = value.length; i < userInput.length; i++) {
-          const targetChar = word[i];
-          const deletedChar = userInput[i];
-          if (targetChar !== undefined && deletedChar === targetChar) {
-            correctCharsRef.current -= 1; // Avval to'g'ri deb sanalgan harf o'chirildi, wpm dan ayriladi
+
+        // Probel bosildi -> bitta tugma
+        allKeystrokesRef.current += 1;
+
+        // Agar so'z to'liq to'g'ri bo'lsa, probel ham to'g'ri belgi sifatida hisoblanadi
+        const isCorrect = currentTyped === word;
+        if (isCorrect) {
+          correctCharsRef.current += 1;
+        }
+
+        setHistory((prev) => [...prev, currentTyped]);
+        setCurrentIndex((prev) => prev + 1);
+        setUserInput("");
+        updateLiveStats();
+      } else {
+        if (value.length > userInput.length) {
+          // Harf qo'shildi
+          const addedLen = value.length - userInput.length;
+          allKeystrokesRef.current += addedLen;
+
+          for (let i = userInput.length; i < value.length; i++) {
+            const targetChar = word[i];
+            const typedChar = value[i];
+            if (targetChar !== undefined && typedChar === targetChar) {
+              correctCharsRef.current += 1;
+            }
+          }
+        } else if (value.length < userInput.length) {
+          // Backspace bosildi (allKeystrokes kamaymaydi!)
+          for (let i = value.length; i < userInput.length; i++) {
+            const targetChar = word[i];
+            const deletedChar = userInput[i];
+            if (targetChar !== undefined && deletedChar === targetChar) {
+              correctCharsRef.current -= 1; // Avval to'g'ri deb sanalgan harf o'chirildi, wpm dan ayriladi
+            }
           }
         }
+
+        setUserInput(value);
       }
-      
-      setUserInput(value);
-    }
-  }, [isFinished, isActive, userInput, words, currentIndex, startTest, updateLiveStats]);
+    },
+    [isFinished, isActive, userInput, words, currentIndex, startTest, updateLiveStats]
+  );
 
   const handleGoBack = useCallback(() => {
     // Agar xato qilib so'zni tugatib qo'ygan bo'lsa va backspace bosa (userInput bo'sh bo'lganda)
@@ -216,13 +225,13 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       // Faqat xato yozilgan so'z bo'lsagina orqaga qaytish mumkin
       if (prevInput === prevWordTarget) return;
 
-      setHistory(prev => prev.slice(0, -1));
+      setHistory((prev) => prev.slice(0, -1));
       setCurrentIndex(prevWordIdx);
       setUserInput(prevInput);
-      
+
       // Probel bosilgan vaqtda faqat allKeystrokes oshgandi (chunki so'z xato edi). Probelni ayirib tashlaymiz.
       allKeystrokesRef.current = Math.max(0, allKeystrokesRef.current - 1);
-      
+
       updateLiveStats();
     }
   }, [currentIndex, userInput, history, words, updateLiveStats]);

@@ -21,69 +21,80 @@ interface WordBoxProps {
   typedWord: string; // The word the user actually typed (past or current)
 }
 
-const WordBox = React.memo(React.forwardRef<HTMLSpanElement, WordBoxProps>(({
-  word, wordIdx, isActive, isPast, typedWord
-}, ref) => {
-  if (!isActive && !isPast) {
-    return (
-      <span ref={ref} className="inline-block whitespace-nowrap text-muted-foreground/50 transition-colors word-box" data-testid={`word-${wordIdx}`}>
-        {word.split("").map((char, charIdx) => (
-          <span key={charIdx} className="char-span">{char}</span>
-        ))}
-      </span>
-    );
-  }
-
-  const renderChar = (char: string, charIdx: number) => {
-    let colorClass = "text-muted-foreground/50";
-
-    if (charIdx < typedWord.length) {
-      const typedChar = typedWord[charIdx];
-      if (typedChar === char) {
-        colorClass = "text-green-500 dark:text-green-400 font-medium";
-      } else {
-        colorClass = "text-red-500 dark:text-red-400 font-bold bg-red-500/10";
-      }
-    } else if (isPast) {
-      colorClass = "text-red-500 underline decoration-red-500/50 decoration-2 font-bold opacity-80";
-    }
-
-    return (
-      <span
-        key={`${wordIdx}-${charIdx}`}
-        className={cn("transition-colors duration-75 char-span inline-block", colorClass)}
-      >
-        {char}
-      </span>
-    );
-  };
-
-  return (
-    <span
-      ref={ref}
-      className={cn(
-        "inline-block whitespace-nowrap transition-all duration-200 word-box",
-        isActive && "bg-primary/5 rounded-md px-1 -mx-1"
-      )}
-      data-testid={`word-${wordIdx}`}
-    >
-      {/* Word Characters */}
-      {word.split("").map((char, charIdx) => renderChar(char, charIdx))}
-
-      {/* Extra characters typed beyond word length */}
-      {typedWord.length > word.length &&
-        typedWord.slice(word.length).split("").map((char, charIdx) => (
+const WordBox = React.memo(
+  React.forwardRef<HTMLSpanElement, WordBoxProps>(
+    ({ word, wordIdx, isActive, isPast, typedWord }, ref) => {
+      if (!isActive && !isPast) {
+        return (
           <span
-            key={`extra-${charIdx}`}
-            className="text-red-500 underline decoration-red-500/50 font-bold opacity-80 char-span inline-block"
+            ref={ref}
+            className="inline-block whitespace-nowrap text-muted-foreground/50 transition-colors word-box"
+            data-testid={`word-${wordIdx}`}
+          >
+            {word.split("").map((char, charIdx) => (
+              <span key={charIdx} className="char-span">
+                {char}
+              </span>
+            ))}
+          </span>
+        );
+      }
+
+      const renderChar = (char: string, charIdx: number) => {
+        let colorClass = "text-muted-foreground/50";
+
+        if (charIdx < typedWord.length) {
+          const typedChar = typedWord[charIdx];
+          if (typedChar === char) {
+            colorClass = "text-green-500 dark:text-green-400 font-medium";
+          } else {
+            colorClass = "text-red-500 dark:text-red-400 font-bold bg-red-500/10";
+          }
+        } else if (isPast) {
+          colorClass =
+            "text-red-500 underline decoration-red-500/50 decoration-2 font-bold opacity-80";
+        }
+
+        return (
+          <span
+            key={`${wordIdx}-${charIdx}`}
+            className={cn("transition-colors duration-75 char-span inline-block", colorClass)}
           >
             {char}
           </span>
-        ))
-      }
-    </span>
-  );
-}));
+        );
+      };
+
+      return (
+        <span
+          ref={ref}
+          className={cn(
+            "inline-block whitespace-nowrap transition-all duration-200 word-box",
+            isActive && "bg-primary/5 rounded-md px-1 -mx-1"
+          )}
+          data-testid={`word-${wordIdx}`}
+        >
+          {/* Word Characters */}
+          {word.split("").map((char, charIdx) => renderChar(char, charIdx))}
+
+          {/* Extra characters typed beyond word length */}
+          {typedWord.length > word.length &&
+            typedWord
+              .slice(word.length)
+              .split("")
+              .map((char, charIdx) => (
+                <span
+                  key={`extra-${charIdx}`}
+                  className="text-red-500 underline decoration-red-500/50 font-bold opacity-80 char-span inline-block"
+                >
+                  {char}
+                </span>
+              ))}
+        </span>
+      );
+    }
+  )
+);
 
 WordBox.displayName = "WordBox";
 
@@ -116,11 +127,11 @@ export function TypingArea({
   // Handle caret positioning
   useEffect(() => {
     if (!wordsRef.current || !activeWordRef.current) return;
-    
+
     const wordEl = activeWordRef.current;
-    const chars = wordEl.querySelectorAll('.char-span');
+    const chars = wordEl.querySelectorAll(".char-span");
     const inputLen = userInput.length;
-    
+
     let top = 0;
     let left = 0;
 
@@ -148,10 +159,10 @@ export function TypingArea({
     if (lineHeightRef.current === 0) {
       const firstWord = wordsRef.current.querySelector(".word-box") as HTMLElement;
       const allWords = wordsRef.current.querySelectorAll(".word-box");
-      
+
       if (firstWord && allWords.length > 0) {
         const top0 = firstWord.offsetTop;
-        
+
         // Find the first word that wrapped to the second line
         for (let i = 1; i < allWords.length; i++) {
           const el = allWords[i] as HTMLElement;
@@ -171,7 +182,7 @@ export function TypingArea({
     if (lineHeightRef.current > 0) {
       const wordTop = activeWord.offsetTop;
       const currentLine = Math.round(wordTop / lineHeightRef.current);
-      
+
       if (currentLine >= 2) {
         setOffsetY(-(currentLine - 1) * lineHeightRef.current);
       } else {
@@ -227,7 +238,7 @@ export function TypingArea({
         className="flex flex-wrap gap-x-3 gap-y-3 text-[1.7rem] font-mono leading-relaxed select-none px-2 relative"
         style={{
           transform: `translateY(${offsetY}px)`,
-          transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)", 
+          transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
         {/* New precise caret */}
@@ -240,7 +251,7 @@ export function TypingArea({
               width: "3px",
               height: "1.4em", // Match character height roughly
               animation: "blink 1s step-end infinite",
-              marginTop: "0.1em" // tiny tweak to align vertically with text
+              marginTop: "0.1em", // tiny tweak to align vertically with text
             }}
             data-testid="typing-caret"
           />

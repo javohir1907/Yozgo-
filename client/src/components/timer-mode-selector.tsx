@@ -20,7 +20,9 @@ export function TimerModeSelector({ currentMode, onModeChange }: TimerModeSelect
           size="sm"
           className={cn(
             "text-xs font-mono transition-all",
-            currentMode === mode ? "text-primary bg-muted" : "text-muted-foreground hover:text-primary"
+            currentMode === mode
+              ? "text-primary bg-muted"
+              : "text-muted-foreground hover:text-primary"
           )}
           onClick={() => onModeChange(mode)}
           data-testid={`button-mode-${mode}`}

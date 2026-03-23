@@ -1,12 +1,12 @@
-import TelegramBot from 'node-telegram-bot-api';
-import { db } from './db';
-import { users, battles, roomAccessCodes, adminMessages } from '@shared/schema';
-import { isNotNull, sql, eq, and } from 'drizzle-orm';
-import crypto from 'crypto';
-import { getAdminBot } from './bot';
+import TelegramBot from "node-telegram-bot-api";
+import { db } from "./db";
+import { users, battles, roomAccessCodes, adminMessages } from "@shared/schema";
+import { isNotNull, sql, eq, and } from "drizzle-orm";
+import crypto from "crypto";
+import { getAdminBot } from "./bot";
 
 let userBot: TelegramBot | null = null;
-const MINI_APP_URL = process.env.VITE_API_BASE_URL?.replace('/api', '') || "https://yozgo.uz";
+const MINI_APP_URL = process.env.VITE_API_BASE_URL?.replace("/api", "") || "https://yozgo.uz";
 const userStates: Record<number, any> = {};
 
 export function getUserBot() {
@@ -16,7 +16,7 @@ export function getUserBot() {
 export function startUserBot() {
   const token = process.env.USER_BOT_TOKEN;
   if (!token) {
-    console.warn('⚠️ USER_BOT_TOKEN not set — user bot disabled');
+    console.warn("⚠️ USER_BOT_TOKEN not set — user bot disabled");
     return;
   }
 
@@ -25,15 +25,15 @@ export function startUserBot() {
 
   try {
     fetch(`https://api.telegram.org/bot${token}/setChatMenuButton`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-         menu_button: {
-            type: "web_app",
-            text: "O'ynash 🚀",
-            web_app: { url: MINI_APP_URL }
-         }
-      })
+        menu_button: {
+          type: "web_app",
+          text: "O'ynash 🚀",
+          web_app: { url: MINI_APP_URL },
+        },
+      }),
     }).catch(() => {});
   } catch (err) {}
 
@@ -45,58 +45,71 @@ export function startUserBot() {
       await handleRoomCode(chatId, param, msg.from?.id);
       return;
     }
-    
-    const text = 
-      `Assalomu alaykum, ${msg.chat.first_name || 'foydalanuvchi'}! 🦁\n\n` +
+
+    const text =
+      `Assalomu alaykum, ${msg.chat.first_name || "foydalanuvchi"}! 🦁\n\n` +
       `YOZGO — O'zbekistonning birinchi va yagona terma-yozish raqobat platformasiga xush kelibsiz!\n\n` +
       `Musobaqada ishtirok etish uchun xona kodini botga yuboring (masalan: OHSVEW).`;
 
     const opts = {
       reply_markup: {
-        inline_keyboard: [[{ text: "🎯 Yozgoga kirish", web_app: { url: "https://yozgo.uz" } }]]
-      }
+        inline_keyboard: [[{ text: "🎯 Yozgoga kirish", web_app: { url: "https://yozgo.uz" } }]],
+      },
     };
-    
+
     userBot?.sendMessage(chatId, text, opts);
   });
 
-  userBot.on('message', async (msg) => {
+  userBot.on("message", async (msg) => {
     if (!msg.text && !msg.contact && !msg.location && !msg.photo) return;
     const chatId = msg.chat.id;
     const state = userStates[chatId];
 
     // Winner Data Collection Flow
-    if (state?.type === 'winner_data') {
-      if (state.step === 'phone') {
+    if (state?.type === "winner_data") {
+      if (state.step === "phone") {
         if (msg.contact?.phone_number || msg.text) {
           state.phone = msg.contact?.phone_number || msg.text;
-          state.step = 'location';
-          userBot?.sendMessage(chatId, "📍 Endi manzilingizni yuboring (Location jo'nating yoki matn ko'rinishida yozing):", {
-            reply_markup: {
-              keyboard: [[{ text: "Manzilni yuborish 📍", request_location: true }]],
-              resize_keyboard: true,
-              one_time_keyboard: true
+          state.step = "location";
+          userBot?.sendMessage(
+            chatId,
+            "📍 Endi manzilingizni yuboring (Location jo'nating yoki matn ko'rinishida yozing):",
+            {
+              reply_markup: {
+                keyboard: [[{ text: "Manzilni yuborish 📍", request_location: true }]],
+                resize_keyboard: true,
+                one_time_keyboard: true,
+              },
             }
-          });
+          );
         }
-      } else if (state.step === 'location') {
+      } else if (state.step === "location") {
         if (msg.location || msg.text) {
-          state.location = msg.location ? `${msg.location.latitude}, ${msg.location.longitude}` : msg.text;
-          state.step = 'photo';
-          userBot?.sendMessage(chatId, "🤳 Pasport yoki ID karta rasmini yuboring (Sovrin topshirilishi uchun majburiy):", {
-            reply_markup: { remove_keyboard: true }
-          });
+          state.location = msg.location
+            ? `${msg.location.latitude}, ${msg.location.longitude}`
+            : msg.text;
+          state.step = "photo";
+          userBot?.sendMessage(
+            chatId,
+            "🤳 Pasport yoki ID karta rasmini yuboring (Sovrin topshirilishi uchun majburiy):",
+            {
+              reply_markup: { remove_keyboard: true },
+            }
+          );
         }
-      } else if (state.step === 'photo') {
+      } else if (state.step === "photo") {
         if (msg.photo) {
           state.photo = msg.photo[msg.photo.length - 1].file_id;
-          userBot?.sendMessage(chatId, "✅ Rahmat! Ma'lumotlaringiz adminga yuborildi. Tez orada siz bilan bog'lanamiz!");
-          
+          userBot?.sendMessage(
+            chatId,
+            "✅ Rahmat! Ma'lumotlaringiz adminga yuborildi. Tez orada siz bilan bog'lanamiz!"
+          );
+
           // Forward to Admin
           const adminBot = getAdminBot();
           const adminIdStr = process.env.ADMIN_TELEGRAM_ID;
           if (adminBot && adminIdStr) {
-            const adminMsg = `📦 G'olibdan ma'lumotlar keldi: ${msg.from?.first_name || 'Noma\'lum'}\n📱 Tel: ${state.phone}\n📍 Manzil: ${state.location}`;
+            const adminMsg = `📦 G'olibdan ma'lumotlar keldi: ${msg.from?.first_name || "Noma'lum"}\n📱 Tel: ${state.phone}\n📍 Manzil: ${state.location}`;
             adminBot.sendPhoto(parseInt(adminIdStr, 10), state.photo, { caption: adminMsg });
           }
           delete userStates[chatId];
@@ -108,7 +121,7 @@ export function startUserBot() {
     }
 
     // Checking for raw room codes (if user types ROOM2025 directly)
-    if (msg.text && !msg.text.startsWith('/')) {
+    if (msg.text && !msg.text.startsWith("/")) {
       const isMaybeCode = msg.text.length >= 4 && msg.text.length <= 10;
       if (isMaybeCode) {
         await handleRoomCode(chatId, msg.text.toUpperCase(), msg.from?.id);
@@ -116,18 +129,21 @@ export function startUserBot() {
     }
   });
 
-  userBot.on('callback_query', async (query) => {
+  userBot.on("callback_query", async (query) => {
     if (!query.message) return;
     const chatId = query.message.chat.id;
-    
-    if (query.data?.startsWith('check_subs_')) {
-      const battleId = query.data.replace('check_subs_', '');
+
+    if (query.data?.startsWith("check_subs_")) {
+      const battleId = query.data.replace("check_subs_", "");
       try {
         const uId = query.from.id;
         const isSubscribed = await checkSubscription(chatId, uId);
-        
+
         if (!isSubscribed) {
-          userBot?.answerCallbackQuery(query.id, { text: "Yolg'on! Hali kanalga a'zo bo'lmadingiz! ❌", show_alert: true });
+          userBot?.answerCallbackQuery(query.id, {
+            text: "Yolg'on! Hali kanalga a'zo bo'lmadingiz! ❌",
+            show_alert: true,
+          });
           return;
         }
 
@@ -143,8 +159,8 @@ export function startUserBot() {
 // Check subscription wrapper
 async function checkSubscription(chatId: number, tgUserId: number) {
   try {
-    const chatMember = await userBot?.getChatMember('@yozgo_uz', tgUserId);
-    if (!chatMember || ['left', 'kicked'].includes(chatMember.status)) {
+    const chatMember = await userBot?.getChatMember("@yozgo_uz", tgUserId);
+    if (!chatMember || ["left", "kicked"].includes(chatMember.status)) {
       return false;
     }
     return true;
@@ -159,12 +175,12 @@ async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
   const [battle] = await db.select().from(battles).where(eq(battles.code, code));
   if (!battle) {
     if (code.length < 8) {
-       userBot?.sendMessage(chatId, "Xona kodi topilmadi yoki yopilgan.");
+      userBot?.sendMessage(chatId, "Xona kodi topilmadi yoki yopilgan.");
     }
     return;
   }
-  
-  if (battle.status === 'finished') {
+
+  if (battle.status === "finished") {
     userBot?.sendMessage(chatId, "Bu musobaqa allaqachon yakunlangan!");
     return;
   }
@@ -172,83 +188,102 @@ async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
   // Subscribe check
   const isSubscribed = await checkSubscription(chatId, tgUserId);
   if (!isSubscribed) {
-     const text = `Avval @yozgo_uz kanaliga a'zo bo'ling! \nKeyin kodni tekshirish tugmasini bosing yoki xona kodini qaytadan yuboring.`;
-     userBot?.sendMessage(chatId, text, {
-       reply_markup: {
-         inline_keyboard: [
-            [{ text: "✅ Kanalga ulanish", url: "https://t.me/yozgo_uz" }],
-            [{ text: "🔄 Tekshirish", callback_data: `check_subs_${battle.id}` }]
-         ]
-       }
-     });
-     return;
+    const text = `Avval @yozgo_uz kanaliga a'zo bo'ling! \nKeyin kodni tekshirish tugmasini bosing yoki xona kodini qaytadan yuboring.`;
+    userBot?.sendMessage(chatId, text, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: "✅ Kanalga ulanish", url: "https://t.me/yozgo_uz" }],
+          [{ text: "🔄 Tekshirish", callback_data: `check_subs_${battle.id}` }],
+        ],
+      },
+    });
+    return;
   }
 
   await generateAndSendRoomCode(battle.id, tgUserId, chatId);
 }
 
-export async function generateAndSendRoomCode(battleId: string, telegramId: number, chatId: number) {
+export async function generateAndSendRoomCode(
+  battleId: string,
+  telegramId: number,
+  chatId: number
+) {
   // DB relations require a valid userId, so we just attach it to any existing user
   // Since we removed user validation for codes on the backend, it acts as a global bearer token!
   const [firstUser] = await db.select().from(users).limit(1);
   const dummyUserId = firstUser?.id;
-  
+
   if (!dummyUserId) {
     userBot?.sendMessage(chatId, "Tizimda xatolik yuz berdi.");
     return;
   }
 
-  const code = crypto.randomBytes(4).toString('hex').toUpperCase(); // 8 characters
+  const code = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8 characters
   await db.insert(roomAccessCodes).values({
     roomId: battleId,
     userId: dummyUserId,
-    code: code
+    code: code,
   });
 
   const text = `🎉 Sizning kirish kodingiz:\n\n\`${code}\`\n\n👆 Yuqoridagi kod ustiga bir marta bossangiz avtomatik nusxalanadi (copy bo'ladi).\nKodni saytdagi maydonga kiritib jangga qo'shiling. Kod bir martalik!`;
-  
+
   userBot?.sendMessage(chatId, text, {
-    parse_mode: 'Markdown',
+    parse_mode: "Markdown",
     reply_markup: {
-      inline_keyboard: [[{ text: "📲 Jangga kirish", web_app: { url: `${MINI_APP_URL}/battle` } }]]
-    }
+      inline_keyboard: [[{ text: "📲 Jangga kirish", web_app: { url: `${MINI_APP_URL}/battle` } }]],
+    },
   });
 }
 
 export async function sendMessageToWinner(telegramId: number, text: string) {
   if (!userBot) return;
-  
+
   // Custom winner collection logic starts here if text contains specific trigger?
   // Actually, we should trigger winner data collection explicitly when winner is chosen.
   // We'll let admin write the custom message, and then we ALSO ask for phone.
-  
+
   await userBot.sendMessage(telegramId, `Yangi xabar (Admindan):\n\n${text}`);
-  
+
   // Set state to collect winner info
-  userStates[telegramId] = { type: 'winner_data', step: 'phone' };
-  
-  userBot.sendMessage(telegramId, "🎉 Tabriklaymiz! Sovrin olish uchun quyidagi ma'lumotlarni yuboring:\n\n1. 📱 Telefon raqamingizni yuboring (Tugmani bosing yoki yozing):", {
-    reply_markup: {
-      keyboard: [[{ text: "Raqamni yuborish 📱", request_contact: true }]],
-      resize_keyboard: true,
-      one_time_keyboard: true
+  userStates[telegramId] = { type: "winner_data", step: "phone" };
+
+  userBot.sendMessage(
+    telegramId,
+    "🎉 Tabriklaymiz! Sovrin olish uchun quyidagi ma'lumotlarni yuboring:\n\n1. 📱 Telefon raqamingizni yuboring (Tugmani bosing yoki yozing):",
+    {
+      reply_markup: {
+        keyboard: [[{ text: "Raqamni yuborish 📱", request_contact: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
     }
-  });
+  );
 }
 
 export async function broadcastFromUserBot(text: string) {
   if (!userBot) return { success: 0, fail: 0, text: "Foydalanuvchi boti ulanmagan" };
-  let success = 0, fail = 0;
+  let success = 0,
+    fail = 0;
   try {
-    const t_users = await db.execute(sql`SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL`);
+    const t_users = await db.execute(
+      sql`SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL`
+    );
     for (const u of t_users.rows) {
       if (u.telegram_id) {
         try {
           await userBot.sendMessage(u.telegram_id as number, `Yangi Xabar:\n\n${text}`);
           success++;
-        } catch (e) { fail++; }
+        } catch (e) {
+          fail++;
+        }
       }
     }
-  } catch (err) { return { success, fail, text: "Xatolik yuz berdi." }; }
-  return { success, fail, text: `Xabar muvaffaqiyatli ${success} kishiga yuborildi. (${fail} ta xato)` };
+  } catch (err) {
+    return { success, fail, text: "Xatolik yuz berdi." };
+  }
+  return {
+    success,
+    fail,
+    text: `Xabar muvaffaqiyatli ${success} kishiga yuborildi. (${fail} ta xato)`,
+  };
 }

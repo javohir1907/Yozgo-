@@ -27,7 +27,9 @@ export function LanguageSelector({ currentLanguage, onLanguageChange }: Language
           size="sm"
           className={cn(
             "text-xs font-mono transition-all",
-            currentLanguage === lang.code ? "text-primary bg-muted" : "text-muted-foreground hover:text-primary"
+            currentLanguage === lang.code
+              ? "text-primary bg-muted"
+              : "text-muted-foreground hover:text-primary"
           )}
           onClick={() => onLanguageChange(lang.code)}
           data-testid={`button-lang-${lang.code}`}

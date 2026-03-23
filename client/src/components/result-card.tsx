@@ -28,30 +28,42 @@ export function ResultCard({
       <CardContent className="p-0">
         <div className="grid grid-cols-2 gap-8 mb-12">
           <div className="text-center">
-            <p className="text-lg text-muted-foreground uppercase tracking-widest mb-2">{t.typing.wpm}</p>
-            <p className="text-7xl font-mono text-primary" data-testid="result-wpm">{wpm}</p>
+            <p className="text-lg text-muted-foreground uppercase tracking-widest mb-2">
+              {t.typing.wpm}
+            </p>
+            <p className="text-7xl font-mono text-primary" data-testid="result-wpm">
+              {wpm}
+            </p>
           </div>
           <div className="text-center">
-            <p className="text-lg text-muted-foreground uppercase tracking-widest mb-2">{t.typing.acc}</p>
-            <p className="text-7xl font-mono text-primary" data-testid="result-accuracy">{accuracy}%</p>
+            <p className="text-lg text-muted-foreground uppercase tracking-widest mb-2">
+              {t.typing.acc}
+            </p>
+            <p className="text-7xl font-mono text-primary" data-testid="result-accuracy">
+              {accuracy}%
+            </p>
           </div>
         </div>
 
         <div className="flex justify-center gap-12 mb-12 text-muted-foreground font-mono">
           <div className="text-center">
             <p className="text-xs uppercase mb-1">{t.typing.correct}</p>
-            <p className="text-2xl text-correct" data-testid="result-correct-chars">{correctChars}</p>
+            <p className="text-2xl text-correct" data-testid="result-correct-chars">
+              {correctChars}
+            </p>
           </div>
           <div className="text-center">
             <p className="text-xs uppercase mb-1">{t.typing.incorrect}</p>
-            <p className="text-2xl text-error" data-testid="result-incorrect-chars">{incorrectChars}</p>
+            <p className="text-2xl text-error" data-testid="result-incorrect-chars">
+              {incorrectChars}
+            </p>
           </div>
         </div>
 
         <div className="flex justify-center gap-4">
-          <Button 
-            size="lg" 
-            variant="ghost" 
+          <Button
+            size="lg"
+            variant="ghost"
             onClick={onRestart}
             className="hover-elevate active-elevate-2 font-mono"
             data-testid="button-restart"
@@ -59,8 +71,8 @@ export function ResultCard({
             <RefreshCw className="mr-2 h-4 w-4" />
             {t.typing.restartTest}
           </Button>
-          <Button 
-            size="lg" 
+          <Button
+            size="lg"
             variant="ghost"
             className="hover-elevate active-elevate-2 font-mono"
             data-testid="button-share"

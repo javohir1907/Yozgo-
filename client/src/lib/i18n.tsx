@@ -29,7 +29,7 @@ const translations = {
       loginLink: "Sign in",
       registerLink: "Sign up",
       forgotPassword: "Forgot password?",
-      usernameExists: "This username is taken, please choose another."
+      usernameExists: "This username is taken, please choose another.",
     },
     landing: {
       heroTitle: "SPEAK WITH YOUR FINGERS",
@@ -37,16 +37,19 @@ const translations = {
       startTyping: "Start Competition",
       viewLeaderboard: "View Leaderboard",
       readyTitle: "Ready to compete with the best?",
-      readySubtitle: "YOZGO brings together the fastest typists for real competitions. Show the world what you're made of.",
+      readySubtitle:
+        "YOZGO brings together the fastest typists for real competitions. Show the world what you're made of.",
       getStarted: "Join the Competition",
       featureSpeed: "Real Competitions",
-      featureSpeedDesc: "Organized typing competitions where speed and accuracy determine the champion.",
+      featureSpeedDesc:
+        "Organized typing competitions where speed and accuracy determine the champion.",
       featureMultilingual: "Multilingual",
       featureMultilingualDesc: "Compete in Uzbek, Russian, and English — all in one platform.",
       featureBattles: "Live Battles",
       featureBattlesDesc: "Face off against real opponents in live, head-to-head typing duels.",
       featureRankings: "Rankings",
-      featureRankingsDesc: "Climb the daily, weekly, and all-time leaderboards to be crowned the top typist.",
+      featureRankingsDesc:
+        "Climb the daily, weekly, and all-time leaderboards to be crowned the top typist.",
       footer: "All rights reserved.",
     },
     typing: {
@@ -170,7 +173,7 @@ const translations = {
       loginLink: "Войти",
       registerLink: "Регистрация",
       forgotPassword: "Забыли пароль?",
-      usernameExists: "Это имя занято, выберите другое."
+      usernameExists: "Это имя занято, выберите другое.",
     },
     landing: {
       heroTitle: "ГОВОРИ ПАЛЬЦАМИ",
@@ -179,16 +182,21 @@ const translations = {
 
       viewLeaderboard: "Рейтинг",
       readyTitle: "Готовы соревноваться с лучшими?",
-      readySubtitle: "YOZGO объединяет самых быстрых печатников для настоящих соревнований. Покажите, на что вы способны.",
+      readySubtitle:
+        "YOZGO объединяет самых быстрых печатников для настоящих соревнований. Покажите, на что вы способны.",
       getStarted: "Присоединиться к соревнованию",
       featureSpeed: "Настоящие соревнования",
-      featureSpeedDesc: "Организованные соревнования по скоростной печати, где победитель определяется скоростью и точностью.",
+      featureSpeedDesc:
+        "Организованные соревнования по скоростной печати, где победитель определяется скоростью и точностью.",
       featureMultilingual: "Мультиязычность",
-      featureMultilingualDesc: "Соревнуйтесь на узбекском, русском и английском — всё на одной платформе.",
+      featureMultilingualDesc:
+        "Соревнуйтесь на узбекском, русском и английском — всё на одной платформе.",
       featureBattles: "Живые батлы",
-      featureBattlesDesc: "Сразитесь с реальными соперниками в прямых поединках по скоростной печати.",
+      featureBattlesDesc:
+        "Сразитесь с реальными соперниками в прямых поединках по скоростной печати.",
       featureRankings: "Рейтинги",
-      featureRankingsDesc: "Поднимайтесь в ежедневных, еженедельных и общих рейтингах, чтобы стать чемпионом.",
+      featureRankingsDesc:
+        "Поднимайтесь в ежедневных, еженедельных и общих рейтингах, чтобы стать чемпионом.",
       footer: "Все права защищены.",
     },
     typing: {
@@ -312,7 +320,7 @@ const translations = {
       loginLink: "Kiring",
       registerLink: "Ro'yxatdan o'ting",
       forgotPassword: "Parolni unutdingizmi?",
-      usernameExists: "Bu nik band, boshqa nik tanlang."
+      usernameExists: "Bu nik band, boshqa nik tanlang.",
     },
     landing: {
       heroTitle: "Barmoqlar tili bilan gapiring",
@@ -320,16 +328,21 @@ const translations = {
       startTyping: "Musobaqani boshlash",
       viewLeaderboard: "Reyting",
       readyTitle: "Eng yaxshilar bilan raqobatlashga tayyormisiz?",
-      readySubtitle: "YOZGO eng tez yozuvchilarni haqiqiy musobaqalarga olib keladi. O'z imkoniyatingizni dunyoga ko'rsating.",
+      readySubtitle:
+        "YOZGO eng tez yozuvchilarni haqiqiy musobaqalarga olib keladi. O'z imkoniyatingizni dunyoga ko'rsating.",
       getStarted: "Musobaqaga qo'shilish",
       featureSpeed: "Haqiqiy musobaqalar",
-      featureSpeedDesc: "Tezlik va aniqlik asosida g'olib aniqlanadigan uyushtirilgan yozish musobaqalari.",
+      featureSpeedDesc:
+        "Tezlik va aniqlik asosida g'olib aniqlanadigan uyushtirilgan yozish musobaqalari.",
       featureMultilingual: "Ko'p tilli",
-      featureMultilingualDesc: "O'zbek, rus va ingliz tillarida musobaqalashing — hammasi bir platformada.",
+      featureMultilingualDesc:
+        "O'zbek, rus va ingliz tillarida musobaqalashing — hammasi bir platformada.",
       featureBattles: "Jonli janglar",
-      featureBattlesDesc: "Haqiqiy raqiblar bilan jonli, to'g'ridan-to'g'ri yozish duellarida uchrashing.",
+      featureBattlesDesc:
+        "Haqiqiy raqiblar bilan jonli, to'g'ridan-to'g'ri yozish duellarida uchrashing.",
       featureRankings: "Reytinglar",
-      featureRankingsDesc: "Kunlik, haftalik va barcha vaqt reytinglarida ko'tarilib, eng yaxshi yozuvchi unvonini qo'lga kiriting.",
+      featureRankingsDesc:
+        "Kunlik, haftalik va barcha vaqt reytinglarida ko'tarilib, eng yaxshi yozuvchi unvonini qo'lga kiriting.",
       footer: "Barcha huquqlar himoyalangan.",
     },
     typing: {
@@ -458,14 +471,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     t: translations[uiLang],
   };
 
-  return (
-    <I18nContext.Provider value={value}>
-      {children}
-    </I18nContext.Provider>
-  );
+  return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
 export function useI18n() {
   return useContext(I18nContext);
 }
-
