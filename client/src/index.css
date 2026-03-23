@@ -2,179 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-/* LIGHT MODE */
+/* GLOBAL ORANGE THEME */
 :root {
-  --button-outline: rgba(0, 0, 0, 0.1);
-  --badge-outline: rgba(0, 0, 0, 0.05);
-  --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0, 0, 0, 0.03);
-  --elevate-2: rgba(0, 0, 0, 0.08);
-  /* 3D Keyboard Theme Defaults */
-  --background: 30 10% 98%; /* Soft off-white */
-  --foreground: 30 10% 10%; /* Dark grey */
-  --border: 30 20% 85%;
-  --card: 0 0% 100%;
-  --card-foreground: 30 10% 10%;
-  --card-border: 30 20% 90%;
+  --background: 19 83% 51%; /* #eb6016 - Solid Orange */
+  --foreground: 0 0% 100%; /* White text */
+  --border: 19 50% 40%;
+  --card: 19 75% 45%;
+  --card-foreground: 0 0% 100%;
+  --card-border: 19 50% 40%;
   
-  --sidebar: 30 10% 98%;
-  --sidebar-foreground: 30 10% 10%;
-  --sidebar-border: 30 20% 85%;
-  --sidebar-primary: 24.6 95% 53.1%; /* Orange */
+  --sidebar: 19 83% 51%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-border: 19 50% 40%;
+  --sidebar-primary: 0 0% 15%; /* Dark Keys */
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 24.6 95% 53.1%;
+  --sidebar-accent: 19 75% 45%;
   --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-ring: 24.6 95% 53.1%;
+  --sidebar-ring: 0 0% 100%;
   
-  --popover: 0 0% 100%;
-  --popover-foreground: 30 10% 10%;
-  --popover-border: 30 20% 90%;
+  --popover: 19 75% 45%;
+  --popover-foreground: 0 0% 100%;
+  --popover-border: 19 50% 40%;
   
-  --primary: 24.6 95% 53.1%; /* Vibrant Orange #f97316 */
+  --primary: 0 0% 15%; /* #262626 Dark Keys */
   --primary-foreground: 0 0% 100%;    
   
-  --secondary: 0 0% 15%; /* Black Keyboard Keys */
-  --secondary-foreground: 0 0% 100%; /* White text on keys */
+  --secondary: 19 60% 35%; 
+  --secondary-foreground: 0 0% 100%; 
   
-  --muted: 30 10% 90%;
-  --muted-foreground: 30 10% 45%;
+  --muted: 19 60% 40%;
+  --muted-foreground: 19 30% 90%;
   
-  --accent: 24.6 95% 53.1%;
+  --accent: 19 75% 45%;
   --accent-foreground: 0 0% 100%;
   
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --input: 30 20% 85%;
-  --ring: 24.6 95% 53.1%;
-  --caret: 24.6 95% 53.1%;
+  --input: 19 50% 40%;
+  --ring: 0 0% 100%;
+  --caret: 0 0% 100%;
   
   --correct: 142 76% 36%;
   --error: 0 84% 60%;
-  --pending: 30 10% 45%;
+  --pending: 19 30% 90%;
 
-  --chart-1: 24.6 95% 53.1%;
+  --chart-1: 0 0% 15%;
   --chart-2: 0 0% 15%;
   --chart-3: 142 76% 36%;
   --chart-4: 0 84% 60%;
-  --chart-5: 30 10% 45%;
+  --chart-5: 19 60% 40%;
 
   --font-sans: "Inter", sans-serif;
   --font-heading: "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   
   --radius: 0.75rem; 
-  --shadow-2xs: 0px 2px 0px 0px hsl(0, 0%, 0% / 0.05);
-  --shadow-xs: 0px 4px 0px 0px hsl(0, 0%, 0% / 0.1);
-  --shadow-sm: 0px 6px 0px 0px hsl(0, 0%, 0% / 0.15);
-  --shadow: 0px 8px 0px 0px hsl(0, 0%, 0% / 0.2);
-  --shadow-md: 0px 10px 0px 0px hsl(0, 0%, 0% / 0.25);
-  --shadow-lg: 0px 12px 10px -5px hsl(0, 0%, 0% / 0.3);
-  --shadow-xl: 0px 16px 15px -5px hsl(0, 0%, 0% / 0.4);
-  --shadow-2xl: 0px 20px 20px -10px hsl(0, 0%, 0% / 0.5);
+  --shadow-2xs: 0px 2px 0px 0px hsl(0, 0%, 0% / 0.1);
+  --shadow-xs: 0px 4px 0px 0px hsl(0, 0%, 0% / 0.15);
+  --shadow-sm: 0px 6px 0px 0px hsl(0, 0%, 0% / 0.2);
+  --shadow: 0px 8px 0px 0px hsl(0, 0%, 0% / 0.25);
+  --shadow-md: 0px 10px 0px 0px hsl(0, 0%, 0% / 0.3);
+  --shadow-lg: 0px 12px 10px -5px hsl(0, 0%, 0% / 0.4);
+  --shadow-xl: 0px 16px 15px -5px hsl(0, 0%, 0% / 0.5);
+  --shadow-2xl: 0px 20px 20px -10px hsl(0, 0%, 0% / 0.6);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
-  /* Fallback for older browsers */
-  --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-primary-border: hsl(
-    from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
-
-  /* Fallback for older browsers */
-  --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --sidebar-accent-border: hsl(
-    from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
-
-  /* Fallback for older browsers */
-  --primary-border: hsl(var(--primary));
-  --primary-border: hsl(
-    from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
-
-  /* Fallback for older browsers */
-  --secondary-border: hsl(var(--secondary));
-  --secondary-border: hsl(
-    from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
-
-  /* Fallback for older browsers */
-  --muted-border: hsl(var(--muted));
-  --muted-border: hsl(
-    from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
-
-  /* Fallback for older browsers */
-  --accent-border: hsl(var(--accent));
-  --accent-border: hsl(
-    from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
-
-  /* Fallback for older browsers */
-  --destructive-border: hsl(var(--destructive));
-  --destructive-border: hsl(
-    from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha
-  );
-}
-
-.light {
-  --button-outline: rgba(0, 0, 0, 0.1);
-  --badge-outline: rgba(0, 0, 0, 0.05);
-  --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0, 0, 0, 0.03);
-  --elevate-2: rgba(0, 0, 0, 0.08);
-
-  --background: 223 39% 5%;
-  --foreground: 214 32% 91%;
-  --border: 224 64% 33%;
-  --card: 221 39% 9%;
-  --card-foreground: 214 32% 91%;
-  --card-border: 224 64% 33%;
-  --sidebar: 223 39% 6%;
-  --sidebar-foreground: 214 32% 91%;
-  --sidebar-border: 224 64% 33%;
-  --sidebar-primary: 221 83% 53%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 224 64% 33%;
-  --sidebar-accent-foreground: 214 32% 91%;
-  --sidebar-ring: 221 83% 53%;
-  --popover: 221 39% 9%;
-  --popover-foreground: 214 32% 91%;
-  --popover-border: 224 64% 33%;
-  --primary: 190 100% 50%;
-  --primary-foreground: 223 39% 5%;
-  --secondary: 224 64% 20%;
-  --secondary-foreground: 214 32% 91%;
-  --muted: 224 64% 15%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 224 64% 25%;
-  --accent-foreground: 190 100% 50%;
-  --destructive: 0 100% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --input: 224 64% 25%;
-  --ring: 190 100% 50%;
-
-  /* Typing specific */
-  --caret: 190 100% 50%;
-  --correct: 160 84% 45%;
-  --error: 0 100% 60%;
-  --pending: 215 20% 50%;
-
-  --chart-1: 190 100% 50%;
-  --chart-2: 280 100% 60%;
-  --chart-3: 320 100% 60%;
-  --chart-4: 30 100% 60%;
-  --chart-5: 160 100% 45%;
-
-  --shadow-2xs: 0px 2px 0px 0px hsl(190, 100%, 50% / 0.1);
-  --shadow-xs: 0px 0px 5px 0px hsl(190, 100%, 50% / 0.2);
-  --shadow-sm: 0px 0px 10px 0px hsl(190, 100%, 50% / 0.3);
-  --shadow: 0px 0px 15px 0px hsl(190, 100%, 50% / 0.4);
-  --shadow-md: 0px 0px 20px 0px hsl(190, 100%, 50% / 0.5);
-  --shadow-lg: 0px 0px 30px 0px hsl(190, 100%, 50% / 0.6);
-  --shadow-xl: 0px 0px 40px 0px hsl(190, 100%, 50% / 0.7);
-  --shadow-2xl: 0px 0px 50px 0px hsl(190, 100%, 50% / 0.8);
   --sidebar-primary-border: hsl(var(--sidebar-primary));
   --sidebar-accent-border: hsl(var(--sidebar-accent));
   --primary-border: hsl(var(--primary));
@@ -184,72 +78,7 @@
   --destructive-border: hsl(var(--destructive));
 }
 
-.dark {
-  --button-outline: rgba(255, 255, 255, 0.1);
-  --badge-outline: rgba(255, 255, 255, 0.05);
-  --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255, 255, 255, 0.04);
-  --elevate-2: rgba(255, 255, 255, 0.09);
 
-  --background: 223 39% 5%;
-  --foreground: 214 32% 91%;
-  --border: 224 64% 33%;
-  --card: 221 39% 9%;
-  --card-foreground: 214 32% 91%;
-  --card-border: 224 64% 33%;
-  --sidebar: 223 39% 6%;
-  --sidebar-foreground: 214 32% 91%;
-  --sidebar-border: 224 64% 33%;
-  --sidebar-primary: 221 83% 53%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 224 64% 33%;
-  --sidebar-accent-foreground: 214 32% 91%;
-  --sidebar-ring: 221 83% 53%;
-  --popover: 221 39% 9%;
-  --popover-foreground: 214 32% 91%;
-  --popover-border: 224 64% 33%;
-  --primary: 190 100% 50%;
-  --primary-foreground: 223 39% 5%;
-  --secondary: 224 64% 20%;
-  --secondary-foreground: 214 32% 91%;
-  --muted: 224 64% 15%;
-  --muted-foreground: 215 20% 65%;
-  --accent: 224 64% 25%;
-  --accent-foreground: 190 100% 50%;
-  --destructive: 0 100% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --input: 224 64% 25%;
-  --ring: 190 100% 50%;
-
-  /* Typing specific */
-  --caret: 190 100% 50%;
-  --correct: 160 84% 45%;
-  --error: 0 100% 60%;
-  --pending: 215 20% 50%;
-
-  --chart-1: 190 100% 50%;
-  --chart-2: 280 100% 60%;
-  --chart-3: 320 100% 60%;
-  --chart-4: 30 100% 60%;
-  --chart-5: 160 100% 45%;
-
-  --shadow-2xs: 0px 2px 0px 0px hsl(190, 100%, 50% / 0.1);
-  --shadow-xs: 0px 0px 5px 0px hsl(190, 100%, 50% / 0.2);
-  --shadow-sm: 0px 0px 10px 0px hsl(190, 100%, 50% / 0.3);
-  --shadow: 0px 0px 15px 0px hsl(190, 100%, 50% / 0.4);
-  --shadow-md: 0px 0px 20px 0px hsl(190, 100%, 50% / 0.5);
-  --shadow-lg: 0px 0px 30px 0px hsl(190, 100%, 50% / 0.6);
-  --shadow-xl: 0px 0px 40px 0px hsl(190, 100%, 50% / 0.7);
-  --shadow-2xl: 0px 0px 50px 0px hsl(190, 100%, 50% / 0.8);
-
-  --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --primary-border: hsl(var(--primary));
-  --secondary-border: hsl(var(--secondary));
-  --muted-border: hsl(var(--muted));
-  --accent-border: hsl(var(--accent));
-  --destructive-border: hsl(var(--destructive));
-}
 
 @layer base {
   * {
@@ -274,50 +103,54 @@
   
   /* Keyboard Key 3D CSS */
   .keyboard-key-3d {
-    background-color: #242424;
-    border-radius: 12px;
+    background-color: #212121;
+    border-radius: 14%;
     box-shadow: 
-      inset 0 1px 2px rgba(255,255,255,0.1),
-      inset 0 -2px 0 rgba(0,0,0,0.5),
-      0 6px 0 #111111,
-      0 8px 10px rgba(0,0,0,0.4);
+      inset 0 2px 4px rgba(255,255,255,0.05),
+      inset 0 -2px 0 rgba(0,0,0,0.4),
+      0 8px 0 #121212,
+      0 12px 16px rgba(0,0,0,0.5);
     position: relative;
-    transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
   }
   .keyboard-key-3d::after {
     content: '';
     position: absolute;
-    top: 8px; left: 8px; right: 8px; bottom: 12px;
-    border-radius: 6px;
-    background: linear-gradient(180deg, #2a2a2a 0%, #1e1e1e 100%);
-    box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), inset 0 -1px 1px rgba(0,0,0,0.8);
+    top: 10%; left: 10%; right: 10%; bottom: 18%;
+    border-radius: 12%;
+    background: linear-gradient(180deg, #2c2c2c 0%, #1a1a1a 100%);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.08), inset 0 -1px 2px rgba(0,0,0,0.9);
     z-index: 1;
   }
   
   .keyboard-key-text {
     position: relative;
     z-index: 10;
-    color: #e5e5e5;
-    font-weight: 700;
+    color: #f0f0f0;
+    font-weight: 800;
     font-family: 'Inter', sans-serif;
+    letter-spacing: -0.02em;
   }
 
-  .keyboard-key-3d.key-hover-ready:hover {
+  /* Hover state */
+  .keyboard-key-3d:hover {
     transform: translateY(2px);
     box-shadow: 
-      inset 0 1px 2px rgba(255,255,255,0.1),
-      inset 0 -2px 0 rgba(0,0,0,0.5),
-      0 4px 0 #111111,
-      0 6px 8px rgba(0,0,0,0.4);
+      inset 0 2px 4px rgba(255,255,255,0.05),
+      inset 0 -2px 0 rgba(0,0,0,0.4),
+      0 6px 0 #121212,
+      0 8px 12px rgba(0,0,0,0.5);
   }
 
+  /* Active state */
   .keyboard-key-3d:active {
-    transform: translateY(6px) !important;
+    transform: translateY(8px) !important;
     box-shadow: 
-      inset 0 1px 2px rgba(255,255,255,0.1),
+      inset 0 1px 2px rgba(255,255,255,0.02),
       inset 0 -1px 0 rgba(0,0,0,0.5),
-      0 0px 0 #111111,
-      0 2px 4px rgba(0,0,0,0.4) !important;
+      0 0px 0 #121212,
+      0 2px 4px rgba(0,0,0,0.5) !important;
   }
 }
 

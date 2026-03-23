@@ -33,10 +33,9 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-primary border-b-4 border-black/10">
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-background">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-[0.05] mix-blend-screen" />
-          <div className="absolute inset-0 bg-black/10 transition-colors" />
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-[0.03] mix-blend-multiply" />
         </div>
 
         <div className="container relative z-30 px-4 flex flex-col items-center justify-center pt-10">
@@ -77,7 +76,7 @@ export default function LandingPage() {
           {/* Texts */}
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center mt-4">
             <motion.h2
-              className="text-3xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-white mb-6 drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)] whitespace-pre-wrap tracking-tight"
+              className="text-3xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground mb-6 drop-shadow-[0_2px_4px_rgba(0,0,0,0.15)] whitespace-pre-wrap tracking-tight"
               variants={{
                 hidden: { opacity: 1 },
                 visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.5 } },
@@ -99,7 +98,7 @@ export default function LandingPage() {
             </motion.h2>
 
             <motion.div
-              className="text-base md:text-2xl text-white/90 font-medium mb-12 flex items-center justify-center min-h-[40px] flex-wrap max-w-[90%] whitespace-pre-wrap font-sans bg-black/20 px-6 py-3 rounded-full backdrop-blur-sm border border-white/10 shadow-sm"
+              className="text-base md:text-2xl text-foreground/90 font-medium mb-12 flex items-center justify-center min-h-[40px] flex-wrap max-w-[90%] whitespace-pre-wrap font-sans bg-black/5 px-6 py-3 rounded-full shadow-sm"
               variants={{
                 hidden: { opacity: 1 },
                 visible: { opacity: 1, transition: { staggerChildren: 0.02, delayChildren: 1.5 } },
@@ -159,7 +158,7 @@ export default function LandingPage() {
 
       <section className="py-24 bg-background relative overflow-hidden">
         <div className="container px-4 relative z-10">
-          <div className="max-w-4xl mx-auto border-l-4 border-primary bg-card p-8 shadow-sm rounded-r-2xl">
+          <div className="max-w-4xl mx-auto border-l-4 border-foreground bg-black/5 p-8 shadow-sm rounded-r-2xl">
             
             <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-foreground tracking-tight flex items-center gap-3">
               {(t.landing as any).aboutUsTitle || "Biz Haqimizda"}
@@ -171,8 +170,8 @@ export default function LandingPage() {
               <p>
                 {(t.landing as any).aboutUsP2 || "Loyiha qisqa vaqt ichida eng qulay yozish trenajyoriga aylandi. Biz foydalanuvchilar orasida musobaqalar o'tkazish barobarida reyting tizimi orqali sog'lom raqobatni shakllantiramiz."}
               </p>
-              <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-primary/10 text-primary rounded-full font-medium text-sm">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-foreground/10 text-foreground rounded-full font-medium text-sm">
+                <div className="w-2 h-2 rounded-full bg-foreground animate-pulse" />
                 {(t.landing as any).aboutUsSystem || "System Status: Active"}
               </div>
             </div>
@@ -180,7 +179,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-24 bg-card/30 border-t">
+      <section className="py-24 bg-black/5">
         <div className="container px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <FeatureCard
@@ -207,7 +206,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-24 bg-card border-t border-border">
+      <section className="py-24 bg-background">
         <div className="container px-4 text-center">
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 text-foreground">
             {t.landing.readyTitle}
@@ -224,7 +223,7 @@ export default function LandingPage() {
       </section>
 
       {competitions && competitions.length > 0 && (
-        <section className="py-24 bg-card/10 border-t">
+        <section className="py-24 bg-black/5 border-t border-black/5">
           <div className="container px-4">
             <h2 className="text-3xl font-bold mb-10 text-center">Yaqinda bo'ladigan musobaqalar</h2>
             {ads && ads.length > 0 && (
@@ -256,7 +255,7 @@ export default function LandingPage() {
         </section>
       )}
 
-      <section className="py-24 bg-card/30 border-t">
+      <section className="py-24 bg-background border-t border-black/5">
         <div className="container px-4">
           <h2 className="text-3xl font-bold mb-10 text-center">Fikr va Mulohazalar</h2>
 
@@ -266,7 +265,7 @@ export default function LandingPage() {
               {reviews && reviews.length > 0 ? (
                 <div className="space-y-4">
                   {reviews.map((rev: any) => (
-                    <div key={rev.id} className="p-4 rounded-lg bg-background border shadow-sm">
+                    <div key={rev.id} className="p-4 rounded-lg bg-black/5 shadow-sm">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-semibold">{rev.user.username}</span>
                         <div className="flex text-yellow-500">
@@ -290,7 +289,7 @@ export default function LandingPage() {
             </div>
 
             <div>
-              <div className="p-6 rounded-xl border bg-background shadow-md">
+              <div className="p-6 rounded-xl bg-black/5 shadow-sm">
                 <h3 className="text-xl font-semibold mb-6">Fikr qoldirish</h3>
                 {user ? (
                   <form
@@ -347,10 +346,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="py-12 border-t mt-auto">
+      <footer className="py-12 border-t border-black/10 mt-auto bg-black/5">
         <div className="container px-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-3 font-bold text-xl">
-            <span className="text-white text-2xl tracking-wider">YOZGO</span>
+            <span className="text-foreground text-2xl tracking-wider">YOZGO</span>
           </div>
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} YOZGO. {t.landing.footer}
@@ -387,15 +386,12 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="p-6 border border-primary/30 bg-background/50 backdrop-blur hover:bg-primary/5 hover:border-primary transition-all duration-300 group relative">
-      <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
-      <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
-      
-      <div className="mb-6 inline-block p-3 border border-primary/20 bg-background group-hover:shadow-[0_0_15px_var(--primary)] transition-all">
+    <div className="p-6 bg-black/5 rounded-2xl hover:bg-black/10 transition-all duration-300 group relative">
+      <div className="mb-6 inline-block p-4 rounded-xl bg-black/5 group-hover:scale-110 transition-transform">
         {icon}
       </div>
-      <h3 className="text-xl font-heading font-bold uppercase tracking-wider mb-2 group-hover:text-primary transition-colors">{title}</h3>
-      <p className="text-muted-foreground font-sans text-sm md:text-base leading-relaxed">{description}</p>
+      <h3 className="text-xl font-heading font-black uppercase tracking-wider mb-2 group-hover:translate-x-1 transition-transform">{title}</h3>
+      <p className="text-foreground/80 font-sans text-sm md:text-base leading-relaxed">{description}</p>
     </div>
   );
 }
