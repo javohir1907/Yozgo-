@@ -40,7 +40,7 @@ export default function LeaderboardPage() {
           </div>
           <p className="text-muted-foreground">
             Eng tez yozuvchilar qatorida o'z o'rningizni toping. Reytingga to'liq kirish uchun jami
-            2 soat (120 daqiqa) yozish tajribasiga ega bo'lishingiz kerak.
+            30 daqiqa yozish tajribasiga ega bo'lishingiz kerak.
           </p>
         </header>
 

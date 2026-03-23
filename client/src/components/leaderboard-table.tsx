@@ -45,9 +45,9 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
         <TableBody>
           {entries.map((entry) => {
             const isCurrentUser = currentUserId && entry.userId === currentUserId;
-            const progress = Math.min((entry.totalSeconds / 7200) * 100, 100);
-            const needsProgress = entry.totalSeconds < 7200;
-            const minutesLeft = Math.ceil((7200 - entry.totalSeconds) / 60);
+            const progress = Math.min((entry.totalSeconds / 1800) * 100, 100);
+            const needsProgress = entry.totalSeconds < 1800;
+            const minutesLeft = Math.ceil((1800 - entry.totalSeconds) / 60);
 
             return (
               <TableRow
