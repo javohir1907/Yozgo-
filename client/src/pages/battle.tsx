@@ -191,6 +191,7 @@ export default function BattlePage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ battleCode: inputCode.trim().toUpperCase() }),
+          credentials: "include",
         });
         const checkTxt = await checkRes.text();
         let checkData;
@@ -232,6 +233,7 @@ export default function BattlePage() {
           battleCode: inputCode.trim().toUpperCase(),
           agreed: isAgreed,
         }),
+        credentials: "include",
       });
       const txt = await res.text();
       let data;
