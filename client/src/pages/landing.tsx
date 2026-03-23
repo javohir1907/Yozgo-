@@ -35,32 +35,15 @@ export default function LandingPage() {
     <div className="flex flex-col min-h-screen">
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-background">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-[0.03] mix-blend-multiply" />
+          {/* <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-[0.03] mix-blend-multiply" /> */}
         </div>
 
         <div className="container relative z-30 px-4 flex flex-col items-center justify-center pt-10">
           {/* Logo 3D Keycaps */}
-          <motion.div
-            className="flex gap-2 sm:gap-4 md:gap-6 mb-12"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-            }}
-            initial="hidden"
-            animate="visible"
-          >
+          <div className="flex gap-2 sm:gap-4 md:gap-6 mb-12">
             {["Y", "O", "Z", "G", "O"].map((letter, i) => (
-              <motion.div
+              <div
                 key={i}
-                variants={{
-                  hidden: { opacity: 0, scale: 0.5, y: -60 },
-                  visible: {
-                    opacity: 1,
-                    scale: 1,
-                    y: 0,
-                    transition: { type: "spring", stiffness: 200, damping: 15 },
-                  },
-                }}
                 className="keyboard-key-3d key-hover-ready w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 md:w-32 md:h-32 flex items-center justify-center cursor-default select-none group"
               >
                 <span className="keyboard-key-text text-4xl sm:text-5xl md:text-7xl group-active:translate-y-[2px] transition-transform">
@@ -69,9 +52,9 @@ export default function LandingPage() {
                 {(i === 1 || i === 3) && (
                   <div className="absolute bottom-[20%] w-[30%] h-[3px] md:h-[4px] bg-[#111] rounded-full z-10 opacity-70 shadow-[0_1px_0_rgba(255,255,255,0.1)] group-active:translate-y-[2px] transition-transform" />
                 )}
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
 
           {/* Texts */}
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center mt-4">
@@ -165,7 +148,7 @@ export default function LandingPage() {
             </h2>
             <div className="space-y-4 text-muted-foreground md:text-lg leading-relaxed text-left font-sans">
               <p>
-                <strong className="text-primary font-bold">YOZGO</strong> — {(t.landing as any).aboutUsP1 || "bu yozish tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus ishlab chiqilgan platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura ko'nikmalarini qiziqarli va raqobatbardosh usulda rivojlantirishga yordam berishdir."}
+                {(t.landing as any).aboutUsP1 || "YOZGO — bu yozish tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus ishlab chiqilgan platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura ko'nikmalarini qiziqarli va raqobatbardosh usulda rivojlantirishga yordam berishdir."}
               </p>
               <p>
                 {(t.landing as any).aboutUsP2 || "Loyiha qisqa vaqt ichida eng qulay yozish trenajyoriga aylandi. Biz foydalanuvchilar orasida musobaqalar o'tkazish barobarida reyting tizimi orqali sog'lom raqobatni shakllantiramiz."}

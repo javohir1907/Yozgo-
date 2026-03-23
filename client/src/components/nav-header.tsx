@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Keyboard, Trophy, Users, Settings, User as UserIcon, LogOut, Globe } from "lucide-react";
+import { Keyboard, Trophy, Users, Settings, User as UserIcon, LogOut, Globe, Moon, Sun } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/lib/theme";
 import { useI18n, type UILanguage } from "@/lib/i18n";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -17,6 +18,7 @@ export function NavHeader() {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { t, uiLang, setUILang } = useI18n();
+  const { theme, setTheme } = useTheme();
 
   const navItems = [
     { label: t.nav.test, href: "/typing-test", icon: Keyboard },
@@ -102,6 +104,17 @@ export function NavHeader() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            data-testid="button-theme-toggle"
+          >
+            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            <span className="sr-only">Toggle theme</span>
+          </Button>
 
           <Link href="/settings">
             <Button
