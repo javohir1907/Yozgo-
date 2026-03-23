@@ -236,6 +236,8 @@ app.use((req, res, next) => {
         agreed_at timestamp,
         joined_at timestamp NOT NULL DEFAULT now()
       );
+      ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS ip_address varchar;
+      ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS agreed_at timestamp;
 
       CREATE TABLE IF NOT EXISTS room_access_codes (
         id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
