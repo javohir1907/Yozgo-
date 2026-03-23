@@ -9,68 +9,70 @@
   --opaque-button-border-intensity: -8;
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
-  /* HUD Theme defaults (Sci-Fi FUI) */
-  --background: 223 39% 5%; /* Very dark deep space blue */
-  --foreground: 214 32% 91%; /* Light pale blue for text */
-  --border: 224 64% 33%; /* Neon blue deep borders */
-  --card: 221 39% 9%;
-  --card-foreground: 214 32% 91%;
-  --card-border: 224 64% 33%;
-  --sidebar: 223 39% 6%;
-  --sidebar-foreground: 214 32% 91%;
-  --sidebar-border: 224 64% 33%;
-  --sidebar-primary: 221 83% 53%; /* Neon Blue */
+  /* 3D Keyboard Theme Defaults */
+  --background: 30 10% 98%; /* Soft off-white */
+  --foreground: 30 10% 10%; /* Dark grey */
+  --border: 30 20% 85%;
+  --card: 0 0% 100%;
+  --card-foreground: 30 10% 10%;
+  --card-border: 30 20% 90%;
+  
+  --sidebar: 30 10% 98%;
+  --sidebar-foreground: 30 10% 10%;
+  --sidebar-border: 30 20% 85%;
+  --sidebar-primary: 24.6 95% 53.1%; /* Orange */
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 224 64% 33%;
-  --sidebar-accent-foreground: 214 32% 91%;
-  --sidebar-ring: 221 83% 53%;
-  --popover: 221 39% 9%;
-  --popover-foreground: 214 32% 91%;
-  --popover-border: 224 64% 33%;
+  --sidebar-accent: 24.6 95% 53.1%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-ring: 24.6 95% 53.1%;
   
-  --primary: 190 100% 50%; /* Cyan Neon */
-  --primary-foreground: 223 39% 5%;    
+  --popover: 0 0% 100%;
+  --popover-foreground: 30 10% 10%;
+  --popover-border: 30 20% 90%;
   
-  --secondary: 224 64% 20%;
-  --secondary-foreground: 214 32% 91%;
+  --primary: 24.6 95% 53.1%; /* Vibrant Orange #f97316 */
+  --primary-foreground: 0 0% 100%;    
   
-  --muted: 224 64% 15%;
-  --muted-foreground: 215 20% 65%;
+  --secondary: 0 0% 15%; /* Black Keyboard Keys */
+  --secondary-foreground: 0 0% 100%; /* White text on keys */
   
-  --accent: 224 64% 25%;
-  --accent-foreground: 190 100% 50%;
+  --muted: 30 10% 90%;
+  --muted-foreground: 30 10% 45%;
   
-  --destructive: 0 100% 60%; /* Neon red */
+  --accent: 24.6 95% 53.1%;
+  --accent-foreground: 0 0% 100%;
+  
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
   
-  --input: 224 64% 25%;
-  --ring: 190 100% 50%;
-  --caret: 190 100% 50%;
+  --input: 30 20% 85%;
+  --ring: 24.6 95% 53.1%;
+  --caret: 24.6 95% 53.1%;
   
-  --correct: 160 84% 45%; /* SciFi Green */
-  --error: 0 100% 60%; /* Neon Red */
-  --pending: 215 20% 50%;
+  --correct: 142 76% 36%;
+  --error: 0 84% 60%;
+  --pending: 30 10% 45%;
 
-  --chart-1: 190 100% 50%;
-  --chart-2: 280 100% 60%;
-  --chart-3: 320 100% 60%;
-  --chart-4: 30 100% 60%;
-  --chart-5: 160 100% 45%;
+  --chart-1: 24.6 95% 53.1%;
+  --chart-2: 0 0% 15%;
+  --chart-3: 142 76% 36%;
+  --chart-4: 0 84% 60%;
+  --chart-5: 30 10% 45%;
 
-  --font-sans: "Exo 2", sans-serif;
-  --font-heading: "Orbitron", sans-serif;
+  --font-sans: "Inter", sans-serif;
+  --font-heading: "Inter", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   
-  --radius: 0.125rem; /* Sharp edges for HUD */
-  --shadow-2xs: 0px 2px 0px 0px hsl(190, 100%, 50% / 0.1);
-  --shadow-xs: 0px 0px 5px 0px hsl(190, 100%, 50% / 0.2);
-  --shadow-sm: 0px 0px 10px 0px hsl(190, 100%, 50% / 0.3);
-  --shadow: 0px 0px 15px 0px hsl(190, 100%, 50% / 0.4);
-  --shadow-md: 0px 0px 20px 0px hsl(190, 100%, 50% / 0.5);
-  --shadow-lg: 0px 0px 30px 0px hsl(190, 100%, 50% / 0.6);
-  --shadow-xl: 0px 0px 40px 0px hsl(190, 100%, 50% / 0.7);
-  --shadow-2xl: 0px 0px 50px 0px hsl(190, 100%, 50% / 0.8);
-  --tracking-normal: 0.1em; /* Wide text for scifi vibe */
+  --radius: 0.75rem; 
+  --shadow-2xs: 0px 2px 0px 0px hsl(0, 0%, 0% / 0.05);
+  --shadow-xs: 0px 4px 0px 0px hsl(0, 0%, 0% / 0.1);
+  --shadow-sm: 0px 6px 0px 0px hsl(0, 0%, 0% / 0.15);
+  --shadow: 0px 8px 0px 0px hsl(0, 0%, 0% / 0.2);
+  --shadow-md: 0px 10px 0px 0px hsl(0, 0%, 0% / 0.25);
+  --shadow-lg: 0px 12px 10px -5px hsl(0, 0%, 0% / 0.3);
+  --shadow-xl: 0px 16px 15px -5px hsl(0, 0%, 0% / 0.4);
+  --shadow-2xl: 0px 20px 20px -10px hsl(0, 0%, 0% / 0.5);
+  --tracking-normal: 0em;
   --spacing: 0.25rem;
 
   /* Fallback for older browsers */
@@ -255,15 +257,67 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-    background-image: linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
-    background-size: 50px 50px;
-    background-position: center bottom;
+    @apply font-sans antialiased bg-background text-foreground transition-colors duration-300;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading uppercase tracking-wider;
-    text-shadow: 0 0 10px hsl(var(--primary) / 0.5);
+    @apply font-heading tracking-tight;
+  }
+  
+  /* Shared Button 3D Utility */
+  .btn-3d {
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.1s;
+  }
+  .btn-3d:active {
+    transform: translateY(6px);
+  }
+  
+  /* Keyboard Key 3D CSS */
+  .keyboard-key-3d {
+    background-color: #242424;
+    border-radius: 12px;
+    box-shadow: 
+      inset 0 1px 2px rgba(255,255,255,0.1),
+      inset 0 -2px 0 rgba(0,0,0,0.5),
+      0 6px 0 #111111,
+      0 8px 10px rgba(0,0,0,0.4);
+    position: relative;
+    transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+  }
+  .keyboard-key-3d::after {
+    content: '';
+    position: absolute;
+    top: 8px; left: 8px; right: 8px; bottom: 12px;
+    border-radius: 6px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1e1e1e 100%);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.1), inset 0 -1px 1px rgba(0,0,0,0.8);
+    z-index: 1;
+  }
+  
+  .keyboard-key-text {
+    position: relative;
+    z-index: 10;
+    color: #e5e5e5;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .keyboard-key-3d.key-hover-ready:hover {
+    transform: translateY(2px);
+    box-shadow: 
+      inset 0 1px 2px rgba(255,255,255,0.1),
+      inset 0 -2px 0 rgba(0,0,0,0.5),
+      0 4px 0 #111111,
+      0 6px 8px rgba(0,0,0,0.4);
+  }
+
+  .keyboard-key-3d:active {
+    transform: translateY(6px) !important;
+    box-shadow: 
+      inset 0 1px 2px rgba(255,255,255,0.1),
+      inset 0 -1px 0 rgba(0,0,0,0.5),
+      0 0px 0 #111111,
+      0 2px 4px rgba(0,0,0,0.4) !important;
   }
 }
 

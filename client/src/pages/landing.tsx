@@ -33,57 +33,51 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-background border-b border-primary/20">
-        {/* Animated HUD Background Effects */}
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-primary border-b-4 border-black/10">
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-10 mix-blend-screen" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent z-10" />
-          <div className="absolute top-1/4 left-0 w-full h-[1px] bg-primary/20 shadow-[0_0_10px_var(--primary)] animate-[ping_4s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
-          <div className="absolute top-3/4 left-0 w-full h-[1px] bg-primary/20 shadow-[0_0_10px_var(--primary)] animate-[ping_6s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
-          {/* Scanning line */}
-          <motion.div
-            className="absolute left-0 w-full h-[2px] bg-primary/50 shadow-[0_0_15px_var(--primary)] z-20"
-            animate={{ top: ["0%", "100%", "0%"] }}
-            transition={{ duration: 8, ease: "linear", repeat: Infinity }}
-          />
+          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1595225476474-87563907a212?q=80&w=2071&auto=format&fit=crop')] bg-cover bg-center opacity-[0.05] mix-blend-screen" />
+          <div className="absolute inset-0 bg-black/10 transition-colors" />
         </div>
 
         <div className="container relative z-30 px-4 flex flex-col items-center justify-center pt-10">
-          {/* Sci-Fi Title/Logo Area */}
+          {/* Logo 3D Keycaps */}
           <motion.div
-            className="flex flex-col items-center mb-10 relative"
+            className="flex gap-2 sm:gap-4 md:gap-6 mb-12"
             variants={{
-              hidden: { opacity: 0, scale: 0.8 },
-              visible: { opacity: 1, scale: 1, transition: { duration: 0.8, ease: "easeOut" } },
+              hidden: { opacity: 0 },
+              visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
             }}
             initial="hidden"
             animate="visible"
           >
-            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150"></div>
-            <div className="relative border border-primary/30 bg-background/50 backdrop-blur-sm p-4 px-10 flex items-center justify-center overflow-hidden group">
-              {/* Corner accents */}
-              <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-primary"></div>
-              <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-primary"></div>
-              <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-primary"></div>
-              <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-primary"></div>
-              
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-heading font-black tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-200 to-primary drop-shadow-[0_0_15px_rgba(0,240,255,0.8)] z-10">
-                YOZGO
-              </h1>
-              
-              {/* Ticker tape effect */}
-              <div className="absolute bottom-1 left-0 w-full flex opacity-50 space-x-2">
-                {[...Array(20)].map((_, i) => (
-                  <div key={i} className="h-[2px] w-2 bg-primary"></div>
-                ))}
-              </div>
-            </div>
+            {["Y", "O", "Z", "G", "O"].map((letter, i) => (
+              <motion.div
+                key={i}
+                variants={{
+                  hidden: { opacity: 0, scale: 0.5, y: -60 },
+                  visible: {
+                    opacity: 1,
+                    scale: 1,
+                    y: 0,
+                    transition: { type: "spring", stiffness: 200, damping: 15 },
+                  },
+                }}
+                className="keyboard-key-3d key-hover-ready w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 md:w-32 md:h-32 flex items-center justify-center cursor-default select-none group"
+              >
+                <span className="keyboard-key-text text-4xl sm:text-5xl md:text-7xl group-active:translate-y-[2px] transition-transform">
+                  {letter}
+                </span>
+                {(i === 1 || i === 3) && (
+                  <div className="absolute bottom-[20%] w-[30%] h-[3px] md:h-[4px] bg-[#111] rounded-full z-10 opacity-70 shadow-[0_1px_0_rgba(255,255,255,0.1)] group-active:translate-y-[2px] transition-transform" />
+                )}
+              </motion.div>
+            ))}
           </motion.div>
 
           {/* Texts */}
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center mt-4">
             <motion.h2
-              className="text-2xl md:text-4xl lg:text-5xl font-heading uppercase text-foreground mb-6 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] whitespace-pre-wrap tracking-wider"
+              className="text-3xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-white mb-6 drop-shadow-[0_4px_4px_rgba(0,0,0,0.25)] whitespace-pre-wrap tracking-tight"
               variants={{
                 hidden: { opacity: 1 },
                 visible: { opacity: 1, transition: { staggerChildren: 0.04, delayChildren: 0.5 } },
@@ -95,8 +89,8 @@ export default function LandingPage() {
                 <motion.span
                   key={i}
                   variants={{
-                    hidden: { opacity: 0, filter: "blur(10px)" },
-                    visible: { opacity: 1, filter: "blur(0px)" },
+                    hidden: { opacity: 0, y: 20 },
+                    visible: { opacity: 1, y: 0 },
                   }}
                 >
                   {char === " " ? "\u00A0" : char}
@@ -105,7 +99,7 @@ export default function LandingPage() {
             </motion.h2>
 
             <motion.div
-              className="text-sm md:text-xl text-primary/80 font-mono mb-12 flex items-center justify-center min-h-[40px] flex-wrap max-w-[90%] whitespace-pre-wrap uppercase tracking-widest bg-primary/5 border border-primary/20 px-6 py-3"
+              className="text-base md:text-2xl text-white/90 font-medium mb-12 flex items-center justify-center min-h-[40px] flex-wrap max-w-[90%] whitespace-pre-wrap font-sans bg-black/20 px-6 py-3 rounded-full backdrop-blur-sm border border-white/10 shadow-sm"
               variants={{
                 hidden: { opacity: 1 },
                 visible: { opacity: 1, transition: { staggerChildren: 0.02, delayChildren: 1.5 } },
@@ -113,7 +107,6 @@ export default function LandingPage() {
               initial="hidden"
               animate="visible"
             >
-              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-primary to-transparent"></div>
               {t.landing.heroSubtitle.split("").map((char, i) => (
                 <motion.span
                   key={i}
@@ -125,12 +118,6 @@ export default function LandingPage() {
                   {char === " " ? "\u00A0" : char}
                 </motion.span>
               ))}
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 1, 0] }}
-                transition={{ repeat: Infinity, duration: 0.8, delay: 2.5 }}
-                className="inline-block w-2 md:w-3 h-4 md:h-5 bg-primary ml-2 shadow-[0_0_8px_var(--primary)]"
-              />
             </motion.div>
 
             {/* Buttons */}
@@ -138,24 +125,23 @@ export default function LandingPage() {
               className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto px-4 z-30"
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 2.5, duration: 0.5 }}
+              transition={{ delay: 2.0, duration: 0.5 }}
             >
               <Link href="/typing-test">
                 <Button
                   size="lg"
-                  className="w-full sm:w-auto text-sm md:text-base px-10 py-6 font-heading tracking-widest uppercase bg-primary/20 text-primary border border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_25px_var(--primary)] transition-all duration-300 relative overflow-hidden group"
+                  className="btn-3d w-full sm:w-auto text-sm md:text-base px-10 py-6 font-bold uppercase bg-[#242424] text-white hover:bg-[#1a1a1a] shadow-[0_6px_0_#111,0_8px_10px_rgba(0,0,0,0.5)] rounded-xl border-t-[1.5px] border-white/10"
                 >
-                  <div className="absolute inset-0 w-full h-full bg-primary/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                  <span className="relative">Musobaqani boshlash</span>
+                  {t.landing.startTyping}
                 </Button>
               </Link>
               <Link href="/leaderboard">
                 <Button
                   size="lg"
                   variant="outline"
-                  className="w-full sm:w-auto text-sm md:text-base px-10 py-6 font-heading tracking-widest uppercase border border-primary/40 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all duration-300 backdrop-blur-sm"
+                  className="btn-3d w-full sm:w-auto text-sm md:text-base px-10 py-6 font-bold uppercase bg-white/10 text-white hover:bg-white/20 hover:text-white border-none shadow-[0_6px_0_rgba(0,0,0,0.2)] rounded-xl"
                 >
-                  Reyting
+                  {t.landing.viewLeaderboard}
                 </Button>
               </Link>
             </motion.div>
@@ -172,39 +158,22 @@ export default function LandingPage() {
       )}
 
       <section className="py-24 bg-background relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent blur-3xl pointer-events-none" />
         <div className="container px-4 relative z-10">
-          <div className="max-w-4xl mx-auto border-l-4 border-primary bg-primary/5 p-8 shadow-[0_0_30px_rgba(0,240,255,0.05)] backdrop-blur-sm relative glass-panel">
-            {/* HUD Corner Decor */}
-            <div className="absolute top-0 right-0 w-4 h-4 border-t border-r border-primary/50"></div>
-            <div className="absolute bottom-0 right-0 w-4 h-4 border-b border-r border-primary/50"></div>
+          <div className="max-w-4xl mx-auto border-l-4 border-primary bg-card p-8 shadow-sm rounded-r-2xl">
             
-            <h2 className="text-3xl lg:text-4xl font-heading font-bold mb-6 text-foreground tracking-widest uppercase flex items-center gap-3">
-              <span className="w-2 h-8 bg-primary shadow-[0_0_10px_var(--primary)] inline-block"></span>
-              Biz Haqimizda
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-foreground tracking-tight flex items-center gap-3">
+              {(t.landing as any).aboutUsTitle || "Biz Haqimizda"}
             </h2>
-            <div className="space-y-6 text-muted-foreground md:text-lg leading-relaxed text-left font-sans">
+            <div className="space-y-4 text-muted-foreground md:text-lg leading-relaxed text-left font-sans">
               <p>
-                <strong className="text-primary font-heading tracking-wider">YOZGO</strong> — bu yozish
-                tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus ishlab
-                chiqilgan avangard platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura
-                ko'nikmalarini qiziqarli va raqobatbardosh usulda maxsus vizual interfeys orqali rivojlantirishga yordam berishdir.
+                <strong className="text-primary font-bold">YOZGO</strong> — {(t.landing as any).aboutUsP1 || "bu yozish tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus ishlab chiqilgan platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura ko'nikmalarini qiziqarli va raqobatbardosh usulda rivojlantirishga yordam berishdir."}
               </p>
               <p>
-                Loyiha qisqa vaqt ichida o'zbek tilidagi eng ilg'or yozish trenajyoriga aylandi. Biz
-                foydalanuvchilar orasida musobaqalar o'tkazish, FUI (Futuristic User Interface) reyting tizimi orqali sog'lom
-                raqobatni shakllantiramiz.
+                {(t.landing as any).aboutUsP2 || "Loyiha qisqa vaqt ichida eng qulay yozish trenajyoriga aylandi. Biz foydalanuvchilar orasida musobaqalar o'tkazish barobarida reyting tizimi orqali sog'lom raqobatni shakllantiramiz."}
               </p>
-              <div className="flex items-center gap-4 mt-8 pt-6 border-t border-primary/20">
-                <div className="w-12 h-12 flex items-center justify-center border border-primary/50 text-primary shadow-[0_0_15px_rgba(0,240,255,0.2)]">
-                  <span className="font-heading font-bold">1</span>
-                </div>
-                <div className="flex-1">
-                  <div className="h-2 w-full bg-primary/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary w-2/3 shadow-[0_0_5px_var(--primary)] animate-pulse"></div>
-                  </div>
-                  <p className="text-xs font-mono text-primary/70 mt-2 uppercase">System Status: Active</p>
-                </div>
+              <div className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-primary/10 text-primary rounded-full font-medium text-sm">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                {(t.landing as any).aboutUsSystem || "System Status: Active"}
               </div>
             </div>
           </div>
@@ -238,17 +207,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="py-24 border-t border-primary/20 bg-background relative overflow-hidden">
-        <div className="absolute top-0 right-1/4 w-[1px] h-full bg-gradient-to-b from-transparent via-primary/30 to-transparent"></div>
-        <div className="container px-4 text-center relative z-10">
-          <h2 className="text-3xl md:text-5xl font-heading font-black tracking-widest uppercase mb-6 text-foreground text-shadow-glow">
+      <section className="py-24 bg-card border-t border-border">
+        <div className="container px-4 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6 text-foreground">
             {t.landing.readyTitle}
           </h2>
-          <p className="text-muted-foreground font-mono mb-10 max-w-[500px] mx-auto opacity-80">
-            &gt; {t.landing.readySubtitle}_
+          <p className="text-muted-foreground mb-10 max-w-[500px] mx-auto text-lg">
+            {t.landing.readySubtitle}
           </p>
           <Link href="/typing-test">
-            <Button size="lg" className="px-12 py-6 font-heading tracking-widest uppercase bg-primary/20 text-primary border border-primary hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_25px_var(--primary)] transition-all duration-300" data-testid="button-get-started">
+            <Button size="lg" className="btn-3d px-12 py-6 font-bold uppercase bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl shadow-[0_6px_0_hsl(var(--primary)/0.5)]" data-testid="button-get-started">
               {t.landing.getStarted}
             </Button>
           </Link>
