@@ -217,8 +217,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       res.status(200).json({ success: true });
-    } catch (e) {
-      res.status(500).json({ message: "Xatolik" });
+    } catch (e: any) {
+      res.status(400).json({ message: e instanceof Error ? e.message : String(e) });
     }
   });
 
@@ -353,9 +353,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       }
 
       res.status(200).json({ success: true, roomCode: battle.code });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Internal server error" });
+    } catch (e: any) {
+      console.error(e);
+      res.status(400).json({ message: e instanceof Error ? e.message : String(e) });
     }
   });
 
