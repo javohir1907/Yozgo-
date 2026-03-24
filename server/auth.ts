@@ -237,10 +237,9 @@ export function setupAuth(app: Express) {
       const { email } = req.body;
       if (!email) return res.status(400).json({ message: "Email kiritilmagan" });
 
-      const crypto = await import("crypto");
+      const crypto = require("crypto");
       const tempPass = crypto.randomBytes(4).toString("hex");
-      const bcryptAuth = await import("bcryptjs");
-      const hashedPassword = await bcryptAuth.hash(tempPass, 10);
+      const hashedPassword = await bcrypt.hash(tempPass, 10);
 
       const [updatedUser] = await db
         .update(users)
