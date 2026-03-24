@@ -77,14 +77,31 @@ export default function LeaderboardPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                {entries && entries.length > 0 ? (
-                  <LeaderboardTable entries={entries} currentUserId={user?.id} />
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-20 text-center border rounded-lg bg-card">
-                    <p className="text-muted-foreground">{t.leaderboard.noRecords}</p>
-                    <p className="text-sm text-muted-foreground/70">{t.leaderboard.beFirst}</p>
-                  </div>
-                )}
+                {(() => {
+                  if (!entries) return null;
+                  const validEntries = entries.filter((e) => e.totalSeconds >= 1800);
+                  const myEntry = entries.find((e) => e.userId === user?.id && e.totalSeconds < 1800);
+                  
+                  const displayEntries = [...validEntries];
+                  if (myEntry) displayEntries.push(myEntry);
+
+                  if (displayEntries.length === 0) {
+                    return (
+                      <div className="flex flex-col items-center justify-center py-24 px-4 text-center border-2 border-dashed rounded-xl bg-card/50">
+                        <Trophy className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                        <p className="text-xl text-muted-foreground font-medium">Hali hech kim reytingga kirish uchun yetarli vaqt to'plamagan.</p>
+                        <p className="text-muted-foreground/70 mt-2">Sizda reytingga kiradigan birinchi foydalanuvchi bo'lish imkoni bor (30 daqiqa yozing)!</p>
+                      </div>
+                    );
+                  }
+
+                  const displayEntriesRanked = displayEntries.map((e, index) => ({
+                    ...e,
+                    rank: e.totalSeconds >= 1800 ? index + 1 : e.rank
+                  }));
+
+                  return <LeaderboardTable entries={displayEntriesRanked} currentUserId={user?.id} />;
+                })()}
               </motion.div>
             )}
           </AnimatePresence>
