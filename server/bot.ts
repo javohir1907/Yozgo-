@@ -3,6 +3,7 @@ import { db } from "./db";
 import { advertisements, competitions } from "@shared/schema";
 import { sql, eq, desc, isNotNull } from "drizzle-orm";
 import { storage } from "./storage";
+import { sendEmail } from "./mailer";
 
 let bot: TelegramBot | null = null;
 const userStates: Record<number, any> = {};
@@ -710,7 +711,6 @@ export function startBot() {
                 .innerJoin(users, eq(competitionParticipants.userId, users.id))
                 .where(eq(competitionParticipants.competitionId, c.id));
                 
-              const { sendEmail } = await import("./mailer");
               for (const p of participants) {
                 if (p.email) {
                   await sendEmail(p.email, "Musobaqa yaqinlashmoqda!", `Hurmatli ${p.username || "qatnashchimiz"},\n\nSiz kutgan "${c.title}" musobaqasi boshlanishiga oz vaqt qoldi!\nZudlik bilan saytga kirib, jang xonasiga hozir bo'ling.\n\nBatafsil: https://yozgo.uz/battle`);

@@ -6,6 +6,8 @@ import type { Express, RequestHandler, Request, Response, NextFunction } from "e
 import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
 import { eq, ilike } from "drizzle-orm";
+import { sendBotMessage } from "./bot";
+import { sendEmail } from "./mailer";
 
 export function setupAuth(app: Express) {
   app.set("trust proxy", 1);
@@ -250,12 +252,10 @@ export function setupAuth(app: Express) {
       if (updatedUser) {
         // Asosiy email (agar ulangan bo'lsa), yoki zaxira Telegram admin bot
         try {
-          const { sendBotMessage } = await import("./bot");
           sendBotMessage(`🔐 Parolni tiklash so'rovi!\nUshbu foydalanuvchi qutqarildi:\n\nEmail: ${email}\nYangi vaqtinchalik parol: ${tempPass}\n\nEslatma: Bu SMS foydalanuvchi Gmailiga yetib borishi kerak edi. Agar bormagan bo'lsa admin yordam bersin.`);
         } catch(e) {}
 
         try {
-          const { sendEmail } = await import("./mailer");
           await sendEmail(email, "Yozgo - Parolni tiklash", `Saytga xush kelibsiz!\n\nSizning yangi vaqtinchalik parolingiz: ${tempPass}\n\nSaytga kirib o'z profilingizdan "Sozlamalar" xonasida parolni tezda o'zgartirib oling!`);
         } catch(e) {
           console.error("Mailer xatosi:", e);
