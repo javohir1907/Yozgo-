@@ -46,13 +46,13 @@ const WordBox = React.memo(
         if (charIdx < typedWord.length) {
           const typedChar = typedWord[charIdx];
           if (typedChar === char) {
-            colorClass = "text-green-500 dark:text-green-400 font-medium";
+            colorClass = "text-green-600 dark:text-green-400 font-bold drop-shadow-sm";
           } else {
-            colorClass = "text-red-500 dark:text-red-400 font-bold bg-red-500/10";
+            colorClass = "text-white bg-red-600 dark:text-red-400 dark:bg-red-500/10 font-bold rounded-sm shadow-sm px-[1px]";
           }
         } else if (isPast) {
           colorClass =
-            "text-red-500 underline decoration-red-500/50 decoration-2 font-bold opacity-80";
+            "text-red-700 dark:text-red-500 underline decoration-red-600/60 decoration-2 font-bold opacity-90 drop-shadow-sm";
         }
 
         return (
@@ -85,7 +85,7 @@ const WordBox = React.memo(
               .map((char, charIdx) => (
                 <span
                   key={`extra-${charIdx}`}
-                  className="text-red-500 underline decoration-red-500/50 font-bold opacity-80 char-span inline-block"
+                  className="text-white bg-red-600 dark:text-red-500 dark:bg-transparent underline decoration-red-500/50 font-bold opacity-90 char-span inline-block px-[1px] rounded-sm"
                 >
                   {char}
                 </span>
@@ -210,7 +210,7 @@ export function TypingArea({
 
   return (
     <div
-      className="relative w-full max-w-5xl mx-auto h-[7rem] overflow-hidden cursor-text"
+      className="relative w-full max-w-5xl mx-auto h-[10.5rem] overflow-hidden cursor-text"
       onClick={() => inputRef.current?.focus()}
       ref={containerRef}
       data-testid="typing-area"

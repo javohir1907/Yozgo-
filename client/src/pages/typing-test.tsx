@@ -83,9 +83,17 @@ export default function TypingTestPage() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-12 flex flex-col items-center min-h-[calc(100vh-8rem)]">
-      {!isFinished ? (
-        <>
+    <div className="relative min-h-[calc(100vh-8rem)]">
+      <div 
+        className={`fixed inset-0 pointer-events-none transition-all duration-500 z-0 ${
+          isActive && !isFinished 
+            ? "opacity-100 bg-black/15 backdrop-blur-[4px] dark:bg-transparent dark:backdrop-blur-none" 
+            : "opacity-0"
+        }`} 
+      />
+      <div className="container relative z-10 mx-auto px-4 py-12 flex flex-col items-center min-h-[calc(100vh-8rem)]">
+        {!isFinished ? (
+          <>
           <div className="w-full flex flex-col items-center gap-4 mb-12">
             {/* FIX: Til va rejim selektorlari - faqat test boshlanmagan vaqtda ko'rinadi */}
             {/* Pastga tushish animatsiyasi bilan yashiriladi */}
@@ -135,6 +143,7 @@ export default function TypingTestPage() {
           />
         </div>
       )}
+      </div>
     </div>
   );
 }

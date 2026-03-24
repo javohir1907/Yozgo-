@@ -541,7 +541,15 @@ export default function BattlePage() {
   }
 
   return (
-    <div className="container max-w-6xl mx-auto py-8 px-4">
+    <div className="relative min-h-[calc(100vh-8rem)]">
+      <div 
+        className={`fixed inset-0 pointer-events-none transition-all duration-500 z-0 ${
+          isAttemptActive 
+            ? "opacity-100 bg-black/15 backdrop-blur-[4px] dark:bg-transparent dark:backdrop-blur-none" 
+            : "opacity-0"
+        }`} 
+      />
+      <div className="container relative z-10 max-w-6xl mx-auto py-8 px-4 min-h-[calc(100vh-8rem)]">
       {/* Header Info */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
@@ -918,6 +926,7 @@ export default function BattlePage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
