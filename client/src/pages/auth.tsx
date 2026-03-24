@@ -108,13 +108,21 @@ export default function AuthPage() {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await fetch("/api/auth/forgot-password", {
+      const baseUrl = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${baseUrl}/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail })
+        body: JSON.stringify({ email: forgotEmail.trim() })
       });
-    } catch(err) {}
-    setForgotSent(true);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(errorData.message || "Xatolik! Ehtimol email topilmadi.");
+        return;
+      }
+      setForgotSent(true);
+    } catch(err) {
+      alert("Tarmoq xatosi, API bilan bog'lanib bo'lmadi.");
+    }
   };
 
   const isPending = isLoggingIn || isRegistering;

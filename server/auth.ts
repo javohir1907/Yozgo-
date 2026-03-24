@@ -246,8 +246,12 @@ export function setupAuth(app: Express) {
       const [updatedUser] = await db
         .update(users)
         .set({ password: hashedPassword })
-        .where(eq(users.email, email.toLowerCase()))
+        .where(eq(users.email, email.trim().toLowerCase()))
         .returning();
+
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Bunday elektron pochtaga ega foydalanuvchi tizimda topilmadi!" });
+      }
 
       if (updatedUser) {
         // Asosiy email (agar ulangan bo'lsa), yoki zaxira Telegram admin bot
