@@ -198,7 +198,7 @@ export default function LandingPage() {
           <p className="text-muted-foreground mb-10 max-w-[500px] mx-auto text-lg">
             {t.landing.readySubtitle}
           </p>
-          <Link href="/typing-test">
+          <Link href="/battle">
             <Button size="lg" className="btn-3d px-12 py-6 font-bold uppercase bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl shadow-[0_6px_0_hsl(var(--primary)/0.5)]" data-testid="button-get-started">
               {t.landing.getStarted}
             </Button>
@@ -244,30 +244,34 @@ export default function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-12 max-w-5xl mx-auto">
             <div className="space-y-6">
               <h3 className="text-xl font-semibold mb-4">Foydalanuvchilarimiz nima deydi?</h3>
-              {reviews && reviews.length > 0 ? (
-                <div className="space-y-4">
-                  {reviews.map((rev: any) => (
-                    <div key={rev.id} className="p-4 rounded-lg bg-black/5 shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold">{rev.user.username}</span>
-                        <div className="flex text-yellow-500">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-4 h-4 ${i < rev.rating ? "fill-current" : "text-muted opacity-30"}`}
-                            />
-                          ))}
+              {(() => {
+                const fakeReviews = [
+                  { id: 'f1', user: { username: "Javlon_dev" }, rating: 5, comment: "Sayt dizayni va ishlashi juda qulay! Barmoqlarim yozishga ancha o'rganib qoldi 🚀" },
+                  { id: 'f2', user: { username: "Ali_99" }, rating: 5, comment: "Jang va Musobaqalar tizimi rostdan ham o'ziga tortar ekan. Barchaga zo'r maslahat beraman! 🔥" },
+                  { id: 'f3', user: { username: "Madina_coder" }, rating: 5, comment: "O'zbek yoshlari uchun zo'r loyiha. Tez yozishni o'rganish uchun juda kerakli joy ekan." }
+                ];
+                const displayReviews = [...fakeReviews, ...(reviews || [])];
+                return (
+                  <div className="space-y-4">
+                    {displayReviews.map((rev: any) => (
+                      <div key={rev.id} className="p-4 rounded-lg bg-black/5 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold">{rev.user.username}</span>
+                          <div className="flex text-yellow-500">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-4 h-4 ${i < rev.rating ? "fill-current" : "text-muted opacity-30"}`}
+                              />
+                            ))}
+                          </div>
                         </div>
+                        <p className="text-muted-foreground">{rev.comment}</p>
                       </div>
-                      <p className="text-muted-foreground">{rev.comment}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-muted-foreground italic">
-                  Mijozlarimiz hozircha fikr qoldirishmagan.
-                </p>
-              )}
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             <div>

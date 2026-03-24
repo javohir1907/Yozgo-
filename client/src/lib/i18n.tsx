@@ -34,7 +34,7 @@ const translations = {
     landing: {
       heroTitle: "SPEAK WITH YOUR FINGERS",
       heroSubtitle: "Compete against your friends. Be the fastest typist.",
-      startTyping: "Start Competition",
+      startTyping: "Start Test",
       viewLeaderboard: "View Leaderboard",
       readyTitle: "Ready to compete with the best?",
       readySubtitle:
@@ -195,7 +195,7 @@ const translations = {
     landing: {
       heroTitle: "ГОВОРИ ПАЛЬЦАМИ",
       heroSubtitle: "Соревнуйся с друзьями. Стань самым быстрым.",
-      startTyping: "Начать соревнование",
+      startTyping: "Начать тест",
 
       viewLeaderboard: "Рейтинг",
       readyTitle: "Готовы соревноваться с лучшими?",
@@ -359,7 +359,7 @@ const translations = {
     landing: {
       heroTitle: "Barmoqlar tili bilan gapiring",
       heroSubtitle: "Do'stlaringizga qarshi yozing. Eng tez yozuvchi Siz bo'ling.",
-      startTyping: "Musobaqani boshlash",
+      startTyping: "Testni boshlash",
       viewLeaderboard: "Reyting",
       readyTitle: "Eng yaxshilar bilan raqobatlashga tayyormisiz?",
       readySubtitle:
