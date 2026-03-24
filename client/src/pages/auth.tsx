@@ -52,7 +52,13 @@ export default function AuthPage() {
   }, [firstName, isLogin]);
 
   if (isAuthenticated) {
-    setLocation("/typing-test");
+    const joinComp = sessionStorage.getItem("joinComp");
+    if (joinComp) {
+      sessionStorage.removeItem("joinComp");
+      setLocation("/");
+    } else {
+      setLocation("/typing-test");
+    }
     return null;
   }
 
@@ -71,7 +77,18 @@ export default function AuthPage() {
         }
         await register({ email, password, firstName });
       }
-      setLocation("/typing-test");
+      
+      const joinComp = sessionStorage.getItem("joinComp");
+      if (joinComp) {
+        try {
+          const { apiRequest } = await import("@/lib/queryClient");
+          await apiRequest("POST", `/api/competitions/${joinComp}/register`);
+        } catch(e) {}
+        sessionStorage.removeItem("joinComp");
+        setLocation("/"); // Return to landing showing waitlist update
+      } else {
+        setLocation("/typing-test");
+      }
     } catch (err: any) {
       const body = err?.message || "Something went wrong";
       try {
@@ -88,8 +105,15 @@ export default function AuthPage() {
     }
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail })
+      });
+    } catch(err) {}
     setForgotSent(true);
   };
 

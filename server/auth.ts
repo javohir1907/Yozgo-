@@ -232,6 +232,43 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ message: "Email kiritilmagan" });
+
+      const crypto = await import("crypto");
+      const tempPass = crypto.randomBytes(4).toString("hex");
+      const bcryptAuth = await import("bcryptjs");
+      const hashedPassword = await bcryptAuth.hash(tempPass, 10);
+
+      const [updatedUser] = await db
+        .update(users)
+        .set({ password: hashedPassword })
+        .where(eq(users.email, email.toLowerCase()))
+        .returning();
+
+      if (updatedUser) {
+        // Asosiy email (agar ulangan bo'lsa), yoki zaxira Telegram admin bot
+        try {
+          const { sendBotMessage } = await import("./bot");
+          sendBotMessage(`🔐 Parolni tiklash so'rovi!\nUshbu foydalanuvchi qutqarildi:\n\nEmail: ${email}\nYangi vaqtinchalik parol: ${tempPass}\n\nEslatma: Bu SMS foydalanuvchi Gmailiga yetib borishi kerak edi. Agar bormagan bo'lsa admin yordam bersin.`);
+        } catch(e) {}
+
+        try {
+          const { sendEmail } = await import("./mailer");
+          await sendEmail(email, "Yozgo - Parolni tiklash", `Saytga xush kelibsiz!\n\nSizning yangi vaqtinchalik parolingiz: ${tempPass}\n\nSaytga kirib o'z profilingizdan "Sozlamalar" xonasida parolni tezda o'zgartirib oling!`);
+        } catch(e) {
+          console.error("Mailer xatosi:", e);
+        }
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  });
+
   // FIX: Parolni yangilash route qo'shildi
   app.post("/api/auth/update-password", async (req, res) => {
     const userId = (req.session as any).userId;

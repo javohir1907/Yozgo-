@@ -700,6 +700,25 @@ export function startBot() {
               adminId,
               `Eslatma:\n\n${c.title} musobaqasi boshlanishiga 1 soat qoldi.`
             );
+            
+            // Mail jo'natish waitlistdagi barcha foydalanuvchilarga
+            try {
+              const { competitionParticipants, users } = require("@shared/schema");
+              const participants = await db
+                .select({ email: users.email, username: users.firstName })
+                .from(competitionParticipants)
+                .innerJoin(users, eq(competitionParticipants.userId, users.id))
+                .where(eq(competitionParticipants.competitionId, c.id));
+                
+              const { sendEmail } = await import("./mailer");
+              for (const p of participants) {
+                if (p.email) {
+                  await sendEmail(p.email, "Musobaqa yaqinlashmoqda!", `Hurmatli ${p.username || "qatnashchimiz"},\n\nSiz kutgan "${c.title}" musobaqasi boshlanishiga oz vaqt qoldi!\nZudlik bilan saytga kirib, jang xonasiga hozir bo'ling.\n\nBatafsil: https://yozgo.uz/battle`);
+                }
+              }
+            } catch (err) {
+              console.error("Cron email hatoligi:", err);
+            }
           }
         }
       } catch (e) {}

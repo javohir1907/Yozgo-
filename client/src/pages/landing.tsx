@@ -477,7 +477,10 @@ function CompetitionWaitlistModal({ competition, user, queryClient }: { competit
 
         <div className="flex flex-col gap-3 mt-2">
           {!user ? (
-            <Link href="/auth" onClick={() => setOpen(false)}>
+            <Link href="/auth" onClick={() => {
+              sessionStorage.setItem("joinComp", competition.id);
+              setOpen(false);
+            }}>
               <Button className="w-full">Tizimga kirish</Button>
             </Link>
           ) : (
