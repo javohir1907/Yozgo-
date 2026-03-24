@@ -141,12 +141,12 @@ export default function LandingPage() {
 
       <section className="py-24 bg-background relative overflow-hidden">
         <div className="container px-4 relative z-10">
-          <div className="max-w-4xl mx-auto border-l-4 border-foreground bg-black/5 p-8 shadow-sm rounded-r-2xl">
+          <div className="max-w-4xl mx-auto border-t-4 border-foreground bg-black/5 p-8 shadow-sm rounded-2xl text-center">
             
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-foreground tracking-tight flex items-center gap-3">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-6 text-foreground tracking-tight flex items-center justify-center gap-3">
               {(t.landing as any).aboutUsTitle || "Biz Haqimizda"}
             </h2>
-            <div className="space-y-4 text-muted-foreground md:text-lg leading-relaxed text-left font-sans">
+            <div className="space-y-4 text-muted-foreground md:text-lg leading-relaxed text-center font-sans">
               <p>
                 {(t.landing as any).aboutUsP1 || "YOZGO — bu yozish tezligini oshirish va o'z ustida ishlashni xohlovchilar uchun maxsus ishlab chiqilgan platforma. Bizning maqsadimiz har bir foydalanuvchiga o'z klaviatura ko'nikmalarini qiziqarli va raqobatbardosh usulda rivojlantirishga yordam berishdir."}
               </p>
@@ -218,13 +218,13 @@ export default function LandingPage() {
               {competitions.map((comp: any) => (
                 <div
                   key={comp.id}
-                  className="p-6 rounded-xl border bg-card hover:border-primary/50 transition-colors shadow-sm"
+                  className="p-6 rounded-xl border bg-card hover:border-primary/50 transition-colors shadow-sm flex flex-col items-center text-center"
                 >
                   <h3 className="text-xl font-bold mb-2">{comp.title}</h3>
                   {comp.prize && (
                     <p className="text-amber-500 font-semibold mb-4">🏆 Sovrin: {comp.prize}</p>
                   )}
-                  <div className="flex items-center gap-2 text-muted-foreground mb-6">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground mb-6">
                     <Clock className="w-4 h-4" />
                     <Countdown date={comp.date} />
                   </div>

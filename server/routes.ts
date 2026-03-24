@@ -362,20 +362,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Reviews
   app.get("/api/reviews", async (req, res) => {
     try {
-      const limit = req.query.limit ? parseInt(req.query.limit as string) : 5;
-      const reviews = await storage.getRecentReviews(limit);
-
-      const transformed = reviews.map((r) => ({
-        id: r.id,
-        rating: r.rating,
-        comment: r.comment,
-        createdAt: r.createdAt,
-        user: {
-          username: r.user.firstName || r.user.email?.split("@")[0] || "Unknown",
-          avatarUrl: r.user.profileImageUrl,
-        },
-      }));
-      res.json(transformed);
+      res.json([]);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -385,8 +372,17 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = (req.session as any).userId;
       const data = insertReviewSchema.parse({ ...req.body, userId });
-      const review = await storage.createReview(data);
-      res.status(201).json(review);
+      
+      try {
+        const { sendBotMessage } = require("./bot");
+        const user = await storage.getUser(userId);
+        const username = user?.firstName || user?.email?.split("@")[0] || "Noma'lum";
+        sendBotMessage(`📨 Yangi fikr/mulohaza qoldirildi:\n\n👤 Foydalanuvchi: ${username}\n⭐ Baho: ${data.rating}/5\n💬 Izoh: ${data.comment}`);
+      } catch (e) {
+        console.error("Botga xabar jo'natishda xatolik:", e);
+      }
+
+      res.status(201).json({ message: "Fikr yuborildi" });
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid review data" });

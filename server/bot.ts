@@ -490,8 +490,10 @@ export function startBot() {
     if (query.data?.startsWith("comp_cancel_")) {
       const id = query.data.replace("comp_cancel_", "");
       try {
+        const { competitionParticipants } = require("@shared/schema");
+        await db.delete(competitionParticipants).where(eq(competitionParticipants.competitionId, id));
         await db.delete(competitions).where(eq(competitions.id, id));
-        bot?.sendMessage(chatId, "Musobaqa o'chirildi.");
+        bot?.sendMessage(chatId, "Musobaqa bekor qilindi.");
       } catch (e) {
         bot?.sendMessage(chatId, "Xato: " + (e as any).message);
       }
@@ -628,8 +630,10 @@ export function startBot() {
     const id = match[1];
     await bot?.sendMessage(msg.chat.id, "O'chirilmoqda...");
     try {
+      const { competitionParticipants } = require("@shared/schema");
+      await db.delete(competitionParticipants).where(eq(competitionParticipants.competitionId, id));
       await db.delete(competitions).where(eq(competitions.id, id));
-      bot?.sendMessage(msg.chat.id, "Musobaqa o'chirildi.");
+      bot?.sendMessage(msg.chat.id, "Musobaqa. o'chirildi.");
     } catch (e) {
       bot?.sendMessage(msg.chat.id, "Xato: " + (e as any).message);
     }
