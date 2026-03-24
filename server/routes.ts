@@ -420,6 +420,36 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/competitions/:id/participants", async (req, res) => {
+    try {
+      const compId = req.params.id as string;
+      const records = await db
+        .select({
+          id: competitionParticipants.id,
+          registeredAt: competitionParticipants.registeredAt,
+          userId: users.id,
+          username: users.firstName,
+          email: users.email
+        })
+        .from(competitionParticipants)
+        .innerJoin(users, eq(competitionParticipants.userId, users.id))
+        .where(eq(competitionParticipants.competitionId, compId))
+        .orderBy(desc(competitionParticipants.registeredAt));
+
+      const transformed = records.map(r => ({
+        id: r.id,
+        registeredAt: r.registeredAt,
+        user: {
+          id: r.userId,
+          username: r.username || r.email?.split("@")[0] || "Noma'lum"
+        }
+      }));
+      res.json(transformed);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/competitions/:id/register", isAuthenticated, async (req, res) => {
     try {
       const userId = (req.session as any).userId as string;

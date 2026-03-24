@@ -472,6 +472,33 @@ export function startBot() {
       delete userStates[chatId];
     }
 
+    if (query.data?.startsWith("comp_parts_")) {
+      const id = query.data.replace("comp_parts_", "");
+      try {
+        const { competitionParticipants, users } = require("@shared/schema");
+        const participants = await db
+          .select({
+            username: users.firstName,
+            email: users.email
+          })
+          .from(competitionParticipants)
+          .innerJoin(users, eq(competitionParticipants.userId, users.id))
+          .where(eq(competitionParticipants.competitionId, id));
+
+        if (participants.length === 0) {
+          bot?.sendMessage(chatId, "Hali hech kim ushbu musobaqa uchun ro'yxatdan o'tmagan.");
+        } else {
+          let listStr = "Musobaqa ishtirokchilari ro'yxati (Waitlist): \n\n";
+          participants.forEach((p, i) => {
+            listStr += `${i + 1}. ${p.username || p.email?.split("@")[0] || "Noma'lum"}\n`;
+          });
+          bot?.sendMessage(chatId, listStr);
+        }
+      } catch (e) {
+        bot?.sendMessage(chatId, "Xato: " + (e as any).message);
+      }
+    }
+
     if (query.data === "m_yes" && state?.type === "musobaqa") {
       await bot?.sendMessage(chatId, "Yuklanmoqda...");
       try {
@@ -609,7 +636,10 @@ export function startBot() {
         const opts = {
           reply_markup: c.isActive
             ? {
-                inline_keyboard: [[{ text: "Bekor qilish", callback_data: `comp_cancel_${c.id}` }]],
+                inline_keyboard: [
+                  [{ text: "Ishtirokchilarni ko'rish", callback_data: `comp_parts_${c.id}` }],
+                  [{ text: "Bekor qilish", callback_data: `comp_cancel_${c.id}` }]
+                ],
               }
             : undefined,
         };

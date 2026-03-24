@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Link } from "wouter";
 import { Keyboard, Zap, Globe, Users, Trophy, Star, Clock } from "lucide-react";
 import { motion } from "framer-motion";
@@ -228,9 +229,7 @@ export default function LandingPage() {
                     <Clock className="w-4 h-4" />
                     <Countdown date={comp.date} />
                   </div>
-                  <Link href="/battle">
-                    <Button className="w-full">Qatnashish</Button>
-                  </Link>
+                  <CompetitionWaitlistModal competition={comp} user={user} queryClient={queryClient} />
                 </div>
               ))}
             </div>
@@ -416,5 +415,90 @@ function Countdown({ date }: { date: string }) {
     <span className="font-medium">
       {timeLeft.days} kun, {timeLeft.hours} soat, {timeLeft.mins} daq.
     </span>
+  );
+}
+
+function CompetitionWaitlistModal({ competition, user, queryClient }: { competition: any, user: any, queryClient: any }) {
+  const [open, setOpen] = useState(false);
+  
+  const { data: participants } = useQuery<any[]>({ 
+    queryKey: [`/api/competitions/${competition.id}/participants`],
+    enabled: open
+  });
+
+  const registerMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", `/api/competitions/${competition.id}/register`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${competition.id}/participants`] });
+      alert("Ro'yxatdan o'tdingiz!");
+    },
+    onError: (err: any) => {
+      alert(err.message || "Xatolik yuz berdi");
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="w-full font-bold">Qatnashish (Batafsil)</Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md bg-card border border-white/10">
+        <DialogHeader>
+          <DialogTitle>{competition.title}</DialogTitle>
+          <DialogDescription>
+            Ushbu musobaqa {new Date(competition.date).toLocaleString('uz-UZ')} da boshlanadi.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="py-4">
+          <h4 className="font-semibold mb-2 flex justify-between">
+            <span>Kutish ro'yxati (Waitlist)</span>
+            <span className="text-primary text-sm bg-primary/10 px-2 py-1 rounded-full">{competition.participantsCount || 0} ishtirokchi</span>
+          </h4>
+          
+          <div className="max-h-[200px] overflow-y-auto space-y-1 mb-4 bg-background/50 p-3 rounded-lg border border-white/5">
+            {!participants ? (
+              <p className="text-center text-sm text-muted-foreground py-4">Yuklanmoqda...</p>
+            ) : participants.length === 0 ? (
+              <p className="text-center text-sm text-muted-foreground py-4">Hali hech kim ro'yxatdan o'tmagan. Birinchi bo'ling!</p>
+            ) : (
+              participants.map((p, i) => (
+                <div key={p.id} className="flex items-center gap-3 text-sm p-2 hover:bg-white/5 rounded-md transition-colors">
+                  <span className="text-muted-foreground font-mono w-4">{i + 1}.</span>
+                  <span className="font-medium text-foreground">{p.user?.username}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 mt-2">
+          {!user ? (
+            <Link href="/auth" onClick={() => setOpen(false)}>
+              <Button className="w-full">Tizimga kirish</Button>
+            </Link>
+          ) : (
+            <Button 
+              className="w-full font-bold"
+              onClick={() => registerMutation.mutate()}
+              disabled={registerMutation.isPending || participants?.some(p => p.user?.id === user?.id)}
+            >
+              {participants?.some(p => p.user?.id === user?.id) 
+                ? "Siz ro'yxatdan o'tgansiz ✅" 
+                : "Ushbu musobaqaga qo'shilish"}
+            </Button>
+          )}
+          
+          <Link href="/battle" onClick={() => setOpen(false)}>
+            <Button variant="secondary" className="w-full">
+               Jang xonasiga kirish 
+            </Button>
+          </Link>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
