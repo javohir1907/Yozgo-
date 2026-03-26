@@ -341,6 +341,12 @@ export default function LandingPage() {
             © {new Date().getFullYear()} YOZGO. {t.landing.footer}
           </p>
           <div className="flex gap-6">
+            <a href="https://t.me/yozgo_uz" target="_blank" rel="noreferrer" className="text-sm font-bold text-primary hover:text-primary/80 transition-colors">
+              Kanal: @yozgo_uz
+            </a>
+            <a href="https://t.me/yozgo_bot" target="_blank" rel="noreferrer" className="text-sm font-bold text-primary hover:text-primary/80 transition-colors">
+              Bot: @yozgo_bot
+            </a>
             <Link
               href="/settings"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"

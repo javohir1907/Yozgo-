@@ -12,9 +12,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Target, Timer, BarChart3, History } from "lucide-react";
+import { Trophy, Target, Timer, BarChart3, History, Key } from "lucide-react";
 import { format } from "date-fns";
 import { useI18n } from "@/lib/i18n";
+import { useState } from "react";
+import { apiRequest } from "@/lib/queryClient";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProfileData {
   user: {
@@ -41,11 +46,49 @@ interface ProfileData {
 export default function Profile() {
   const { user: authUser } = useAuth();
   const { t } = useI18n();
+  const { toast } = useToast();
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const { data, isLoading } = useQuery<ProfileData>({
     queryKey: ["/api/profile", authUser?.id],
     enabled: !!authUser?.id,
   });
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      toast({
+        title: "Xatolik",
+        description: "Yangi parol kamida 6ta belgidan iborat bo'lishi kerak",
+        variant: "destructive",
+      });
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await apiRequest("POST", "/api/auth/update-password", {
+        currentPassword,
+        newPassword,
+      });
+      toast({
+        title: "Muvaffaqiyatli",
+        description: "Parolingiz o'zgartirildi",
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+    } catch (err: any) {
+      toast({
+        title: "Xatolik",
+        description: err.message || "Parolni o'zgartirish amalga oshmadi",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
 
   if (isLoading || !data) {
     return (
@@ -167,6 +210,43 @@ export default function Profile() {
           <div className="h-[400px] w-full">
             <ProgressChart data={chartData} />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-card/50 backdrop-blur-sm border-primary/10">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Key className="w-5 h-5 text-primary" />
+            Parolni o'zgartirish
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Joriy parol</label>
+              <Input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Hozirgi parolingiz"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Yangi parol</label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Yangi parol (kamida 6 ta belgi)"
+                required
+                minLength={6}
+              />
+            </div>
+            <Button type="submit" disabled={isChangingPassword} className="w-full font-bold">
+              {isChangingPassword ? "Saqlanmoqda..." : "Parolni Yangilash"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
 

@@ -57,7 +57,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="light">
         <I18nProvider>
           <TooltipProvider>
             <div className="flex flex-col min-h-screen bg-background text-foreground">

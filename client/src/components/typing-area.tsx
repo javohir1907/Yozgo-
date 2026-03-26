@@ -46,19 +46,19 @@ const WordBox = React.memo(
         if (charIdx < typedWord.length) {
           const typedChar = typedWord[charIdx];
           if (typedChar === char) {
-            colorClass = "text-green-600 dark:text-green-400 font-bold drop-shadow-sm";
+            colorClass = "text-green-600 dark:text-green-400 font-bold";
           } else {
-            colorClass = "text-white bg-red-600 dark:text-red-400 dark:bg-red-500/10 font-bold rounded-sm shadow-sm px-[1px]";
+            colorClass = "text-white bg-red-600 dark:text-red-400 dark:bg-red-500/10 font-bold rounded-sm px-[1px]";
           }
         } else if (isPast) {
           colorClass =
-            "text-red-700 dark:text-red-500 underline decoration-red-600/60 decoration-2 font-bold opacity-90 drop-shadow-sm";
+            "text-red-700 dark:text-red-500 underline decoration-red-600/60 decoration-2 font-bold opacity-90";
         }
 
         return (
           <span
             key={`${wordIdx}-${charIdx}`}
-            className={cn("transition-colors duration-75 char-span inline-block", colorClass)}
+            className={cn("char-span inline-block", colorClass)}
           >
             {char}
           </span>
@@ -69,7 +69,7 @@ const WordBox = React.memo(
         <span
           ref={ref}
           className={cn(
-            "inline-block whitespace-nowrap transition-all duration-200 word-box",
+            "inline-block whitespace-nowrap word-box",
             isActive && "bg-primary/5 rounded-md px-1 -mx-1"
           )}
           data-testid={`word-${wordIdx}`}
