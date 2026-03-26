@@ -175,8 +175,9 @@ export class BattleManager {
     room.settings = settings;
     if (settings.language && settings.language !== room.language) {
       room.language = settings.language;
-      room.testWords = this.generateWords(settings.language, 100);
     }
+    // Har doim yengi battle o'yinida yengi test matni yaratish
+    room.testWords = this.generateWords(room.language, 200);
 
     room.status = "playing";
     room.startTime = Date.now();
