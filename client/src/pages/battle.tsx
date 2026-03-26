@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebsocket } from "@/hooks/use-websocket";
 import { TypingArea } from "@/components/typing-area";
@@ -53,6 +53,7 @@ export default function BattlePage() {
   const [totalTimer, setTotalTimer] = useState<number | null>(null);
   const [isAttemptActive, setIsAttemptActive] = useState(false);
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
+  const [localAttemptCount, setLocalAttemptCount] = useState(0);
 
   const [showTerms, setShowTerms] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
@@ -95,6 +96,7 @@ export default function BattlePage() {
   // Handle countdown when battle starts
   useEffect(() => {
     if (battleStart) {
+      setLocalAttemptCount(0); // Reset attempts when new battle starts
       setCountdown(3);
       const timer = setInterval(() => {
         setCountdown((prev) => {
@@ -146,6 +148,7 @@ export default function BattlePage() {
     setWpm(0);
     setAccuracy(100);
     setHistory([]);
+    setLocalAttemptCount((prev) => prev + 1);
   };
 
   const endAttempt = () => {
@@ -260,6 +263,17 @@ export default function BattlePage() {
     }
   };
 
+  const currentAttemptWords = useMemo(() => {
+    if (!battleStart) return [];
+    const attemptIndex = Math.max(0, localAttemptCount - 1);
+    const startIdx = (attemptIndex * 50) % Math.max(1, battleStart.words.length);
+    let chunk = battleStart.words.slice(startIdx, startIdx + 100);
+    if (chunk.length < 100) {
+      chunk = [...chunk, ...battleStart.words.slice(0, 100 - chunk.length)];
+    }
+    return chunk;
+  }, [battleStart, localAttemptCount]);
+
   const updateStats = useCallback(
     (currHistory: string[], currInput: string, currIndex: number) => {
       if (!battleStart || !attemptStartTime) return;
@@ -268,7 +282,8 @@ export default function BattlePage() {
 
       for (let i = 0; i < currHistory.length; i++) {
         const hWord = currHistory[i];
-        const actualWord = battleStart.words[i];
+        const actualWord = currentAttemptWords[i];
+        if (!actualWord) continue;
         totKeys += hWord.length + 1;
         if (hWord === actualWord) {
           corKeys += actualWord.length + 1;
@@ -280,8 +295,8 @@ export default function BattlePage() {
         }
       }
 
-      const actualWord = battleStart.words[currIndex];
-      if (currInput.length > 0) {
+      const actualWord = currentAttemptWords[currIndex];
+      if (actualWord && currInput.length > 0) {
         totKeys += currInput.length;
         for (let j = 0; j < currInput.length; j++) {
           if (currInput[j] === actualWord[j]) corKeys++;
@@ -298,7 +313,7 @@ export default function BattlePage() {
 
       sendProgress(Math.min(Math.round((currIndex / 50) * 100), 100), exactWpm);
     },
-    [battleStart, attemptStartTime, sendProgress]
+    [battleStart, attemptStartTime, currentAttemptWords, sendProgress]
   );
 
   const handleInputChange = useCallback(
@@ -328,7 +343,7 @@ export default function BattlePage() {
 
     if (currentIndex > 0 && userInput.length === 0) {
       const parentIdx = currentIndex - 1;
-      const prevWordTarget = battleStart.words[parentIdx];
+      const prevWordTarget = currentAttemptWords[parentIdx];
       const prevInput = history[parentIdx];
 
       // Faqat xato qilingan bo'lsa orqaga qaytish mumkin
@@ -341,7 +356,7 @@ export default function BattlePage() {
 
       updateStats(newHistory, prevInput, parentIdx);
     }
-  }, [isAttemptActive, battleStart, currentIndex, userInput, history, updateStats]);
+  }, [isAttemptActive, battleStart, currentIndex, userInput, history, currentAttemptWords, updateStats]);
 
   const handleAdminStart = () => {
     startBattle({
@@ -755,7 +770,7 @@ export default function BattlePage() {
                   </div>
 
                   <TypingArea
-                    words={battleStart.words}
+                    words={currentAttemptWords}
                     userInput={userInput}
                     onInputChange={handleInputChange}
                     onGoBack={handleGoBack}
