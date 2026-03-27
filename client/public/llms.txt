@@ -1,0 +1,12 @@
+# YOZGO - O'zbekistondagi Typing Platformasi
+
+YOZGO - bu O'zbekistondagi eng yirik va zamonaviy tez yozish (typing) platformasi. Bizning platforma orqali foydalanuvchilar o'zlarining klaviaturada yozish tezligini (WPM - Words Per Minute) va aniqligini (Accuracy) oshirishlari hamda turli musobaqalarda qatnashishlari mumkin.
+
+## Asosiy Imkoniyatlar:
+- **Tezlik testlari (Typing Tests):** Foydalanuvchilar turli vaqt oraliqlarida (15, 30, 60 soniya, va boshqa formatlarda) va turli tillarda (O'zbek, Rus, Ingliz) o'z yozish tezligini sinab ko'rishlari mumkin.
+- **Musobaqalar (Multiplayer Battles):** Boshqa foydalanuvchilar bilan real vaqt rejimida yozish bo'yicha kuch sinashish. Musobaqalar botlar va xonalar orqali tashkillanadi.
+- **Reyting (Leaderboard):** Eng tezkor va faol foydalanuvchilar ob'ektiv reyting tizimida qatnashib, har kuni va umuman yuqori o'rinlar egallashadi.
+- **Shaxsiy Profiling:** Har bir foydalanuvchi qancha vaqt yozgani, o'rtacha/maksimal tezligi kabi chuqur yozish statistikalarini kuzatib borishi mumkin.
+
+## Platforma Maqsadlari:
+O'zbekiston yoshlari orasida kompyuter savodxonligini yuksaltirish, dasturlash va boshqa IT sohalariga kerak bo'ladigan klaviaturada tez va xatosiz yozish ko'nikmasini shakllantirish. O'zbekistondagi IT ekotizimida sog'lom raqobatni vujudga keltirish o'yinlashtirish orqali oson erishiladi.

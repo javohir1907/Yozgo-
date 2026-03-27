@@ -633,5 +633,38 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Open API endpoint for AI models and external services
+  app.get("/api/public/info", async (req, res) => {
+    try {
+      const activeBattles = await db.execute(
+        sql`SELECT count(*) FROM battles WHERE status IN ('waiting', 'playing')`
+      );
+      const allTests = await db.execute(
+        sql`SELECT count(*), COALESCE(round(avg(wpm)), 0) as avg_wpm, MAX(wpm) as max_wpm FROM test_results`
+      );
+      const dbUsersCount = await db.execute(sql`SELECT count(*) FROM users`);
+
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.json({
+        platform: "YOZGO",
+        description: "O'zbekistondagi eng yirik tez yozish va musobaqalar platformasi.",
+        website: "https://yozgo.uz",
+        stats: {
+          totalUsers: Number(dbUsersCount.rows[0].count),
+          activeBattles: Number(activeBattles.rows[0].count),
+          totalTestsDone: Number(allTests.rows[0].count),
+          averageWPM: Number(allTests.rows[0].avg_wpm),
+          maxWPM: Number(allTests.rows[0].max_wpm)
+        },
+        endpoints: {
+          leaderboard: "GET https://yozgo.uz/api/leaderboard",
+          competitions: "GET https://yozgo.uz/api/competitions"
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   return httpServer;
 }
