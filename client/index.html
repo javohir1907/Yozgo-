@@ -23,19 +23,34 @@
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "YOZGO",
-      "url": "https://yozgo.uz",
-      "description": "O'zbekistondagi typing (tez yozish) platformasi va musobaqalar maydoni.",
-      "publisher": {
-        "@type": "Organization",
-        "name": "YOZGO Coder Team",
-        "logo": "https://yozgo.uz/favicon.svg"
+    [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "YOZGO",
+        "url": "https://yozgo.uz",
+        "description": "O'zbekistondagi eng yirik tez yozish (typing) platformasi, multiplayer musobaqalar va liderlar jadvali.",
+        "inLanguage": ["uz", "ru", "en"],
+        "publisher": {
+          "@type": "Organization",
+          "name": "YOZGO",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://yozgo.uz/favicon.svg"
+          }
+        }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "SportsEvent",
+        "name": "YOZGO Multiplayer Typing Battle",
+        "url": "https://yozgo.uz/multiplayer",
+        "description": "Onlayn tez yozish (typing) musobaqalari! Boshqalar bilan raqobatlashib liderlikni qiling.",
+        "sport": "Esports"
       }
-    }
+    ]
     </script>
+    <link rel="canonical" href="https://yozgo.uz" />
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-56W2C1S1FV"></script>
     <script>
