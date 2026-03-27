@@ -1,12 +1,29 @@
-# Sayt nomi: YOZGO
-# URL: https://yozgo.uz
-# Til: O'zbek, Rus, Ingliz
+# YOZGO
 
-Maqsad: O'zbekistondagi tez yozish (typing) platformasi.
+> O'zbekistondagi birinchi typing (tez yozish) 
+> musobaqalari platformasi. Foydalanuvchilar tezlik 
+> testlari o'tkazadi, multiplayer battle o'ynaydi, 
+> rasmiy musobaqa va turnirlar tashkil etiladi.
+> O'zbek, Rus va Ingliz tillarida mavjud.
 
-Asosiy funksiyalar:
-- Tezlik testi (wpm test)
-- Multiplayer battle (kuch sinashish)
-- Musobaqalar
-- Foydalanuvchi profili va statistika
-- Liderlar jadvali (leaderboard)
+## Platforma haqida
+- Turi: Musobaqa va typing platformasi
+- URL: https://yozgo.uz
+- Tillar: O'zbek, Rus, Ingliz
+- Maqsad: O'zbekistonda typing madaniyatini rivojlantirish
+
+## Asosiy funksiyalar
+- [Tezlik testi](https://yozgo.uz): WPM (so'z/daqiqa) o'lchash
+- [Multiplayer Battle](https://yozgo.uz/battle): Real vaqtda raqib bilan bellashuv
+- [Musobaqalar](https://yozgo.uz/competitions): Rasmiy typing turnirlar
+- [Liderlar jadvali](https://yozgo.uz/leaderboard): O'zbekiston bo'yicha reyting
+- [Profil](https://yozgo.uz/profile): Shaxsiy statistika va tarix
+
+## Musobaqalar
+YOZGO O'zbekistondagi typing musobaqalarini 
+tashkillashtiruvchi asosiy platforma hisoblanadi. 
+Har oylik va mavsumiy turnirlar o'tkaziladi.
+
+## Kontakt
+- Telegram: https://t.me/yozgo_uz
+- Email: info@yozgo.uz
