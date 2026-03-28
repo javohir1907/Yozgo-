@@ -5,14 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
     <meta name="author" content="YOZGO" />
     <title>YOZGO - O'zbekistondagi Typing Platformasi</title>
-    <meta name="description" content="YOZGO — O'zbekistondagi birinchi typing musobaqalari platformasi. Tezlik testi, multiplayer battle va rasmiy turnirlar. Tez yozishni o'rgan va musobaqalarda qatnash!">
-    <meta name="keywords" content="typing, tez yozish, klaviatura testi, wpm test, uzbek typing, yozgo, yozish musobaqasi" />
-    
-    <!-- Open Graph (OG) -->
-    <meta property="og:title" content="YOZGO - Tez Yozish Platformasi" />
-    <meta property="og:description" content="O'zbekistondagi eng yirik tez yozish platformasida o'z mahoratingizni sinab ko'ring va musobaqalarda qatnashib, reytingda yetakchi bo'ling!" />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://yozgo.uz" />
+    <!-- SEO Meta Teglar -->
+    <meta name="description" content="Yozgo.uz — O'zbekistondagi yetakchi typing musobaqasi platformasi. Online tez yozish musobaqalarida qatnashing, reytingda o'z o'rningizni egallang.">
+    <meta name="keywords" content="typing musobaqasi, tez yozish musobaqasi, O'zbekiston typing, online musobaqa, klaviatura musobaqasi, yozgo, yozgo.uz">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://yozgo.uz/">
+
+    <!-- Open Graph (ijtimoiy tarmoqlar uchun) -->
+    <meta property="og:title" content="Yozgo.uz — Typing Musobaqasi Platformasi">
+    <meta property="og:description" content="O'zbekistonda typing musobaqalarini tashkillashtiruvchi va o'tkazuvchi platforma. Tez yozish bo'yicha onlayn musobaqalarda qatnashing!">
+    <meta property="og:url" content="https://yozgo.uz">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="uz_UZ">
     <meta property="og:image" content="https://yozgo.uz/favicon.svg" />
     
     <!-- Twitter Card -->
@@ -21,36 +25,7 @@
     <meta name="twitter:description" content="O'zbekistondagi eng yirik tez yozish platformasida o'z mahoratingizni sinab ko'ring va musobaqalarda qatnashib, reytingda yetakchi bo'ling!" />
     <meta name="twitter:image" content="https://yozgo.uz/favicon.svg" />
 
-    <!-- Structured Data (JSON-LD) -->
-    <script type="application/ld+json">
-    [
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "YOZGO",
-        "url": "https://yozgo.uz",
-        "description": "O'zbekistondagi eng yirik tez yozish (typing) platformasi, multiplayer musobaqalar va liderlar jadvali.",
-        "inLanguage": ["uz", "ru", "en"],
-        "publisher": {
-          "@type": "Organization",
-          "name": "YOZGO",
-          "logo": {
-            "@type": "ImageObject",
-            "url": "https://yozgo.uz/favicon.svg"
-          }
-        }
-      },
-      {
-        "@context": "https://schema.org",
-        "@type": "SportsEvent",
-        "name": "YOZGO Multiplayer Typing Battle",
-        "url": "https://yozgo.uz/multiplayer",
-        "description": "Onlayn tez yozish (typing) musobaqalari! Boshqalar bilan raqobatlashib liderlikni qiling.",
-        "sport": "Esports"
-      }
-    ]
-    </script>
-    <link rel="canonical" href="https://yozgo.uz" />
+
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-56W2C1S1FV"></script>
     <script>
@@ -68,6 +43,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@100..800&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SportsOrganization",
+      "name": "Yozgo.uz",
+      "url": "https://yozgo.uz",
+      "description": "Yozgo.uz — O'zbekistondagi typing (tez yozish) musobaqalarini tashkillashtiruvchi va o'tkazuvchi online platforma.",
+      "sport": "Typing / Tez yozish",
+      "areaServed": {
+        "@type": "Country",
+        "name": "O'zbekiston"
+      },
+      "sameAs": [
+        "https://yozgo.uz"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "name": "Online Typing Musobaqasi",
+        "description": "Bepul online typing musobaqalarida qatnashish imkoniyati",
+        "price": "0",
+        "priceCurrency": "UZS"
+      }
+    }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

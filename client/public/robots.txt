@@ -1,14 +1,13 @@
 User-agent: *
 Allow: /
 
-User-agent: Googlebot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
 User-agent: GPTBot
 Allow: /
 
-User-agent: Bingbot
+User-agent: Claude-Web
 Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+Sitemap: https://yozgo.uz/sitemap.xml
