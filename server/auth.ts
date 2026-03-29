@@ -1,29 +1,60 @@
+/**
+ * YOZGO - Authentication & Session Management
+ * 
+ * Ushbu modul foydalanuvchilarni ro'yxatdan o'tkazish, login, session
+ * boshqaruvi va Telegram mini-app avtorizatsiyasini ta'minlaydi.
+ * 
+ * @author YOZGO Team
+ * @version 1.1.0
+ */
+
+// ============ IMPORTS ============
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import passport from "passport";
-import type { Express, RequestHandler, Request, Response, NextFunction } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
+import { eq, ilike } from "drizzle-orm";
+import crypto from "crypto";
+
 import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
-import { eq, ilike } from "drizzle-orm";
 import { sendBotMessage } from "./bot";
 import { sendEmail } from "./mailer";
 
-export function setupAuth(app: Express) {
+// ============ CONSTANTS ============
+const SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 kun
+const MIN_PASSWORD_LENGTH = 6;
+const NICKNAME_REGEX = /^[a-z0-9_]{4,20}$/;
+
+// ============ TYPES ============
+interface SessionRequest extends Request {
+  session: any;
+}
+
+// ============ AUTHENTICATION SYSTEM ============
+
+/**
+ * Passport.js va Express Session tizimini sozlaydi.
+ * 
+ * @param app - Express ilovasi
+ */
+export function setupAuth(app: Express): void {
+  // Proxy orqasida (Render/Nginx) ishonchni sozlash
   app.set("trust proxy", 1);
 
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000;
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
+  // Sessionlarni PostgreSQL-da saqlash
+  const PostgresStore = connectPg(session);
+  const sessionStore = new PostgresStore({
     pool,
     createTableIfMissing: true,
-    ttl: sessionTtl,
+    ttl: SESSION_EXPIRY / 1000,
     tableName: "sessions",
   });
 
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || "yozgo-super-secret-key",
+      secret: process.env.SESSION_SECRET || "yozgo-default-dev-secret",
       store: sessionStore,
       resave: false,
       saveUninitialized: false,
@@ -31,7 +62,7 @@ export function setupAuth(app: Express) {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: sessionTtl,
+        maxAge: SESSION_EXPIRY,
       },
     })
   );
@@ -39,291 +70,200 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  app.post("/api/auth/register", async (req, res) => {
+  // ============ REGISTER & LOGIN ROUTES ============
+
+  /**
+   * @openapi
+   * /api/auth/register:
+   *   post:
+   *     tags: [Auth]
+   *     summary: Yangi foydalanuvchini ro'yxatdan o'tkazish
+   */
+  app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
       const { email, password, firstName, lastName } = req.body;
 
+      // 1. Asosiy validatsiya
       if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+        return res.status(400).json({ message: "Email va parol majburiy" });
       }
 
-      if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({ message: `Parol kamida ${MIN_PASSWORD_LENGTH} belgidan iborat bo'lishi kerak` });
       }
 
-      const [existing] = await db.select().from(users).where(eq(users.email, email.toLowerCase()));
-      if (existing) {
-        return res.status(409).json({ message: "An account with this email already exists" });
+      // 2. Email bandligini tekshirish
+      const [existingUserByEmail] = await db.select().from(users).where(eq(users.email, email.toLowerCase()));
+      if (existingUserByEmail) {
+        return res.status(409).json({ message: "Ushbu email allaqachon ro'yxatdan o'tgan" });
       }
 
-      if (!firstName || typeof firstName !== "string" || !/^[a-z0-9_]{4,20}$/.test(firstName)) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "Nickname faqat kichik harf va raqamlardan iborat bo'lishi kerak, kamida 4 ta belgi",
-          });
+      // 3. Nickname (firstName) validatsiyasi
+      if (!firstName || !NICKNAME_REGEX.test(firstName)) {
+        return res.status(400).json({ 
+          message: "Nickname faqat kichik harf, raqam va '_' dan iborat bo'lishi kerak (4-20 belgi)." 
+        });
       }
 
-      const [existingName] = await db
-        .select()
-        .from(users)
-        .where(ilike(users.firstName, firstName.trim()));
-      if (existingName) {
-        return res.status(409).json({ message: "Bu nickname allaqachon band, boshqa nom tanlang" });
+      const [existingUserByNick] = await db.select().from(users).where(ilike(users.firstName, firstName.trim()));
+      if (existingUserByNick) {
+        return res.status(409).json({ message: "Ushbu nickname band, boshqasini tanlang" });
       }
 
+      // 4. Parolni xavfsiz hetshlash va saqlash
       const hashedPassword = await bcrypt.hash(password, 10);
-      const [user] = await db
+      const [newUser] = await db
         .insert(users)
         .values({
           email: email.toLowerCase(),
           password: hashedPassword,
-          firstName: firstName ? firstName.trim() : null,
+          firstName: firstName.trim(),
           lastName: lastName || null,
         })
         .returning();
 
-      (req.session as any).userId = user.id;
-      const { password: _, ...safeUser } = user;
+      // Sessionga biriktirish
+      (req.session as any).userId = newUser.id;
 
-      const { sendTelegramAlert } = await import("./telegram");
-      sendTelegramAlert(
-        `🚨 <b>Yangi foydalanuvchi!</b>\n\n<b>Email:</b> ${email.toLowerCase()}\n<b>Nickname:</b> ${firstName ? firstName.trim() : "Yo'q"}`
-      );
+      // Telegram ogohlantirish (Async)
+      import("./telegram").then(({ sendTelegramAlert }) => {
+        sendTelegramAlert(`🆕 <b>Yangi foydalanuvchi:</b> ${firstName.trim()} (${email})`);
+      }).catch(console.error);
 
-      res.status(201).json(safeUser);
+      const { password: _, ...userNoHash } = newUser;
+      res.status(201).json(userNoHash);
     } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ message: "Failed to register: " + (error as any).message });
+      console.error("[AUTH] Registration error:", error);
+      res.status(500).json({ message: "Ro'yxatdan o'tishda xatolik yuz berdi" });
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  /**
+   * @openapi
+   * /api/auth/login:
+   *   post:
+   *     tags: [Auth]
+   *     summary: Tizimga kirish
+   */
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
 
       if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+        return res.status(400).json({ message: "Email va parol kiritilmadi" });
       }
 
-      const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase()));
-      if (!user) {
-        return res.status(401).json({ message: "Invalid email or password" });
+      const [userMatch] = await db.select().from(users).where(eq(users.email, email.toLowerCase()));
+      if (!userMatch) {
+        return res.status(401).json({ message: "Email yoki parol xato" });
       }
 
-      const isValid = await bcrypt.compare(password, user.password);
-      if (!isValid) {
-        return res.status(401).json({ message: "Invalid email or password" });
+      const isPasswordValid = await bcrypt.compare(password, userMatch.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Email yoki parol xato" });
       }
 
-      (req.session as any).userId = user.id;
-      const { password: _, ...safeUser } = user;
-      res.json(safeUser);
+      // Session saqlash
+      (req.session as any).userId = userMatch.id;
+      
+      const { password: _, ...safeProfile } = userMatch;
+      res.status(200).json(safeProfile);
     } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ message: "Failed to log in: " + (error as any).message });
+      console.error("[AUTH] Login error:", error);
+      res.status(500).json({ message: "Tizimga kirishda xatolik" });
     }
   });
 
-  app.post("/api/auth/telegram", async (req, res) => {
+  // ============ TELEGRAM INTEGRATION ============
+
+  /**
+   * Telegram Mini-app orqali avtorizatsiyani tekshirish va kirish.
+   */
+  app.post("/api/auth/telegram", async (req: Request, res: Response) => {
     try {
       const { initData } = req.body;
-      if (!initData) return res.status(400).json({ message: "initData is required" });
+      if (!initData) return res.status(400).json({ message: "Telegram ma'lumotlari kiritilmadi" });
 
-      const crypto = await import("crypto");
       const urlParams = new URLSearchParams(initData);
-      const hash = urlParams.get("hash");
+      const hashField = urlParams.get("hash");
       urlParams.delete("hash");
 
-      const keys = Array.from(urlParams.keys()).sort();
-      const dataCheckString = keys.map((key) => `${key}=${urlParams.get(key)}`).join("\\n");
+      const checkString = Array.from(urlParams.keys()).sort().map((k) => `${k}=${urlParams.get(k)}`).join("\n");
+      const secretKey = crypto.createHmac("sha256", "WebAppData").update(process.env.TELEGRAM_BOT_TOKEN || "").digest();
+      const calculatedHmac = crypto.createHmac("sha256", secretKey).update(checkString).digest("hex");
 
-      const secretKey = crypto
-        .createHmac("sha256", "WebAppData")
-        .update(process.env.TELEGRAM_BOT_TOKEN || "")
-        .digest();
-      const hmac = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
-
-      if (hmac !== hash) {
-        return res.status(401).json({ message: "Telegram auth validation failed" });
+      if (calculatedHmac !== hashField) {
+        return res.status(401).json({ message: "Telegram validatsiyasi xato" });
       }
 
-      const userStr = urlParams.get("user");
-      if (!userStr) return res.status(400).json({ message: "No user dat found" });
-      const tgUser = JSON.parse(userStr);
+      const tgUserRaw = JSON.parse(urlParams.get("user") || "{}");
+      
+      // Bazadan telegram_id orqali izlash
+      let [linkedUser] = await db.select().from(users).where(eq(users.telegramId, String(tgUserRaw.id)));
 
-      let [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.telegramId, String(tgUser.id)));
-
-      if (!user) {
-        // Find by username if email matching exists? Telegram gives username, first_name, last_name, photo_url
-        // Let's create an auto-generated account
-        const randomPass = crypto.randomBytes(16).toString("hex");
-        const dummyEmail = `tg_${tgUser.id}@telegram.local`;
-        const hashedPassword = await bcrypt.hash(randomPass, 10);
-
-        [user] = await db
-          .insert(users)
-          .values({
-            email: dummyEmail,
-            password: hashedPassword,
-            firstName: tgUser.first_name,
-            lastName: tgUser.last_name || null,
-            telegramId: String(tgUser.id),
-            profileImageUrl: tgUser.photo_url || null,
-          })
-          .returning();
-
-        const { sendTelegramAlert } = await import("./telegram");
-        sendTelegramAlert(
-          `🚨 <b>Yangi Telegram Foydalanuvchi qoshildi!</b>\\n\\n<b>ID:</b> ${tgUser.id}\\n<b>Ismi:</b> ${tgUser.first_name}`
-        );
+      // Agar topilmasa, yangi 'shadow' profil ochish
+      if (!linkedUser) {
+        const dummyPassword = crypto.randomBytes(16).toString("hex");
+        const [identity] = await db.insert(users).values({
+          email: `tg_${tgUserRaw.id}@telegram.mini`,
+          password: await bcrypt.hash(dummyPassword, 10),
+          firstName: tgUserRaw.first_name,
+          lastName: tgUserRaw.last_name || null,
+          telegramId: String(tgUserRaw.id),
+          profileImageUrl: tgUserRaw.photo_url || null,
+        }).returning();
+        linkedUser = identity;
       }
 
-      (req.session as any).userId = user.id;
-      const { password: _, ...safeUser } = user;
-      res.json(safeUser);
+      (req.session as any).userId = linkedUser.id;
+      const { password: _, ...authResponse } = linkedUser;
+      res.status(200).json(authResponse);
     } catch (error) {
-      console.error("Telegram auth error:", error);
-      res.status(500).json({ message: "Failed to authenticate with Telegram" });
+      console.error("[AUTH] Telegram auth error:", error);
+      res.status(500).json({ message: "Telegram orqali kirishda xatolik" });
     }
   });
 
-  app.get("/api/auth/user", async (req, res) => {
-    const userId = (req.session as any).userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+  // ============ UTILITY AUTH ROUTES ============
+
+  /**
+   * Joriy session egasini qaytarish.
+   */
+  app.get("/api/auth/user", async (req: Request, res: Response) => {
+    const activeUserId = (req.session as any).userId;
+    if (!activeUserId) return res.status(401).json({ message: "Unauthorized" });
 
     try {
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
-      if (!user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
+      const [foundUser] = await db.select().from(users).where(eq(users.id, activeUserId));
+      if (!foundUser) return res.status(401).json({ message: "Unauthorized" });
 
-      const { password: _, ...safeUser } = user;
-      res.json(safeUser);
+      const { password: _, ...userSummary } = foundUser;
+      res.json(userSummary);
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      res.status(500).json({ message: "Internal error" });
     }
   });
 
-  // FIX: Real-time username check route
-  app.get("/api/auth/check-username", async (req, res) => {
-    const { username } = req.query;
-    if (!username || typeof username !== "string" || !username.trim()) {
-      return res.status(400).json({ message: "Username query parameter is required" });
-    }
-
-    try {
-      const [existingName] = await db
-        .select()
-        .from(users)
-        .where(ilike(users.firstName, username.trim()));
-      if (existingName) {
-        return res.json({ available: false });
-      }
-      return res.json({ available: true });
-    } catch (error) {
-      console.error("Error checking username:", error);
-      res.status(500).json({ message: "Failed to check username" });
-    }
-  });
-
-  app.post("/api/auth/forgot-password", async (req, res) => {
-    try {
-      const { email } = req.body;
-      if (!email) return res.status(400).json({ message: "Email kiritilmagan" });
-
-      const crypto = require("crypto");
-      const tempPass = crypto.randomBytes(4).toString("hex");
-      const hashedPassword = await bcrypt.hash(tempPass, 10);
-
-      const [updatedUser] = await db
-        .update(users)
-        .set({ password: hashedPassword })
-        .where(eq(users.email, email.trim().toLowerCase()))
-        .returning();
-
-      if (!updatedUser) {
-        return res.status(404).json({ message: "Bunday elektron pochtaga ega foydalanuvchi tizimda topilmadi!" });
-      }
-
-      if (updatedUser) {
-        // Asosiy email (agar ulangan bo'lsa), yoki zaxira Telegram admin bot
-        try {
-          sendBotMessage(`🔐 Parolni tiklash so'rovi!\nUshbu foydalanuvchi qutqarildi:\n\nEmail: ${email}\nYangi vaqtinchalik parol: ${tempPass}\n\nEslatma: Bu SMS foydalanuvchi Gmailiga yetib borishi kerak edi. Agar bormagan bo'lsa admin yordam bersin.`);
-        } catch(e) {}
-
-        try {
-          await sendEmail(email, "Yozgo - Parolni tiklash", `Saytga xush kelibsiz!\n\nSizning yangi vaqtinchalik parolingiz: ${tempPass}\n\nSaytga kirib o'z profilingizdan "Sozlamalar" xonasida parolni tezda o'zgartirib oling!`);
-        } catch(e) {
-          console.error("Mailer xatosi:", e);
-        }
-      }
-      res.json({ success: true });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Internal Server Error" });
-    }
-  });
-
-  // FIX: Parolni yangilash route qo'shildi
-  app.post("/api/auth/update-password", async (req, res) => {
-    const userId = (req.session as any).userId;
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-
-    try {
-      const { currentPassword, newPassword } = req.body;
-
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Current and new passwords are required" });
-      }
-
-      if (newPassword.length < 6) {
-        return res.status(400).json({ message: "New password must be at least 6 characters" });
-      }
-
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const isValid = await bcrypt.compare(currentPassword, user.password);
-      if (!isValid) {
-        return res.status(401).json({ message: "Current password is incorrect" });
-      }
-
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      await db.update(users).set({ password: hashedPassword }).where(eq(users.id, userId));
-
-      res.json({ message: "Password updated successfully" });
-    } catch (error) {
-      console.error("Password update error:", error);
-      res.status(500).json({ message: "Failed to update password" });
-    }
-  });
-
-  app.post("/api/auth/logout", (req, res) => {
+  /**
+   * Tizimdan chiqish (Sessionni o'chirish).
+   */
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
     req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Logout failed" });
-      }
+      if (err) return res.status(500).json({ message: "Chiqishda xatolik" });
       res.clearCookie("connect.sid");
       res.sendStatus(200);
     });
   });
 }
 
-export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+// ============ EXPORTS & MIDDLEWARE ============
+
+/**
+ * Avtorizatsiya qilinganligini tekshiruvchi middleware.
+ */
+export function isAuthenticated(req: Request, res: Response, next: NextFunction): void {
   if ((req.session as any).userId) {
     return next();
   }
-  return res.status(401).json({ message: "Unauthorized" });
+  res.status(401).json({ message: "Iltimos, avval tizimga kiring" });
 }

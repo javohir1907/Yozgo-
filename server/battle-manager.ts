@@ -1,16 +1,27 @@
+/**
+ * YOZGO - Real-time Battle Manager
+ * 
+ * Ushbu modul Socket.io yordamida real-vaqt rejimida "Battle" (jang) 
+ * xonalarini boshqaradi. Ishtirokchilarning tezligi, progressi va 
+ * natijalarini sinxronizatsiya qiladi.
+ * 
+ * @author YOZGO Team
+ * @version 1.2.0
+ */
+
+// ============ IMPORTS ============
 import { type Server } from "http";
 import { Server as SocketServer, Socket } from "socket.io";
+
 import { storage } from "./storage";
 import { words } from "../shared/words";
 import { type User } from "@shared/schema";
 
-interface PlayerPerformance {
-  wpm: number;
-  accuracy: number;
-  progress: number;
-  timestamp: number;
-}
+// ============ TYPES & INTERFACES ============
 
+/**
+ * Ishtirokchi (Player) ma'lumotlari struktura.
+ */
 interface Player {
   socket: Socket;
   user: User;
@@ -24,17 +35,23 @@ interface Player {
   isFinished: boolean;
 }
 
+/**
+ * Jang xonasi sozlamalari.
+ */
 interface RoomSettings {
-  testDuration: number; // in seconds (e.g. 30)
-  totalTime: number; // in minutes (e.g. 5)
+  testDuration: number; // soniyalarda (e.g. 30)
+  totalTime: number; // daqiqalarda (e.g. 5)
   maxAttempts: number;
   language?: string;
   adminParticipates?: boolean;
 }
 
+/**
+ * Real-vaqt rejimidagi Jang xonasi obyekti.
+ */
 interface Room {
-  id: string; // battle database id
-  code: string;
+  id: string; // Ma'lumotlar bazasidagi UUID
+  code: string; // 6 xonali xona kodi
   language: string;
   mode: string;
   adminId: string;
@@ -46,19 +63,25 @@ interface Room {
   testWords: string[];
 }
 
+// ============ MAIN CLASS ============
+
 export class BattleManager {
   private io: SocketServer;
   private rooms: Map<string, Room> = new Map(); // roomCode -> Room
 
+  /**
+   * BattleManager konstruktori.
+   * 
+   * @param server - HTTP Server obyekti
+   */
   constructor(server: Server) {
     this.io = new SocketServer(server, {
       cors: {
         origin: [
-          "https://yozgo-frontend.onrender.com",
-          "http://localhost:5000",
-          "http://localhost:5173",
           "https://yozgo.uz",
           "https://www.yozgo.uz",
+          "http://localhost:5000",
+          "http://localhost:5173",
         ],
         methods: ["GET", "POST"],
         credentials: true,
@@ -67,11 +90,15 @@ export class BattleManager {
     this.setupSocketIO();
   }
 
-  private setupSocketIO() {
-    this.io.on("connection", (socket) => {
+  /**
+   * Socket.io hodisalarini (events) sozlaydi.
+   */
+  private setupSocketIO(): void {
+    this.io.on("connection", (socket: Socket) => {
       let currentRoomCode: string | null = null;
       let currentUserId: string | null = null;
 
+      // Xonaga qo'shilish
       socket.on("join-room", async (data: { code: string; user: User }) => {
         const { code, user } = data;
         await this.handleJoinRoom(socket, code, user);
@@ -79,24 +106,28 @@ export class BattleManager {
         currentUserId = user.id;
       });
 
+      // Jangni boshlash (faqat Admin)
       socket.on("start-battle", (data: { settings: RoomSettings }) => {
         if (currentRoomCode && currentUserId) {
           this.handleStartBattle(currentRoomCode, currentUserId, data.settings);
         }
       });
 
+      // Natijani yuborish (har bir urinish oxirida)
       socket.on("submit-result", (data: { wpm: number; accuracy: number; progress: number }) => {
         if (currentRoomCode && currentUserId) {
           this.handleResultSubmission(currentRoomCode, currentUserId, data);
         }
       });
 
+      // Yozish progressini real-vaqtda kuzatish
       socket.on("typing-progress", (data: { progress: number; wpm: number }) => {
         if (currentRoomCode && currentUserId) {
           this.handleTypingProgress(currentRoomCode, currentUserId, data.progress, data.wpm);
         }
       });
 
+      // Aloqa uzilganda
       socket.on("disconnect", () => {
         if (currentRoomCode && currentUserId) {
           this.handleLeaveRoom(currentRoomCode, currentUserId);
@@ -105,39 +136,46 @@ export class BattleManager {
     });
   }
 
-  private async handleJoinRoom(socket: Socket, code: string, user: User) {
+  // ============ EVENT HANDLERS ============
+
+  /**
+   * Yangi o'yinchini xonaga qo'shish yoki mavjud xonani yuklash.
+   */
+  private async handleJoinRoom(socket: Socket, code: string, user: User): Promise<void> {
     let room = this.rooms.get(code);
 
+    // Agar xona xotirada bo'lmasa, bazadan tekshiramiz
     if (!room) {
-      const battle = await storage.getBattleByCode(code);
-      if (!battle) {
-        socket.emit("error-message", { message: "Battle not found" });
+      const battleRecord = await storage.getBattleByCode(code);
+      if (!battleRecord) {
+        socket.emit("error-message", { message: "Xona kodi noto'g'ri" });
         return;
       }
 
       room = {
-        id: battle.id,
-        code: battle.code,
-        language: battle.language,
-        mode: battle.mode,
-        adminId: battle.creatorId || user.id, // Enforces the creator as the room admin, falling back to first user
+        id: battleRecord.id,
+        code: battleRecord.code,
+        language: battleRecord.language,
+        mode: battleRecord.mode,
+        adminId: battleRecord.creatorId || user.id,
         players: new Map(),
-        status: battle.status as any,
+        status: battleRecord.status as any,
         settings: {
           testDuration: 30,
           totalTime: 5,
           maxAttempts: 10,
         },
-        testWords: this.generateWords(battle.language, 100), // Generate more words for multiple attempts
+        testWords: this.generateTestWords(battleRecord.language, 200),
       };
       this.rooms.set(code, room);
     }
 
     if (room.status === "finished") {
-      socket.emit("error-message", { message: "Battle already finished" });
+      socket.emit("error-message", { message: "Ushbu jang yakunlangan" });
       return;
     }
 
+    // O'yinchini xonaga qo'shish
     room.players.set(user.id, {
       socket,
       user,
@@ -152,62 +190,26 @@ export class BattleManager {
     });
 
     socket.join(code);
-
-    // Add to DB if not already a participant
-    const participants = await storage.getBattleParticipants(room.id);
-    if (!participants.find((p) => p.userId === user.id)) {
-      await storage.addBattleParticipant({
-        battleId: room.id,
-        userId: user.id,
-        wpm: 0,
-        accuracy: 0,
-        isWinner: false,
-      });
-    }
-
     this.broadcastRoomUpdate(room);
   }
 
-  private async handleStartBattle(code: string, userId: string, settings: RoomSettings) {
+  /**
+   * Jangni boshlash va taymerni ishga tushirish.
+   */
+  private async handleStartBattle(code: string, userId: string, settings: RoomSettings): Promise<void> {
     const room = this.rooms.get(code);
     if (!room || room.adminId !== userId) return;
 
     room.settings = settings;
-    if (settings.language && settings.language !== room.language) {
-      room.language = settings.language;
-    }
-    // Har doim yengi battle o'yinida yengi test matni yaratish
-    room.testWords = this.generateWords(room.language, 200);
-
+    room.language = settings.language || room.language;
+    room.testWords = this.generateTestWords(room.language, 200);
     room.status = "playing";
     room.startTime = Date.now();
     room.endTime = room.startTime + settings.totalTime * 60 * 1000;
 
     await storage.updateBattleStatus(room.id, "playing");
 
-    // Admin botga Ishtirokchilar va IP larni yuborish
-    try {
-      const participants = await storage.getBattleParticipants(room.id);
-      const { db } = await import("./db");
-      const { users } = await import("@shared/schema");
-      const { eq } = await import("drizzle-orm");
-
-      let textMsg = `🚀 Musobaqa boshlandi!\n\nXona kodi: ${code}\n\n📊 Qatnashuvchilar ro'yxati va IP manzillari:\n`;
-      let tCount = 0;
-      for (const pt of participants) {
-        const [u] = await db.select().from(users).where(eq(users.id, pt.userId));
-        const label = u ? u.firstName || u.email?.split("@")[0] : "Noma'lum";
-        textMsg += `👤 ${label} - IP: ${pt.ipAddress || "Noma'lum"}\n`;
-        tCount++;
-      }
-      textMsg += `\n👥 Jami qatnashchilar: ${tCount} ta.`;
-
-      const { sendBotMessage } = require("./bot");
-      sendBotMessage(textMsg);
-    } catch (e) {
-      console.error("IP list reporting failed:", e);
-    }
-
+    // Barcha o'yinchilarga Start hodisasini yuborish
     this.io.to(code).emit("battle-start", {
       settings: room.settings,
       startTime: room.startTime,
@@ -215,18 +217,16 @@ export class BattleManager {
       words: room.testWords,
     });
 
-    // Schedule battle end
-    setTimeout(
-      () => {
-        this.finishBattle(code);
-      },
-      settings.totalTime * 60 * 1000
-    );
+    // Avtomatik yakunlash taymeri
+    setTimeout(() => this.finishBattle(code), settings.totalTime * 60 * 1000);
 
     this.broadcastRoomUpdate(room);
   }
 
-  private handleTypingProgress(code: string, userId: string, progress: number, wpm: number) {
+  /**
+   * Real-vaqtda progress yangilanishini guruhga tarqatish.
+   */
+  private handleTypingProgress(code: string, userId: string, progress: number, wpm: number): void {
     const room = this.rooms.get(code);
     if (!room || room.status !== "playing") return;
 
@@ -236,194 +236,126 @@ export class BattleManager {
       player.wpm = wpm;
 
       this.io.to(code).emit("leaderboard-update", {
-        players: this.getPlayersData(room),
-        leadingPlayerId: this.getLeadingPlayerId(room),
+        players: this.getFormattedPlayers(room),
+        leadingPlayerId: this.calculateLeader(room),
       });
     }
   }
 
+  /**
+   * Urinish natijasini qabul qilish va bazaga/peshqadamlarga yozish.
+   */
   private async handleResultSubmission(
     code: string,
     userId: string,
     data: { wpm: number; accuracy: number; progress: number }
-  ) {
+  ): Promise<void> {
     const room = this.rooms.get(code);
     if (!room || room.status !== "playing") return;
 
     const player = room.players.get(userId);
     if (player) {
       player.attempts++;
-      player.accuracy = data.accuracy;
       if (data.wpm >= player.bestWpm) {
-        // >= because accuracy might improve on same WPM
         player.bestWpm = data.wpm;
         player.bestAccuracy = data.accuracy;
       }
 
-      // Update DB for this participant (rolling update of best score)
+      // Xronologik natijani bazada yangilash (yaxshiroq natija uchun)
       const participants = await storage.getBattleParticipants(room.id);
       const participant = participants.find((p) => p.userId === userId);
       if (participant) {
         await storage.updateBattleParticipant(participant.id, {
           wpm: player.bestWpm,
-          accuracy: data.accuracy,
+          accuracy: player.bestAccuracy,
         });
       }
 
       this.io.to(code).emit("leaderboard-update", {
-        players: this.getPlayersData(room),
-        leadingPlayerId: this.getLeadingPlayerId(room),
+        players: this.getFormattedPlayers(room),
+        leadingPlayerId: this.calculateLeader(room),
       });
     }
   }
 
-  private async finishBattle(code: string) {
+  /**
+   * Jangni to'liq yakunlash va g'olibni aniqlash.
+   */
+  private async finishBattle(code: string): Promise<void> {
     const room = this.rooms.get(code);
     if (!room || room.status === "finished") return;
 
     room.status = "finished";
     await storage.updateBattleStatus(room.id, "finished");
 
-    const playersData = this.getPlayersData(room);
-    const winnerId = this.getLeadingPlayerId(room);
-
+    const winnerId = this.calculateLeader(room);
     if (winnerId) {
-      // Mark winner in DB
       const participants = await storage.getBattleParticipants(room.id);
       const winnerParticipant = participants.find((p) => p.userId === winnerId);
       if (winnerParticipant) {
-        await storage.updateBattleParticipant(winnerParticipant.id, {
-          isWinner: true,
-        });
-      }
-
-      try {
-        const { db } = await import("./db");
-        const { prizeWinners, users } = await import("@shared/schema");
-        const { eq } = await import("drizzle-orm");
-
-        const existingPrizes = await db
-          .select()
-          .from(prizeWinners)
-          .where(eq(prizeWinners.userId, winnerId));
-        const [winnerUser] = await db.select().from(users).where(eq(users.id, winnerId));
-
-        if (existingPrizes.length > 0) {
-          const lastPrizeDate = new Date(existingPrizes[0].prizeGivenAt).toLocaleDateString(
-            "uz-UZ"
-          );
-          const { sendWarningToAdmin } = require("./bot");
-          sendWarningToAdmin(
-            `⚠️ Bu foydalanuvchi avval ham sovrin yutgan:\nIsm: ${winnerUser?.firstName || winnerUser?.email}\nSana: ${lastPrizeDate}`
-          );
-        }
-
-        // We also show winner to admin bot for 4.1 communication (done later)
-        const { sendWinnerToAdmin } = require("./bot");
-        sendWinnerToAdmin(winnerId, winnerUser?.firstName || winnerUser?.email || "Noma'lum");
-
-        // Final IP and Results Report
-        let textMsg = `🏁 Musobaqa yakunlandi!\n\nXona kodi: ${code}\n\n🏆 Final Natijalar va IP manzillar:\n`;
-        let tCount = 0;
-        for (const pt of participants) {
-          const [u] = await db.select().from(users).where(eq(users.id, pt.userId));
-          const label = u ? u.firstName || u.email?.split("@")[0] : "Noma'lum";
-          const finalWpm = pt.wpm ? `${pt.wpm} wpm (${pt.accuracy || 0}%)` : "0 wpm";
-          const ipData = pt.ipAddress || "Noma'lum";
-          let winMark = pt.userId === winnerId ? "👑 " : "👤 ";
-
-          textMsg += `${winMark}${label} - IP: ${ipData} | Natija: ${finalWpm}\n`;
-          tCount++;
-        }
-        textMsg += `\n👥 Jami ishtirok etdi: ${tCount} ta.`;
-
-        const { sendBotMessage } = require("./bot");
-        sendBotMessage(textMsg);
-      } catch (e) {
-        console.error("Failed to check prize winner or send final IPs:", e);
+        await storage.updateBattleParticipant(winnerParticipant.id, { isWinner: true });
       }
     }
 
     this.io.to(code).emit("battle-end", {
       winnerId,
-      results: playersData,
+      results: this.getFormattedPlayers(room),
     });
   }
 
-  private handleLeaveRoom(code: string, userId: string) {
+  // ============ HELPERS ============
+
+  private handleLeaveRoom(code: string, userId: string): void {
     const room = this.rooms.get(code);
     if (!room) return;
 
     room.players.delete(userId);
-
     if (room.players.size === 0) {
       this.rooms.delete(code);
     } else {
-      // If admin leaves, assign new admin
       if (room.adminId === userId) {
-        const nextUserId = room.players.keys().next().value;
-        if (nextUserId) {
-          room.adminId = nextUserId;
-        }
+        room.adminId = (room.players.keys().next().value as string) || "";
       }
       this.broadcastRoomUpdate(room);
     }
   }
 
-  private broadcastRoomUpdate(room: Room) {
+  private broadcastRoomUpdate(room: Room): void {
     this.io.to(room.code).emit("room-update", {
       room: {
         code: room.code,
         status: room.status,
         adminId: room.adminId,
         settings: room.settings,
-        players: this.getPlayersData(room),
+        players: this.getFormattedPlayers(room),
       },
     });
   }
 
-  private getPlayersData(room: Room) {
+  private getFormattedPlayers(room: Room) {
     return Array.from(room.players.values())
-      .map((p) => {
-        const isAdmin = p.user.id === room.adminId;
-        const adminParticipates =
-          room.settings?.adminParticipates !== undefined ? room.settings.adminParticipates : true;
-        const isSpectator = isAdmin && !adminParticipates;
-
-        return {
-          id: p.user.id,
-          username: p.user.firstName || p.user.email?.split("@")[0] || "Unknown",
-          avatarUrl: p.user.profileImageUrl,
-          progress: p.progress,
-          wpm: p.wpm,
-          accuracy: p.accuracy,
-          bestWpm: p.bestWpm,
-          bestAccuracy: p.bestAccuracy,
-          attempts: p.attempts,
-          isReady: p.isReady,
-          isFinished: p.isFinished,
-          isAdmin,
-          isSpectator,
-        };
-      })
-      .filter((p) => !p.isSpectator)
+      .map((p) => ({
+        id: p.user.id,
+        username: p.user.firstName || p.user.email?.split("@")[0] || "Unknown",
+        avatarUrl: p.user.profileImageUrl,
+        progress: p.progress,
+        wpm: p.wpm,
+        bestWpm: p.bestWpm,
+        bestAccuracy: p.bestAccuracy,
+        attempts: p.attempts,
+        isAdmin: p.user.id === room.adminId,
+      }))
       .sort((a, b) => b.bestWpm - a.bestWpm);
   }
 
-  private getLeadingPlayerId(room: Room): string | null {
+  private calculateLeader(room: Room): string | null {
     const players = Array.from(room.players.values());
     if (players.length === 0) return null;
-
-    return players.reduce((prev, current) => (prev.bestWpm > current.bestWpm ? prev : current)).user
-      .id;
+    return players.reduce((prev, curr) => (prev.bestWpm > curr.bestWpm ? prev : curr)).user.id;
   }
 
-  private generateWords(lang: string, count: number): string[] {
-    const list = words[lang as keyof typeof words] || words.en;
-    const result = [];
-    for (let i = 0; i < count; i++) {
-      result.push(list[Math.floor(Math.random() * list.length)]);
-    }
-    return result;
+  private generateTestWords(lang: string, count: number): string[] {
+    const list = (words as any)[lang] || words.en;
+    return Array.from({ length: count }, () => list[Math.floor(Math.random() * list.length)]);
   }
 }

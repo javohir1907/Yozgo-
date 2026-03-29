@@ -20,6 +20,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import SEO from "@/components/SEO";
 
 interface ProfileData {
   user: {
@@ -120,6 +121,10 @@ export default function Profile() {
 
   return (
     <div className="container mx-auto p-8 space-y-8 animate-in fade-in duration-500">
+      <SEO 
+        title={`${user.username} | Profil`} 
+        description={`${user.username}ning YOZGO platformasidagi natijalari va statistikasi.`}
+      />
       <div className="flex items-center gap-6 mb-8">
         <Avatar className="h-24 w-24 border-2 border-primary/20">
           <AvatarImage src={user.avatarUrl} />

@@ -1,30 +1,54 @@
+/**
+ * YOZGO - Main Server Entry Point
+ * 
+ * Ushbu fayl Express serverini, xavfsizlik choralarini (Helmet),
+ * Ma'lumotlar bazasi migratsiyalarini va botlarni ishga tushiradi.
+ * 
+ * @author YOZGO Team
+ * @version 1.2.0
+ */
+
+// ============ IMPORTS ============
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { createServer, type Server } from "http";
+import helmet from "helmet";
+
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
-import { createServer } from "http";
-import debugRouter from "./debug-auth";
-import helmet from "helmet";
 import { pool } from "./db";
+import { setupSwagger } from "./swagger";
+import debugRouter from "./debug-auth";
 
-const app = express();
-const httpServer = createServer(app);
-
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
-});
-
-process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
-});
-
+/**
+ * Global HTTP turlarini kengaytirish
+ */
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
   }
 }
 
+// ============ INITIALIZATION ============
+const app = express();
+const httpServer: Server = createServer(app);
+const PORT = parseInt(process.env.PORT || "5000", 10);
+
+// ============ PROCESS HANDLERS ============
+process.on("unhandledRejection", (reason: unknown, promise: Promise<unknown>) => {
+  console.error("[CRITICAL] Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (error: Error) => {
+  console.error("[CRITICAL] Uncaught Exception:", error);
+});
+
+// ============ MIDDLEWARES & SECURITY ============
+
+/**
+ * Helmet: Xavfsizlik sarlavhalarini sozlash (CSP, HSTS, Frameguard)
+ */
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -50,12 +74,15 @@ app.use(
   })
 );
 
-// Add Permissions-Policy since Helmet doesn't support it directly yet.
-app.use((req, res, next) => {
+// Maxfiy ma'lumotlarni ruxsat etish siyosati
+app.use((_req: Request, res: Response, next: NextFunction) => {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   next();
 });
 
+/**
+ * CORS: Tashqi domendan so'rovlarni boshqarish
+ */
 app.use(
   cors({
     origin: [
@@ -68,245 +95,142 @@ app.use(
     credentials: true,
   })
 );
-app.use(cookieParser());
 
-app.use(
-  express.json({
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  })
-);
+app.use(cookieParser());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: false }));
 
-export function log(message: string, source = "express") {
+// ============ LOGGING UTILITY ============
+
+/**
+ * Standart formatdagi log yozish funksiyasi.
+ * 
+ * @param message - Xabar matni
+ * @param source - Manba (default: express)
+ */
+export function log(message: string, source = "express"): void {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     second: "2-digit",
     hour12: true,
   });
-
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+/**
+ * API So'rovlarni kuzatish (Request Logger)
+ */
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const startAt = Date.now();
+  const requestPath = req.path;
+  let capturedBody: any = undefined;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
+  const originalJson = res.json;
+  res.json = function (body, ...args) {
+    capturedBody = body;
+    return originalJson.apply(res, [body, ...args]);
   };
 
   res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      log(logLine);
+    const elapsed = Date.now() - startAt;
+    if (requestPath.startsWith("/api")) {
+      const logMessage = `${req.method} ${requestPath} ${res.statusCode} in ${elapsed}ms`;
+      log(capturedBody ? `${logMessage} :: ${JSON.stringify(capturedBody)}` : logMessage);
     }
   });
 
   next();
 });
 
+// ============ MAIN STARTUP LOGIC ============
+
 (async () => {
-  try {
-    console.log("Running guaranteed DB migrations from index.ts...");
+  // Test muhitida migratsiyalar va botlarni bloklash
+  const isTestEnvironment = process.env.NODE_ENV === "test";
 
-    // Tizimga faqat bir marta ishlaydigan va keyin o'zini bloklaydigan o'chirish logikasi:
-    await pool.query(`CREATE TABLE IF NOT EXISTS _one_time_reset (done boolean);`);
-    const resetCheck = await pool.query(`SELECT * FROM _one_time_reset;`);
-
-    if (resetCheck.rowCount === 0) {
-      console.log("Running ONE-TIME users database wipe...");
-      // UUID ishlatilgani uchun sequence restart qilinmaydi va xato beradi!
-      // CASCADE qilib barcha usersga bog'langan eski result/review larni ham tozalash:
-      await pool.query(`TRUNCATE TABLE users CASCADE;`);
-      await pool.query(`INSERT INTO _one_time_reset (done) VALUES (true);`);
-      console.log("Wipe completed successfully.");
-    }
-
-    await pool.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar NOT NULL DEFAULT 'user';
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id varchar UNIQUE;
-    `);
-
+  if (!isTestEnvironment) {
     try {
+      log("Initializing database schema and migrations...", "startup");
+
+      // Bir marta ishlaydigan DB tozalash logikasi (idempotent)
+      await pool.query(`CREATE TABLE IF NOT EXISTS _one_time_reset (done boolean);`);
+      const resetCheck = await pool.query(`SELECT * FROM _one_time_reset;`);
+
+      if (resetCheck.rowCount === 0) {
+        log("Performing one-time database initial reset...", "migration");
+        await pool.query(`TRUNCATE TABLE users CASCADE;`);
+        await pool.query(`INSERT INTO _one_time_reset (done) VALUES (true);`);
+      }
+
+      // Rollout migrations: foydalanuvchi rollari va telegram integratsiyasi
       await pool.query(`
-        UPDATE users SET role = 'admin' WHERE email = 'xolmatovjavohir911@gmail.com';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar NOT NULL DEFAULT 'user';
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id varchar UNIQUE;
       `);
-    } catch (e) {
-      console.error("Admin setup failed:", e);
+
+      // Adminlarni tayinlash
+      await pool.query(`UPDATE users SET role = 'admin' WHERE email = 'xolmatovjavohir911@gmail.com';`);
+
+      log("Database migrations successfully synchronized.", "startup");
+    } catch (startupError) {
+      console.warn("[WARNING] Startup DB synchronization skipped or failed:", startupError);
     }
 
-    // Also ensuring tables are handled here because Render might skip NPM start phase
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS reviews (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id varchar REFERENCES users(id) NOT NULL,
-        rating integer NOT NULL,
-        comment text NOT NULL,
-        created_at timestamp NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS competitions (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        title text NOT NULL,
-        prize text,
-        date timestamp NOT NULL,
-        participants_count integer DEFAULT 0,
-        winner_name text,
-        is_active boolean DEFAULT true,
-        created_at timestamp NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS competition_participants (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        competition_id uuid REFERENCES competitions(id) NOT NULL,
-        user_id varchar REFERENCES users(id) NOT NULL,
-        registered_at timestamp NOT NULL DEFAULT now()
-      );
-      CREATE TABLE IF NOT EXISTS notifications (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        title text NOT NULL,
-        message text NOT NULL,
-        created_at timestamp NOT NULL DEFAULT now()
-      );
-
-      ALTER TABLE competitions ADD COLUMN IF NOT EXISTS participants_count integer DEFAULT 0;
-      ALTER TABLE competitions ADD COLUMN IF NOT EXISTS winner_name text;
-      CREATE TABLE IF NOT EXISTS advertisements (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        title text NOT NULL,
-        description text,
-        image_url text NOT NULL,
-        link_url text NOT NULL,
-        start_date timestamp NOT NULL,
-        end_date timestamp NOT NULL,
-        is_active boolean DEFAULT true,
-        clicks integer DEFAULT 0
-      );
-      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS description text;
-      ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS clicks integer DEFAULT 0;
-
-      CREATE TABLE IF NOT EXISTS test_results (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id varchar REFERENCES users(id),
-        wpm integer NOT NULL,
-        accuracy integer NOT NULL,
-        language text NOT NULL,
-        mode text NOT NULL,
-        created_at timestamp NOT NULL DEFAULT now()
-      );
-
-      CREATE TABLE IF NOT EXISTS leaderboard_entries (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id varchar REFERENCES users(id) NOT NULL,
-        wpm integer NOT NULL,
-        accuracy integer NOT NULL,
-        language text NOT NULL,
-        period text NOT NULL,
-        updated_at timestamp NOT NULL DEFAULT now()
-      );
-
-      CREATE TABLE IF NOT EXISTS battles (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        code text NOT NULL UNIQUE,
-        status text NOT NULL,
-        language text NOT NULL,
-        mode text NOT NULL,
-        creator_id varchar REFERENCES users(id),
-        created_at timestamp NOT NULL DEFAULT now()
-      );
-      ALTER TABLE battles ADD COLUMN IF NOT EXISTS creator_id varchar REFERENCES users(id);
-
-      CREATE TABLE IF NOT EXISTS battle_participants (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        battle_id uuid REFERENCES battles(id) NOT NULL,
-        user_id varchar REFERENCES users(id) NOT NULL,
-        wpm integer,
-        accuracy integer,
-        is_winner boolean DEFAULT false,
-        ip_address varchar,
-        agreed_at timestamp,
-        joined_at timestamp NOT NULL DEFAULT now()
-      );
-      ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS ip_address varchar;
-      ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS agreed_at timestamp;
-
-      CREATE TABLE IF NOT EXISTS room_access_codes (
-        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-        room_id uuid REFERENCES battles(id) NOT NULL,
-        user_id varchar REFERENCES users(id),
-        code text NOT NULL UNIQUE,
-        is_used boolean DEFAULT false,
-        used_at timestamp,
-        created_at timestamp NOT NULL DEFAULT now()
-      );
-
-    `);
-    console.log("DB migration completed directly from index!");
-  } catch (err) {
-    console.warn("DB Startup migration failed (probably already applied):", err);
+    // Botlarni ishga tushirish (Main & User bots)
+    try {
+      const { startBot } = require("./bot");
+      const { startUserBot } = require("./userBot");
+      startBot();
+      startUserBot();
+      log("Integrations (Telegram Bots) are active.", "startup");
+    } catch (botError) {
+      console.error("[CRITICAL] Failed to start one or more bot services:", botError);
+    }
   }
 
-  // Barcha jadvallar faol bo'lgandan so'ng botlarni ishga tushirish:
-  const { startBot } = require("./bot");
-  const { startUserBot } = require("./userBot");
-  startBot();
-  startUserBot();
+  // Swagger Documentation
+  setupSwagger(app);
 
+  // API Yo'nalishlarini ro'yxatdan o'tkazish
   await registerRoutes(httpServer, app);
   app.use("/api", debugRouter);
 
-  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  // ============ ERROR HANDLING ============
 
-    console.error("Internal Server Error:", err);
-    if (status === 500) {
-      import("./telegram").then(({ sendTelegramAlert }) => {
-        sendTelegramAlert(
-          `❌ <b>500 Xatolik!</b>\n\n<b>Yo'l:</b> ${_req.path}\n<b>Xato:</b> ${message}\n<pre>${err.stack?.substring(0, 500)}</pre>`
-        );
-      });
-    }
-
-    if (res.headersSent) {
-      return next(err);
-    }
-
-    return res.status(status).json({ message });
+  /**
+   * Global xatoliklarni ushlab qolish middleware.
+   * Server xatolarini foydalanuvchiga chiroyli ko'rinishda qaytaradi.
+   */
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error("[SERVER ERROR]:", err.stack || err);
+    res.status(500).json({ 
+      message: "Ichki server xatosi yuz berdi.",
+      error: process.env.NODE_ENV === "development" ? err.message : undefined 
+    });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // ============ CLIENT SERVING ============
+
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
+    log("Setting up development environment with Vite...", "startup");
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    }
-  );
+  // ============ SERVER LISTEN ============
+
+  if (!isTestEnvironment) {
+    const server = httpServer.listen(PORT, "0.0.0.0", () => {
+      log(`[SUCCESS] Server started on port ${PORT}`);
+    });
+  }
 })();
+
+export { app, httpServer };

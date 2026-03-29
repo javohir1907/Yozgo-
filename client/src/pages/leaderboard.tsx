@@ -6,6 +6,7 @@ import { Loader2, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
+import SEO from "@/components/SEO";
 
 export interface LeaderboardEntry {
   rank: number;
@@ -30,6 +31,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <SEO title="Reyting | YOZGO" description="Eng tez yozuvchilar peshqadamlar jadvali. O'z o'rningizni toping va natijangizni yaxshilang." />
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
