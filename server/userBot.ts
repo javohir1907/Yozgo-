@@ -4,6 +4,7 @@ import { users, battles, roomAccessCodes, adminMessages } from "@shared/schema";
 import { isNotNull, sql, eq, and } from "drizzle-orm";
 import crypto from "crypto";
 import { getAdminBot } from "./bot";
+import { processInChunks } from "./utils/async-chunker";
 
 let userBot: TelegramBot | null = null;
 const MINI_APP_URL = process.env.VITE_API_BASE_URL?.replace("/api", "") || "https://yozgo.uz";
@@ -268,16 +269,18 @@ export async function broadcastFromUserBot(text: string) {
     const t_users = await db.execute(
       sql`SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL`
     );
-    for (const u of t_users.rows) {
+
+    // Event Loop'ni bloklamasdan Telegram xabar yuborish
+    await processInChunks(t_users.rows, 50, 1000, async (u: any) => {
       if (u.telegram_id) {
         try {
-          await userBot.sendMessage(u.telegram_id as number, `Yangi Xabar:\n\n${text}`);
+          await userBot!.sendMessage(u.telegram_id as number, `Yangi Xabar:\n\n${text}`);
           success++;
         } catch (e) {
           fail++;
         }
       }
-    }
+    });
   } catch (err) {
     return { success, fail, text: "Xatolik yuz berdi." };
   }

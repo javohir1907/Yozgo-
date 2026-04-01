@@ -18,6 +18,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, isAuthenticated } from "./auth";
 import { BattleManager } from "./battle-manager";
+import { LeaderboardService } from "./services/leaderboard.service";
 
 // Shared Schemas & Models
 import {
@@ -153,44 +154,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const { language } = querySchema.parse(req.query);
 
       // Keshlash mantig'i (faqat "all" holati uchun, qolganlarini on-the-fly hisoblaymiz)
-      if (language === "all" && Date.now() - leaderboardCache.lastFetched < CACHE_TTL) {
+      if (language === "all" && leaderboardCache.data && Date.now() - leaderboardCache.lastFetched < CACHE_TTL) {
         return res.status(HTTP_STATUS.OK).json(leaderboardCache.data);
       }
 
-      // Dinamik filter shartlarini yaratish
-      const filterConditions = language !== "all" ? eq(testResults.language, language) : undefined;
-
-      // Murakkab SQL so'rovi: foydalanuvchi statistikasini bitta so'rovda hisoblash
-      const leaderboardData = await db
-        .select({
-          userId: testResults.userId,
-          username: users.firstName,
-          email: users.email,
-          avatarUrl: users.profileImageUrl,
-          testCount: sql<number>`count(${testResults.id})::int`,
-          bestWpm: sql<number>`max(${testResults.wpm})::int`,
-          avgWpm: sql<number>`round(avg(${testResults.wpm}))::int`,
-          accuracy: sql<number>`round(avg(${testResults.accuracy}))::int`,
-          totalSeconds: sql<number>`sum(cast(${testResults.mode} as integer))::int`,
-        })
-        .from(testResults)
-        .innerJoin(users, eq(testResults.userId, users.id))
-        .where(filterConditions)
-        .groupBy(testResults.userId, users.id, users.firstName, users.email, users.profileImageUrl)
-        .orderBy(desc(sql`max(${testResults.wpm})`));
-
-      // Ma'lumotlarni frontend uchun formatlash (rank qo'shish)
-      const formattedEntries = leaderboardData.map((user, index) => ({
-        rank: index + 1,
-        userId: user.userId,
-        username: user.username || user.email?.split("@")[0] || "Unknown",
-        avatarUrl: user.avatarUrl,
-        avgWpm: user.avgWpm,
-        bestWpm: user.bestWpm,
-        accuracy: user.accuracy,
-        testCount: user.testCount,
-        totalSeconds: user.totalSeconds,
-      }));
+      // Toza Arxitektura: DB va Mantiq Service'ga topshirildi
+      const formattedEntries = await LeaderboardService.getLeaderboardData(language);
 
       // Ma'lumotlarni formatlash qismidan keyin:
       if (language === "all") {

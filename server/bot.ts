@@ -4,6 +4,7 @@ import { advertisements, competitions } from "@shared/schema";
 import { sql, eq, desc, isNotNull } from "drizzle-orm";
 import { storage } from "./storage";
 import { sendEmail } from "./mailer";
+import { processInChunks } from "./utils/async-chunker";
 
 let bot: TelegramBot | null = null;
 const userStates: Record<number, any> = {};
@@ -711,11 +712,12 @@ export function startBot() {
                 .innerJoin(users, eq(competitionParticipants.userId, users.id))
                 .where(eq(competitionParticipants.competitionId, c.id));
                 
-              for (const p of participants) {
+              // Event Loop'ni bloklamasdan Email yuborish
+              await processInChunks(participants, 50, 1000, async (p: any) => {
                 if (p.email) {
                   await sendEmail(p.email, "Musobaqa yaqinlashmoqda!", `Hurmatli ${p.username || "qatnashchimiz"},\n\nSiz kutgan "${c.title}" musobaqasi boshlanishiga oz vaqt qoldi!\nZudlik bilan saytga kirib, jang xonasiga hozir bo'ling.\n\nBatafsil: https://yozgo.uz/battle`);
                 }
-              }
+              });
             } catch (err) {
               console.error("Cron email hatoligi:", err);
             }
