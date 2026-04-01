@@ -177,6 +177,66 @@ export default function BattlePage() {
   };
 
   /**
+   * Klaviaturadan kelayotgan yozuvlarni qabul qilish va progressni hisoblash
+   */
+  const handleInputChange = useCallback(
+    (value: string) => {
+      if (!isAttemptActive || !battleStart) return;
+
+      const currentWords = battleStart.words || [];
+      const word = currentWords[currentIndex];
+      if (!word) return;
+
+      if (value.endsWith(" ")) {
+        const currentTyped = value.slice(0, -1);
+        
+        const totalKeystrokes = history.reduce((acc, w) => acc + w.length + 1, 0) + currentTyped.length + 1;
+        const correctChars = [...history, currentTyped].reduce((acc, typed, idx) => {
+          let correct = 0;
+          const target = currentWords[idx] || "";
+          for (let i = 0; i < typed.length; i++) {
+            if (typed[i] === target[i]) correct++;
+          }
+          if (typed === target) correct++; 
+          return acc + correct;
+        }, 0);
+
+        const newWpm = attemptStartTime 
+          ? Math.max(0, Math.round((correctChars / 5) / ((Date.now() - attemptStartTime) / 60000)))
+          : 0;
+        const newAccuracy = totalKeystrokes > 0 ? Math.round((correctChars / totalKeystrokes) * 100) : 100;
+
+        setWpm(newWpm);
+        setAccuracy(newAccuracy);
+
+        const progressPercentage = Math.min(100, Math.round(((currentIndex + 1) / currentWords.length) * 100));
+        sendProgress(progressPercentage, newWpm);
+
+        setHistory((prev) => [...prev, currentTyped]);
+        setCurrentIndex((prev) => prev + 1);
+        setUserInput("");
+      } else {
+        setUserInput(value);
+      }
+    },
+    [isAttemptActive, battleStart, currentIndex, history, attemptStartTime, sendProgress]
+  );
+
+  const handleGoBack = useCallback(() => {
+    if (currentIndex > 0 && userInput.length === 0) {
+      const prevWordIdx = currentIndex - 1;
+      const prevWordTarget = battleStart?.words[prevWordIdx];
+      const prevInput = history[prevWordIdx];
+
+      if (prevInput === prevWordTarget) return; 
+
+      setHistory((prev) => prev.slice(0, -1));
+      setCurrentIndex(prevWordIdx);
+      setUserInput(prevInput);
+    }
+  }, [currentIndex, userInput, history, battleStart]);
+
+  /**
    * Jang xonasini yaratish.
    */
   const handleCreateBattle = async () => {
@@ -393,12 +453,12 @@ export default function BattlePage() {
                      <TypingArea 
                         words={battleStart?.words || []} 
                         isActive={isAttemptActive} 
-                        onInputChange={(v) => setUserInput(v)} 
+                        onInputChange={handleInputChange} 
                         userInput={userInput}
                         currentIndex={currentIndex}
                         history={history}
                         onComplete={finalizeAttempt}
-                        onGoBack={() => {}} 
+                        onGoBack={handleGoBack} 
                       />
                   </div>
                 </div>

@@ -87,7 +87,7 @@ export default function TypingTestPage() {
       <div 
         className={`fixed inset-0 pointer-events-none transition-all duration-500 z-0 ${
           isActive && !isFinished 
-            ? "opacity-100 bg-black/15 backdrop-blur-[4px] dark:bg-transparent dark:backdrop-blur-none" 
+            ? "opacity-100 bg-black/5 dark:bg-transparent" 
             : "opacity-0"
         }`} 
       />
