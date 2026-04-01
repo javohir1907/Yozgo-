@@ -86,6 +86,10 @@ export class BattleManager {
         methods: ["GET", "POST"],
         credentials: true,
       },
+      // XAVFSIZLIK VA UZILISHLAR UCHUN QO'SHILDI:
+      pingTimeout: 10000,   // 10 soniya javob kelmasa, client uzildi deb hisoblanadi
+      pingInterval: 5000,   // Har 5 soniyada client tirikligini tekshirish
+      connectTimeout: 5000,
     });
     this.setupSocketIO();
 

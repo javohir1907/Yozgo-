@@ -24,6 +24,10 @@ export const users = pgTable("users", {
   role: varchar("role").default("user").notNull(), // added role for admin checks
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => {
+  return {
+    emailIdx: index("email_idx").on(table.email),
+  };
 });
 
 export type UpsertUser = typeof users.$inferInsert;

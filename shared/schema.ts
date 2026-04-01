@@ -8,6 +8,7 @@ import {
   varchar,
   unique,
   jsonb,
+  index,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -23,6 +24,12 @@ export const testResults = pgTable("test_results", {
   language: text("language").notNull(), // 'en', 'ru', 'uz'
   mode: text("mode").notNull(), // '15', '30', '60'
   createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => {
+  return {
+    userIdIdx: index("test_user_id_idx").on(table.userId),
+    languageIdx: index("test_language_idx").on(table.language),
+    wpmIdx: index("test_wpm_idx").on(table.wpm),
+  };
 });
 
 export const leaderboardEntries = pgTable("leaderboard_entries", {

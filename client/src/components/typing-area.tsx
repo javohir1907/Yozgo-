@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { WordStatus } from "@/hooks/use-typing-test";
 
@@ -197,16 +197,42 @@ export function TypingArea({
     lineHeightRef.current = 0;
   }, [words]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      onComplete();
-    }
-    if (e.key === "Backspace" && userInput.length === 0 && onGoBack) {
-      e.preventDefault(); // OLDINI OLAMIZ: Brauzer o'zining "Delete" qoidalari orqali oldingi so'zni (qayta o'rnatilganida) o'chirib yubormasligi shart.
-      onGoBack();
-    }
-  };
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Tab") {
+        e.preventDefault();
+        onComplete();
+      }
+      if (e.key === "Backspace" && userInput.length === 0 && onGoBack) {
+        e.preventDefault();
+        onGoBack();
+      }
+    },
+    [userInput.length, onComplete, onGoBack]
+  );
+
+  const renderedWords = React.useMemo(() => {
+    return words.map((word, wordIdx) => {
+      let typedWord = "";
+      if (wordIdx < currentIndex) {
+        typedWord = history[wordIdx] || "";
+      } else if (wordIdx === currentIndex) {
+        typedWord = userInput;
+      }
+
+      return (
+        <WordBox
+          key={wordIdx}
+          ref={wordIdx === currentIndex ? activeWordRef : null}
+          word={word}
+          wordIdx={wordIdx}
+          isActive={wordIdx === currentIndex}
+          isPast={wordIdx < currentIndex}
+          typedWord={typedWord}
+        />
+      );
+    });
+  }, [words, currentIndex, history, userInput]);
 
   return (
     <div
@@ -257,26 +283,7 @@ export function TypingArea({
           />
         )}
 
-        {words.map((word, wordIdx) => {
-          let typedWord = "";
-          if (wordIdx < currentIndex) {
-            typedWord = history[wordIdx] || "";
-          } else if (wordIdx === currentIndex) {
-            typedWord = userInput;
-          }
-
-          return (
-            <WordBox
-              key={wordIdx}
-              ref={wordIdx === currentIndex ? activeWordRef : null}
-              word={word}
-              wordIdx={wordIdx}
-              isActive={wordIdx === currentIndex}
-              isPast={wordIdx < currentIndex}
-              typedWord={typedWord}
-            />
-          );
-        })}
+        {renderedWords}
       </div>
     </div>
   );
