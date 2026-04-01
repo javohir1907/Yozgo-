@@ -22,6 +22,19 @@ import { pool } from "./db";
 import { setupSwagger } from "./swagger";
 import debugRouter from "./debug-auth";
 import { logger } from "./utils/logger";
+import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
+
+// Sentry'ni ishga tushirish (DSN .env dan olinadi, agar yo'q bo'lsa Sentry o'chirilgan holatda turadi)
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    integrations: [nodeProfilingIntegration()],
+    tracesSampleRate: 1.0, // Hamma so'rovlarni kuzatish
+    profilesSampleRate: 1.0,
+  });
+  logger.info("🛡️ [SYSTEM] Sentry Monitoring is ACTIVE.");
+}
 
 /**
  * Global HTTP turlarini kengaytirish
@@ -47,6 +60,11 @@ process.on("uncaughtException", (error: Error) => {
 });
 
 // ============ MIDDLEWARES & SECURITY ============
+
+if (process.env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
+}
 
 /**
  * Helmet: Xavfsizlik sarlavhalarini sozlash (CSP, HSTS, Frameguard)
@@ -220,6 +238,10 @@ if (!isTestEnvironment) {
   app.use("/api", debugRouter);
 
   // ============ ERROR HANDLING ============
+
+  if (process.env.SENTRY_DSN) {
+    app.use(Sentry.Handlers.errorHandler());
+  }
 
   /**
    * Global xatoliklarni ushlab qolish middleware.
