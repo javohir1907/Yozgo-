@@ -331,15 +331,36 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
 
-      const battle = await storage.getBattleByCode(battleCode);
-      if (!battle) {
+      let matchedBattle = await storage.getBattleByCode(battleCode);
+
+      // Avval individual kirish kodlarini tekshiramiz
+      const [accessCodeEntry] = await db
+        .select()
+        .from(roomAccessCodes)
+        .where(eq(roomAccessCodes.code, battleCode));
+
+      if (accessCodeEntry) {
+        if (accessCodeEntry.isUsed) {
+          // It's already used but maybe this is the same user clicking "Join" again after validating
+          // We'll let it pass for now if they are already a participant, but for safety:
+          console.log(`[BATTLE JOIN] Code ${battleCode} is already marked as used.`);
+        } else {
+          // Koddan foydalanildi deb belgilash
+          await db.update(roomAccessCodes).set({ isUsed: true }).where(eq(roomAccessCodes.id, accessCodeEntry.id));
+        }
+
+        const [foundBattle] = await db.select().from(battles).where(eq(battles.id, accessCodeEntry.roomId));
+        matchedBattle = foundBattle;
+      }
+
+      if (!matchedBattle) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Xona topilmadi" });
       }
 
       // Ishtirokchini bazaga qo'shish (Duplicate check storage ichida)
       try {
         await storage.addBattleParticipant({
-          battleId: battle.id,
+          battleId: matchedBattle.id,
           userId: userId,
         });
       } catch (dbError) {
@@ -347,7 +368,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         console.log("[BATTLE JOIN] User already in room or DB error:", (dbError as any).message);
       }
 
-      res.status(HTTP_STATUS.OK).json({ roomCode: battle.code });
+      // Frontendga asl xona kodini (e.g. "X2K9L") qaytaramiz
+      res.status(HTTP_STATUS.OK).json({ roomCode: matchedBattle.code });
     } catch (error) {
       console.error("[BATTLE JOIN] Error:", error);
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: "Xonaga qo'shilishda xatolik yuz berdi" });
