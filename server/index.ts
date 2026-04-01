@@ -10,6 +10,7 @@
 
 // ============ IMPORTS ============
 import express, { type Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { createServer, type Server } from "http";
@@ -73,6 +74,23 @@ app.use(
     },
   })
 );
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 daqiqa
+  max: 200, // Har bir IP uchun 15 daqiqada 200 ta so'rov
+  message: "Juda ko'p so'rov yuborildi. Iltimos, birozdan so'ng qayta urinib ko'ring.",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 soat
+  max: 20, // 1 soatda 20 ta urinish
+  message: "Juda ko'p avtorizatsiya urinishlari.",
+});
+
+app.use("/api/", apiLimiter);
+app.use("/api/auth/", authLimiter);
 
 // Maxfiy ma'lumotlarni ruxsat etish siyosati
 app.use((_req: Request, res: Response, next: NextFunction) => {
@@ -183,7 +201,8 @@ if (!isTestEnvironment) {
       `);
 
       // Adminlarni tayinlash
-      await pool.query(`UPDATE users SET role = 'admin' WHERE email = 'xolmatovjavohir911@gmail.com';`);
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@yozgo.uz';
+      await pool.query(`UPDATE users SET role = 'admin' WHERE email = $1;`, [adminEmail]);
 
       log("Database migrations successfully synchronized.", "startup");
     } catch (startupError) {

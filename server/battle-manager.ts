@@ -88,6 +88,20 @@ export class BattleManager {
       },
     });
     this.setupSocketIO();
+
+    // Har 15 daqiqada tozala
+    setInterval(() => this.cleanupInactiveRooms(), 15 * 60 * 1000);
+  }
+
+  private cleanupInactiveRooms(): void {
+    const now = Date.now();
+    for (const [code, room] of Array.from(this.rooms.entries())) {
+      // Agar xona "waiting" bo'lsa va 1 soatdan beri tursa yoki "finished" bo'lib qolib ketgan bo'lsa
+      if (room.status === "finished" || (room.status === "waiting" && room.startTime && (now - room.startTime > 60 * 60 * 1000))) {
+        this.rooms.delete(code);
+        console.log(`[BATTLE] Inactive room ${code} cleaned up from memory.`);
+      }
+    }
   }
 
   /**

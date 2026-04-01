@@ -37,6 +37,9 @@ import {
   insertAdvertisementSchema,
 } from "@shared/schema";
 
+let leaderboardCache = { data: null as any, lastFetched: 0 };
+const CACHE_TTL = 5 * 60 * 1000; // 5 daqiqa
+
 // ============ CONSTANTS ============
 const HTTP_STATUS = {
   OK: 200,
@@ -149,6 +152,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const { language } = querySchema.parse(req.query);
 
+      // Keshlash mantig'i (faqat "all" holati uchun, qolganlarini on-the-fly hisoblaymiz)
+      if (language === "all" && Date.now() - leaderboardCache.lastFetched < CACHE_TTL) {
+        return res.status(HTTP_STATUS.OK).json(leaderboardCache.data);
+      }
+
       // Dinamik filter shartlarini yaratish
       const filterConditions = language !== "all" ? eq(testResults.language, language) : undefined;
 
@@ -183,6 +191,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         testCount: user.testCount,
         totalSeconds: user.totalSeconds,
       }));
+
+      // Ma'lumotlarni formatlash qismidan keyin:
+      if (language === "all") {
+        leaderboardCache = { data: formattedEntries, lastFetched: Date.now() };
+      }
 
       res.status(HTTP_STATUS.OK).json(formattedEntries);
     } catch (error) {
@@ -409,12 +422,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
    */
   const adminGuard = async (req: Request, res: Response, next: any) => {
     const botSecret = process.env.BOT_SECRET;
-    // Serverlar to'g'ridan-to'g'ri integratsiyasi uchun bot secret-ni tekshirish
-    if (botSecret && (req.headers["x-bot-secret"] as string) === botSecret) {
+    
+    // XAVFSIZLIK: Bot secret faqat serverdan (localhost yoki render internal) kelsa ishlashi kerak
+    // Ammo hozircha oddiy tekshiruv qoldiramiz, faqat sir o'ta kuchli bo'lishi shart!
+    if (botSecret && req.headers["x-bot-secret"] === botSecret) {
       return next();
     }
 
-    const currentUserId = req.session.userId;
+    const currentUserId = req.session?.userId;
     if (!currentUserId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
 
     const currentUser = await storage.getUser(currentUserId);
