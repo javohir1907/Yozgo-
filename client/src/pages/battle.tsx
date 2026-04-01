@@ -84,6 +84,9 @@ export default function BattlePage() {
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [attemptCount, setAttemptCount] = useState<number>(0);
+
+  const correctCharsRef = useRef(0);
+  const allKeystrokesRef = useRef(0);
   
   // --- STATE: Settings & Terms ---
   const [testDuration, setTestDuration] = useState<number>(GAME_DEFAULTS.TEST_DURATION);
@@ -135,8 +138,12 @@ export default function BattlePage() {
   }, [battleStart]);
 
   /**
-   * Urinish (Attempt) taymerini boshqarish.
+   * Urinish (Attempt) taymerini va Jonli statistika (Live Stats) boshqarish.
    */
+  const currentWords = useMemo(() => {
+    return battleStart?.words?.slice(attemptCount * 30) || [];
+  }, [battleStart?.words, attemptCount]);
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isAttemptActive && attemptTimer !== null && attemptTimer > 0) {
@@ -146,6 +153,32 @@ export default function BattlePage() {
     }
     return () => clearTimeout(interval);
   }, [isAttemptActive, attemptTimer]);
+
+  useEffect(() => {
+    let statsInterval: NodeJS.Timeout;
+
+    const updateLiveStats = () => {
+      if (!attemptStartTime) return;
+      const elapsedMins = (Date.now() - attemptStartTime) / 60000;
+      if (elapsedMins > 0) {
+        const currentWpm = Math.max(0, Math.round((correctCharsRef.current / 5) / elapsedMins));
+        const currentAcc = allKeystrokesRef.current > 0 
+            ? Math.round((correctCharsRef.current / allKeystrokesRef.current) * 100) 
+            : 100;
+        
+        setWpm(currentWpm);
+        setAccuracy(currentAcc);
+
+        const prog = currentWords.length > 0 ? Math.min(100, Math.round((currentIndex / currentWords.length) * 100)) : 0;
+        sendProgress(prog, currentWpm);
+      }
+    };
+
+    if (isAttemptActive && attemptStartTime) {
+      statsInterval = setInterval(updateLiveStats, 500);
+    }
+    return () => clearInterval(statsInterval);
+  }, [isAttemptActive, attemptStartTime, currentIndex, currentWords.length, sendProgress]);
 
   // ============ ACTIONS ============
 
@@ -163,6 +196,8 @@ export default function BattlePage() {
     setWpm(0);
     setAccuracy(100);
     setHistory([]);
+    correctCharsRef.current = 0;
+    allKeystrokesRef.current = 0;
     setAttemptCount(prev => prev + 1);
   };
 
@@ -185,49 +220,50 @@ export default function BattlePage() {
     (value: string) => {
       if (!isAttemptActive || !battleStart) return;
 
-      const currentWords = battleStart.words || [];
       const word = currentWords[currentIndex];
       if (!word) return;
 
       if (value.endsWith(" ")) {
         const currentTyped = value.slice(0, -1);
         
-        const totalKeystrokes = history.reduce((acc, w) => acc + w.length + 1, 0) + currentTyped.length + 1;
-        const correctChars = [...history, currentTyped].reduce((acc, typed, idx) => {
-          let correct = 0;
-          const target = currentWords[idx] || "";
-          for (let i = 0; i < typed.length; i++) {
-            if (typed[i] === target[i]) correct++;
+        if (currentTyped.length > userInput.length) {
+          allKeystrokesRef.current += (currentTyped.length - userInput.length);
+          for (let i = userInput.length; i < currentTyped.length; i++) {
+            if (currentTyped[i] === word[i]) correctCharsRef.current++;
           }
-          if (typed === target) correct++; 
-          return acc + correct;
-        }, 0);
-
-        const newWpm = attemptStartTime 
-          ? Math.max(0, Math.round((correctChars / 5) / ((Date.now() - attemptStartTime) / 60000)))
-          : 0;
-        const newAccuracy = totalKeystrokes > 0 ? Math.round((correctChars / totalKeystrokes) * 100) : 100;
-
-        setWpm(newWpm);
-        setAccuracy(newAccuracy);
-
-        const progressPercentage = Math.min(100, Math.round(((currentIndex + 1) / currentWords.length) * 100));
-        sendProgress(progressPercentage, newWpm);
+        } else if (currentTyped.length < userInput.length) {
+          for (let i = currentTyped.length; i < userInput.length; i++) {
+            if (userInput[i] === word[i]) correctCharsRef.current--;
+          }
+        }
+        
+        allKeystrokesRef.current += 1; 
+        if (currentTyped === word) correctCharsRef.current += 1; 
 
         setHistory((prev) => [...prev, currentTyped]);
         setCurrentIndex((prev) => prev + 1);
         setUserInput("");
       } else {
+        if (value.length > userInput.length) {
+          allKeystrokesRef.current += (value.length - userInput.length);
+          for (let i = userInput.length; i < value.length; i++) {
+            if (value[i] === word[i]) correctCharsRef.current++;
+          }
+        } else if (value.length < userInput.length) {
+          for (let i = value.length; i < userInput.length; i++) {
+            if (userInput[i] === word[i]) correctCharsRef.current--;
+          }
+        }
         setUserInput(value);
       }
     },
-    [isAttemptActive, battleStart, currentIndex, history, attemptStartTime, sendProgress]
+    [isAttemptActive, battleStart, currentIndex, history, userInput, currentWords]
   );
 
   const handleGoBack = useCallback(() => {
     if (currentIndex > 0 && userInput.length === 0) {
       const prevWordIdx = currentIndex - 1;
-      const prevWordTarget = battleStart?.words[prevWordIdx];
+      const prevWordTarget = currentWords[prevWordIdx];
       const prevInput = history[prevWordIdx];
 
       if (prevInput === prevWordTarget) return; 
@@ -235,8 +271,10 @@ export default function BattlePage() {
       setHistory((prev) => prev.slice(0, -1));
       setCurrentIndex(prevWordIdx);
       setUserInput(prevInput);
+      
+      allKeystrokesRef.current = Math.max(0, allKeystrokesRef.current - 1);
     }
-  }, [currentIndex, userInput, history, battleStart]);
+  }, [currentIndex, userInput, history, currentWords]);
 
   /**
    * Jang xonasini yaratish.
@@ -465,7 +503,7 @@ export default function BattlePage() {
                         </div>
                      </div>
                      <TypingArea 
-                        words={battleStart?.words?.slice(attemptCount * 30) || []} 
+                        words={currentWords} 
                         isActive={isAttemptActive} 
                         onInputChange={handleInputChange} 
                         userInput={userInput}
