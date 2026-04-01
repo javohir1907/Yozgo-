@@ -278,6 +278,7 @@ export default function BattlePage() {
                   <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-background border p-2 rounded-md">
                     <option value="uz">O'zbekcha</option>
                     <option value="en">English</option>
+                    <option value="ru">Русский</option>
                   </select>
                 </div>
               </div>
@@ -373,7 +374,7 @@ export default function BattlePage() {
                 <div className="relative">
                   {!isAttemptActive && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-[6px] rounded-3xl border-2 border-dashed">
-                      <Button onClick={startAttempt} size="xl" className="font-black text-2xl h-16 px-12 rounded-full shadow-2xl skew-x-[-4deg]">
+                      <Button onClick={startAttempt} size="lg" className="font-black text-2xl h-16 px-12 rounded-full shadow-2xl skew-x-[-4deg]">
                         Keyingi Urinish <Flame className="ml-2" />
                       </Button>
                     </div>
@@ -390,7 +391,7 @@ export default function BattlePage() {
                         </div>
                      </div>
                      <TypingArea 
-                        words={room?.testWords || []} 
+                        words={battleStart?.words || []} 
                         isActive={isAttemptActive} 
                         onInputChange={(v) => setUserInput(v)} 
                         userInput={userInput}
