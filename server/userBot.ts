@@ -5,10 +5,10 @@ import { isNotNull, sql, eq, and } from "drizzle-orm";
 import crypto from "crypto";
 import { getAdminBot } from "./bot";
 import { processInChunks } from "./utils/async-chunker";
+import { BotStateService } from "./services/bot-state.service";
 
 let userBot: TelegramBot | null = null;
 const MINI_APP_URL = process.env.VITE_API_BASE_URL?.replace("/api", "") || "https://yozgo.uz";
-const userStates: Record<number, any> = {};
 
 export function getUserBot() {
   return userBot;
@@ -64,7 +64,7 @@ export function startUserBot() {
   userBot.on("message", async (msg) => {
     if (!msg.text && !msg.contact && !msg.location && !msg.photo) return;
     const chatId = msg.chat.id;
-    const state = userStates[chatId];
+    const state = await BotStateService.getState(chatId);
 
     // Winner Data Collection Flow
     if (state?.type === "winner_data") {
@@ -113,7 +113,7 @@ export function startUserBot() {
             const adminMsg = `📦 G'olibdan ma'lumotlar keldi: ${msg.from?.first_name || "Noma'lum"}\n📱 Tel: ${state.phone}\n📍 Manzil: ${state.location}`;
             adminBot.sendPhoto(parseInt(adminIdStr, 10), state.photo, { caption: adminMsg });
           }
-          delete userStates[chatId];
+          await BotStateService.clearState(chatId);
         } else {
           userBot?.sendMessage(chatId, "Iltimos rasm formatida yuboring.");
         }
@@ -246,7 +246,7 @@ export async function sendMessageToWinner(telegramId: number, text: string) {
   await userBot.sendMessage(telegramId, `Yangi xabar (Admindan):\n\n${text}`);
 
   // Set state to collect winner info
-  userStates[telegramId] = { type: "winner_data", step: "phone" };
+  await BotStateService.setState(telegramId, { type: "winner_data", step: "phone" });
 
   userBot.sendMessage(
     telegramId,

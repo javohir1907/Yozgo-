@@ -7,6 +7,7 @@ import {
   boolean,
   varchar,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -154,6 +155,12 @@ export const adminMessages = pgTable("admin_messages", {
   sentAt: timestamp("sent_at").defaultNow().notNull(),
 });
 
+export const botStates = pgTable("bot_states", {
+  telegramId: text("telegram_id").primaryKey(),
+  stateData: jsonb("state_data").notNull().default({}),
+  lastActivity: timestamp("last_activity").defaultNow(),
+});
+
 export const insertTestResultSchema = createInsertSchema(testResults).omit({
   id: true,
   createdAt: true,
@@ -207,3 +214,4 @@ export type InsertAdvertisement = z.infer<typeof insertAdvertisementSchema>;
 export type PrizeWinner = typeof prizeWinners.$inferSelect;
 export type RoomAccessCode = typeof roomAccessCodes.$inferSelect;
 export type AdminMessage = typeof adminMessages.$inferSelect;
+export type BotState = typeof botStates.$inferSelect;

@@ -5,9 +5,9 @@ import { sql, eq, desc, isNotNull } from "drizzle-orm";
 import { storage } from "./storage";
 import { sendEmail } from "./mailer";
 import { processInChunks } from "./utils/async-chunker";
+import { BotStateService } from "./services/bot-state.service";
 
 let bot: TelegramBot | null = null;
-const userStates: Record<number, any> = {};
 
 export function getAdminBot() {
   return bot;
@@ -201,18 +201,18 @@ export function startBot() {
     sendUsersList(msg.chat.id);
   });
 
-  bot.onText(/^\/bekor$/, (msg) => {
+  bot.onText(/^\/bekor$/, async (msg) => {
     if (!isAdmin(msg)) return;
-    delete userStates[msg.chat.id];
+    await BotStateService.clearState(msg.chat.id);
     bot?.sendMessage(msg.chat.id, "Barcha buyruqlar bekor qilindi.", { parse_mode: "HTML" });
   });
 
   // ========== Ommaviy Xabar ==========
-  bot.onText(/^\/xabar(?:\s+(.+))?$/, (msg, match) => {
+  bot.onText(/^\/xabar(?:\s+(.+))?$/, async (msg, match) => {
     if (!isAdmin(msg)) return;
     const textInfo = match && match[1];
     if (textInfo) {
-      userStates[msg.chat.id] = { type: "xabar", text: textInfo };
+      await BotStateService.setState(msg.chat.id, { type: "xabar", text: textInfo });
       const confirmMsg =
         "Diqqat! Quyidagi xabar barcha botga ulangan foydalanuvchilarga yuboriladi:\n\n" +
         `${textInfo}\n\n` +
@@ -227,7 +227,7 @@ export function startBot() {
       };
       bot?.sendMessage(msg.chat.id, confirmMsg, opts);
     } else {
-      userStates[msg.chat.id] = { type: "xabar" };
+      await BotStateService.setState(msg.chat.id, { type: "xabar" });
       bot?.sendMessage(
         msg.chat.id,
         "Barcha foydalanuvchilarga jo'natiladigan xabar matnini kiriting:",
@@ -237,18 +237,18 @@ export function startBot() {
   });
 
   // ========== REKLAMA CREATION ==========
-  bot.onText(/^\/reklama$/, (msg) => {
+  bot.onText(/^\/reklama$/, async (msg) => {
     if (!isAdmin(msg)) return;
-    userStates[msg.chat.id] = { type: "reklama", step: "title" };
+    await BotStateService.setState(msg.chat.id, { type: "reklama", step: "title" });
     bot?.sendMessage(msg.chat.id, "Yangi reklama.\n\n1. Homiy nomi yoki sarlavhani kiriting:", {
       parse_mode: "HTML",
     });
   });
 
   // ========== MUSOBAQA CREATION ==========
-  bot.onText(/^\/musobaqa_och$/, (msg) => {
+  bot.onText(/^\/musobaqa_och$/, async (msg) => {
     if (!isAdmin(msg)) return;
-    userStates[msg.chat.id] = { type: "musobaqa", step: "title" };
+    await BotStateService.setState(msg.chat.id, { type: "musobaqa", step: "title" });
     bot?.sendMessage(msg.chat.id, "Yangi musobaqa ochish.\n\n1. Musobaqa nomini kiriting:", {
       parse_mode: "HTML",
     });
@@ -256,7 +256,7 @@ export function startBot() {
 
   bot.on("message", async (msg) => {
     if (!msg.text || msg.text.startsWith("/")) return;
-    const state = userStates[msg.chat.id];
+    const state = await BotStateService.getState(msg.chat.id);
     if (!state) return;
 
     if (state.type === "xabar") {
@@ -265,6 +265,7 @@ export function startBot() {
         `${msg.text}\n\n` +
         "Tasdiqlaysizmi?";
       state.text = msg.text;
+      await BotStateService.setState(msg.chat.id, state);
       const opts = {
         reply_markup: {
           inline_keyboard: [
@@ -275,46 +276,49 @@ export function startBot() {
       };
       bot?.sendMessage(msg.chat.id, confirmMsg, opts);
     } else if (state.type === "reklama") {
-      if (state.step === "title") {
-        state.title = msg.text;
-        state.step = "image";
-        bot?.sendMessage(msg.chat.id, "2. Reklama rasmi (URL orqali tashlang):");
-      } else if (state.step === "image") {
-        state.imageUrl = msg.text;
-        state.step = "link";
-        bot?.sendMessage(msg.chat.id, "3. Havola (Bosganda qayerga o'tishi kerakligini kiriting):");
-      } else if (state.step === "link") {
-        state.linkUrl = msg.text;
-        state.step = "desc";
-        bot?.sendMessage(
-          msg.chat.id,
-          "4. Qisqa tavsif kiriting (majburiy emas, bo'sh qoldirish uchun nuqta qo'ying):"
-        );
-      } else if (state.step === "desc") {
-        state.description = msg.text === "." ? "" : msg.text;
-        state.step = "confirm";
+      state.title = msg.text;
+      state.step = "image";
+      await BotStateService.setState(msg.chat.id, state);
+      bot?.sendMessage(msg.chat.id, "2. Reklama rasmi (URL orqali tashlang):");
+    } else if (state.step === "image") {
+      state.imageUrl = msg.text;
+      state.step = "link";
+      await BotStateService.setState(msg.chat.id, state);
+      bot?.sendMessage(msg.chat.id, "3. Havola (Bosganda qayerga o'tishi kerakligini kiriting):");
+    } else if (state.step === "link") {
+      state.linkUrl = msg.text;
+      state.step = "desc";
+      await BotStateService.setState(msg.chat.id, state);
+      bot?.sendMessage(
+        msg.chat.id,
+        "4. Qisqa tavsif kiriting (majburiy emas, bo'sh qoldirish uchun nuqta qo'ying):"
+      );
+    } else if (state.step === "desc") {
+      state.description = msg.text === "." ? "" : msg.text;
+      state.step = "confirm";
+      await BotStateService.setState(msg.chat.id, state);
 
-        const preview =
-          `Homiy nomi: ${state.title}\n` +
-          `Rasm havolasi: ${state.imageUrl}\n` +
-          `Havola URL: ${state.linkUrl}\n` +
-          `Tavsif: ${state.description}\n\n` +
-          "Ushbu reklamani tasdiqlaysizmi?";
+      const preview =
+        `Homiy nomi: ${state.title}\n` +
+        `Rasm havolasi: ${state.imageUrl}\n` +
+        `Havola URL: ${state.linkUrl}\n` +
+        `Tavsif: ${state.description}\n\n` +
+        "Ushbu reklamani tasdiqlaysizmi?";
 
-        const opts = {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: "Ha, joylash", callback_data: "r_yes" }],
-              [{ text: "Bekor qilish", callback_data: "r_no" }],
-            ],
-          },
-        };
-        bot?.sendMessage(msg.chat.id, preview, opts);
-      }
+      const opts = {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Ha, joylash", callback_data: "r_yes" }],
+            [{ text: "Bekor qilish", callback_data: "r_no" }],
+          ],
+        },
+      };
+      bot?.sendMessage(msg.chat.id, preview, opts);
     } else if (state.type === "musobaqa") {
       if (state.step === "title") {
         state.title = msg.text;
         state.step = "date";
+        await BotStateService.setState(msg.chat.id, state);
         bot?.sendMessage(
           msg.chat.id,
           "2. Sanani kiriting.\n\n" +
@@ -336,6 +340,7 @@ export function startBot() {
         }
         state.date = d.toISOString();
         state.step = "prize";
+        await BotStateService.setState(msg.chat.id, state);
         bot?.sendMessage(
           msg.chat.id,
           `Sanasi qabul qilindi: ${d.toLocaleDateString("uz-UZ")}\n\n` +
@@ -344,6 +349,7 @@ export function startBot() {
       } else if (state.step === "prize") {
         state.prize = msg.text;
         state.step = "confirm";
+        await BotStateService.setState(msg.chat.id, state);
 
         const preview =
           `Musobaqa nomi: ${state.title}\n` +
@@ -392,14 +398,14 @@ export function startBot() {
       } catch (e: any) {
         bot?.sendMessage(msg.chat.id, "Xatolik: " + e.message);
       }
-      delete userStates[msg.chat.id];
+      await BotStateService.clearState(msg.chat.id);
     }
   });
 
   bot.on("callback_query", async (query) => {
     if (!query.message) return;
     const chatId = query.message.chat.id;
-    const state = userStates[chatId];
+    const state = await BotStateService.getState(chatId);
     bot?.answerCallbackQuery(query.id);
 
     if (query.data === "cmd_stats") return sendStats(chatId);
@@ -408,7 +414,7 @@ export function startBot() {
     if (query.data === "cmd_reklama_list") return sendReklamaList(chatId);
 
     if (query.data === "r_no" || query.data === "m_no") {
-      delete userStates[chatId];
+      await BotStateService.clearState(chatId);
       bot?.sendMessage(chatId, "Bekor qilindi.");
       return;
     }
@@ -428,7 +434,7 @@ export function startBot() {
       } catch (e) {
         bot?.sendMessage(chatId, "Xatolik yuz berdi: " + (e as any)?.message);
       }
-      delete userStates[chatId];
+      await BotStateService.clearState(chatId);
     }
 
     if (query.data?.startsWith("br_battle_")) {
@@ -471,7 +477,7 @@ export function startBot() {
       } catch (e) {
         bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
       }
-      delete userStates[chatId];
+      await BotStateService.clearState(chatId);
     }
 
     if (query.data?.startsWith("comp_parts_")) {
@@ -513,7 +519,7 @@ export function startBot() {
       } catch (e) {
         bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
       }
-      delete userStates[chatId];
+      await BotStateService.clearState(chatId);
     }
 
     if (query.data?.startsWith("comp_cancel_")) {
@@ -530,7 +536,7 @@ export function startBot() {
 
     if (query.data?.startsWith("msg_winner_")) {
       const winnerUserId = query.data.replace("msg_winner_", "");
-      userStates[chatId] = { type: "msg_winner", winnerUserId };
+      await BotStateService.setState(chatId, { type: "msg_winner", winnerUserId });
       bot?.sendMessage(chatId, "G'olibga jo'natiladigan xabar matnini kiriting:", {
         parse_mode: "HTML",
       });

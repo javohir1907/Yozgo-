@@ -256,3 +256,29 @@ if (!isTestEnvironment) {
 })();
 
 export { app, httpServer };
+
+const shutdown = async (signal: string) => {
+  log(`[SYSTEM] Qabul qilindi ${signal}. Tizim xavfsiz o'chirilmoqda...`, "shutdown");
+  
+  // 1. Yangi ulanishlarni qabul qilishni to'xtatish
+  httpServer.close(() => {
+    log("[SYSTEM] HTTP Server yopildi.", "shutdown");
+  });
+
+  try {
+    // 2. Ma'lumotlar bazasi bilan ulanishni xavfsiz uzish
+    const { pool } = require("./db");
+    await pool.end();
+    log("[SYSTEM] Database ulanishi uzildi.", "shutdown");
+    
+    // 3. Jarayonni xatosiz to'xtatish
+    process.exit(0);
+  } catch (error) {
+    console.error("[CRITICAL] Tizimni o'chirishda xatolik:", error);
+    process.exit(1);
+  }
+};
+
+// Operatsion tizim signallarini eshitish
+process.on("SIGINT", () => shutdown("SIGINT"));   // Ctrl+C
+process.on("SIGTERM", () => shutdown("SIGTERM")); // Render/Docker stop
