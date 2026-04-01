@@ -147,11 +147,20 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// ============ MAIN STARTUP LOGIC ============
+// ============ FINAL STARTUP ============
+const isTestEnvironment = process.env.NODE_ENV === "test";
+
+if (!isTestEnvironment) {
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 [SYSTEM] SERVER BOUND TO PORT: ${PORT}`);
+    console.log(`🚀 [SYSTEM] STATUS: ONLINE (MODE: ${process.env.NODE_ENV?.toUpperCase() || 'DEVELOPMENT'})`);
+    log(`[SUCCESS] Port ${PORT} is open and ready for Render health checks.`);
+  });
+}
 
 (async () => {
   // Test muhitida migratsiyalar va botlarni bloklash
-  const isTestEnvironment = process.env.NODE_ENV === "test";
+
 
   if (!isTestEnvironment) {
     try {
@@ -224,13 +233,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     await setupVite(httpServer, app);
   }
 
-  // ============ SERVER LISTEN ============
-
-  if (!isTestEnvironment) {
-    const server = httpServer.listen(PORT, "0.0.0.0", () => {
-      log(`[SUCCESS] Server started on port ${PORT}`);
-    });
-  }
+  // Port already bound at top
 })();
 
 export { app, httpServer };

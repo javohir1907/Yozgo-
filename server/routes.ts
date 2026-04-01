@@ -75,6 +75,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // Avtorizatsiya tizimini sozlash
   setupAuth(app);
 
+  console.log("🚀 [SYSTEM] API ROUTER SUCCESSFULLY MOUNTED");
+
   // Jang menejerini ishga tushirish
   const battleManager = new BattleManager(httpServer);
 
@@ -312,6 +314,43 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(HTTP_STATUS.OK).json({ success: true });
     } catch (error) {
       res.status(HTTP_STATUS.BAD_REQUEST).json({ message: error instanceof Error ? error.message : "Xatolik" });
+    }
+  });
+
+  /**
+   * Xonaga ishtirokchi sifatida qo'shilish (Database darajasida).
+   */
+  app.post("/api/battles/join", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { battleCode, agreed } = req.body;
+      const userId = req.session.userId;
+
+      if (!agreed) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Shartlarga rozilik berilmagan" });
+      }
+
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+
+      const battle = await storage.getBattleByCode(battleCode);
+      if (!battle) {
+        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Xona topilmadi" });
+      }
+
+      // Ishtirokchini bazaga qo'shish (Duplicate check storage ichida)
+      try {
+        await storage.addBattleParticipant({
+          battleId: battle.id,
+          userId: userId,
+        });
+      } catch (dbError) {
+        // Agar allaqachon qo'shilgan bo'lsa, xatolikni e'tiborsiz qoldiramiz
+        console.log("[BATTLE JOIN] User already in room or DB error:", (dbError as any).message);
+      }
+
+      res.status(HTTP_STATUS.OK).json({ roomCode: battle.code });
+    } catch (error) {
+      console.error("[BATTLE JOIN] Error:", error);
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: "Xonaga qo'shilishda xatolik yuz berdi" });
     }
   });
 
