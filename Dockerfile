@@ -1,0 +1,27 @@
+# 1. Build bosqichi
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# 2. Production bosqichi (Yengil va xavfsiz)
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+# Faqat kerakli fayllarni nusxalash
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
+# Muhit o'zgaruvchilari
+ENV NODE_ENV=production
+ENV PORT=5000
+
+EXPOSE 5000
+
+# Xavfsizlik: Dasturni root huquqisiz ishga tushirish
+USER node
+
+CMD ["npm", "start"]
