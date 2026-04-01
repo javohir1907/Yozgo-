@@ -83,6 +83,7 @@ export default function BattlePage() {
   const [totalTimer, setTotalTimer] = useState<number | null>(null);
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
   const [history, setHistory] = useState<string[]>([]);
+  const [attemptCount, setAttemptCount] = useState<number>(0);
   
   // --- STATE: Settings & Terms ---
   const [testDuration, setTestDuration] = useState<number>(GAME_DEFAULTS.TEST_DURATION);
@@ -162,6 +163,7 @@ export default function BattlePage() {
     setWpm(0);
     setAccuracy(100);
     setHistory([]);
+    setAttemptCount(prev => prev + 1);
   };
 
   /**
@@ -409,7 +411,19 @@ export default function BattlePage() {
                 <h2 className="text-3xl font-black uppercase mb-2">Lobbyda kutilmoqda</h2>
                 <p className="text-muted-foreground mb-8">Hozirda {room?.players.length || 0} ishtirokchi yig'ildi</p>
                 {isAdmin && (
-                  <Button onClick={() => startBattle({ testDuration, totalTime, maxAttempts: 5, language, adminParticipates })} size="lg" className="px-16 font-black h-14 text-xl rounded-full">
+                  <div className="flex flex-col items-center gap-6 w-full max-w-md mb-8 bg-black/5 p-6 rounded-2xl border border-white/5">
+                    <div className="w-full space-y-3">
+                      <Label className="flex justify-between text-muted-foreground">Test urinish vaqti (soniya): <span className="font-black text-foreground">{testDuration}s</span></Label>
+                      <Slider value={[testDuration]} max={120} min={15} step={15} onValueChange={(v) => setTestDuration(v[0])} />
+                    </div>
+                    <div className="w-full space-y-3">
+                      <Label className="flex justify-between text-muted-foreground">Jang umumiy davomiyligi (daqiqa): <span className="font-black text-foreground">{totalTime}m</span></Label>
+                      <Slider value={[totalTime]} max={30} min={1} step={1} onValueChange={(v) => setTotalTime(v[0])} />
+                    </div>
+                  </div>
+                )}
+                {isAdmin && (
+                  <Button onClick={() => startBattle({ testDuration, totalTime, maxAttempts: 5, language, adminParticipates })} size="lg" className="px-16 font-black h-14 text-xl rounded-full shadow-lg hover:scale-105 transition-transform">
                     JANGNI BOSHLASH <Play className="ml-2 fill-current" />
                   </Button>
                 )}
@@ -451,7 +465,7 @@ export default function BattlePage() {
                         </div>
                      </div>
                      <TypingArea 
-                        words={battleStart?.words || []} 
+                        words={battleStart?.words?.slice(attemptCount * 30) || []} 
                         isActive={isAttemptActive} 
                         onInputChange={handleInputChange} 
                         userInput={userInput}
@@ -476,8 +490,11 @@ export default function BattlePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {room?.players.map((p: any, i: number) => (
-                <div key={p.id} className="flex items-center justify-between p-3 rounded-2xl bg-black/5 border border-transparent hover:border-primary/20 transition-all">
-                  <div className="flex items-center gap-3">
+                <div key={p.id} className="relative overflow-hidden flex items-center justify-between p-3 rounded-2xl bg-black/5 border border-transparent hover:border-primary/20 transition-all">
+                  {/* Live Progress Bar Background */}
+                  <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
+                  
+                  <div className="relative z-10 flex items-center gap-3">
                     <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
                     <div className="relative">
                       {p.id === room.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
@@ -485,9 +502,9 @@ export default function BattlePage() {
                     </div>
                     <span className="font-bold text-sm truncate max-w-[100px]">{p.username}</span>
                   </div>
-                  <div className="text-right">
-                    <div className="font-black text-primary">{p.bestWpm} WPM</div>
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} urinish</div>
+                  <div className="relative z-10 text-right">
+                    <div className="font-black text-primary">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
+                    <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} urinish (Eng yaxshi: {p.bestWpm})</div>
                   </div>
                 </div>
               ))}
