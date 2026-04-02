@@ -217,9 +217,9 @@ if (!isTestEnvironment) {
 
     // Botlarni ishga tushirish (Main & User bots)
     try {
-      const { startBot } = require("./bot");
+      // const { startBot } = require("./bot");
       const { startUserBot } = require("./userBot");
-      startBot();
+      // startBot();
       startUserBot();
       logger.info("Integrations (Telegram Bots) are active.", { source: "startup" });
     } catch (botError) {
