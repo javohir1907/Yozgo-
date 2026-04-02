@@ -24,6 +24,7 @@ import debugRouter from "./debug-auth";
 import { logger } from "./utils/logger";
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
+import { sendAdminNotification } from "./utils/notifier";
 
 // Sentry'ni ishga tushirish (DSN .env dan olinadi, agar yo'q bo'lsa Sentry o'chirilgan holatda turadi)
 if (process.env.SENTRY_DSN) {
@@ -243,8 +244,22 @@ if (!isTestEnvironment) {
    * Global xatoliklarni ushlab qolish middleware.
    * Server xatolarini foydalanuvchiga chiroyli ko'rinishda qaytaradi.
    */
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     logger.error("[SERVER ERROR]:", err);
+
+    // Faqatgina kutilmagan server xatoliklarida (500) adminga yozamiz
+    if (err.status !== 404 && err.status !== 401) {
+      const errorMessage = err.message || "Noma'lum xatolik";
+      const errorStack = err.stack ? err.stack.substring(0, 500) : "";
+      
+      sendAdminNotification(
+        `❌ <b>TIZIMDA XATOLIK YUZ BERDI!</b>\n\n` +
+        `📍 <b>Manzil:</b> ${req.method} ${req.originalUrl}\n` +
+        `⚠️ <b>Xato:</b> ${errorMessage}\n` +
+        `<pre>${errorStack}</pre>`
+      ).catch(console.error);
+    }
+
     res.status(500).json({ 
       message: "Ichki server xatosi yuz berdi.",
       error: process.env.NODE_ENV === "development" ? err.message : undefined 

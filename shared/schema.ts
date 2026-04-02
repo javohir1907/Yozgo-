@@ -9,6 +9,7 @@ import {
   unique,
   jsonb,
   index,
+  serial,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -81,19 +82,19 @@ export const reviews = pgTable("reviews", {
 });
 
 export const competitions = pgTable("competitions", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  prize: text("prize"),
-  date: timestamp("date").notNull(),
-  participantsCount: integer("participants_count").default(0),
-  winnerName: text("winner_name"),
+  description: text("description"),
+  reward: text("reward"),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const competitionParticipants = pgTable("competition_participants", {
   id: uuid("id").primaryKey().defaultRandom(),
-  competitionId: uuid("competition_id")
+  competitionId: integer("competition_id")
     .references(() => competitions.id)
     .notNull(),
   userId: varchar("user_id")
@@ -110,15 +111,14 @@ export const notifications = pgTable("notifications", {
 });
 
 export const advertisements = pgTable("advertisements", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  description: text("description"),
-  imageUrl: text("image_url").notNull(),
-  linkUrl: text("link_url").notNull(),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
+  imageUrl: text("image_url"),
+  linkUrl: text("link_url"),
+  durationDays: integer("duration_days").default(7),
+  expiresAt: timestamp("expires_at").notNull(),
   isActive: boolean("is_active").default(true),
-  clicks: integer("clicks").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const prizeWinners = pgTable("prize_winners", {
@@ -126,7 +126,7 @@ export const prizeWinners = pgTable("prize_winners", {
   userId: varchar("user_id")
     .references(() => users.id)
     .notNull(),
-  competitionId: uuid("competition_id")
+  competitionId: integer("competition_id")
     .references(() => competitions.id)
     .notNull(),
   prizeGivenAt: timestamp("prize_given_at").defaultNow().notNull(),
@@ -220,5 +220,9 @@ export type InsertAdvertisement = z.infer<typeof insertAdvertisementSchema>;
 
 export type PrizeWinner = typeof prizeWinners.$inferSelect;
 export type RoomAccessCode = typeof roomAccessCodes.$inferSelect;
-export type AdminMessage = typeof adminMessages.$inferSelect;
 export type BotState = typeof botStates.$inferSelect;
+
+export const systemSettings = pgTable("system_settings", {
+  key: varchar("key", { length: 50 }).primaryKey(),
+  value: text("value").notNull(),
+});

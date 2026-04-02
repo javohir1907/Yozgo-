@@ -21,6 +21,7 @@ import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
 import { sendBotMessage } from "./bot";
 import { sendEmail } from "./mailer";
+import { sendAdminNotification } from "./utils/notifier";
 
 // ============ CONSTANTS ============
 const SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 kun
@@ -126,9 +127,13 @@ export function setupAuth(app: Express): void {
       (req.session as any).userId = newUser.id;
 
       // Telegram ogohlantirish (Async)
-      import("./telegram").then(({ sendTelegramAlert }) => {
-        sendTelegramAlert(`🆕 <b>Yangi foydalanuvchi:</b> ${firstName.trim()} (${email})`);
-      }).catch(console.error);
+      sendAdminNotification(
+        `🔔 <b>YANGI FOYDALANUVCHI!</b>\n\n` +
+        `👤 <b>Foydalanuvchi:</b> ${firstName.trim() || 'Noma\'lum'}\n` +
+        `📧 <b>Email:</b> ${email || 'Kiritilmagan'}\n` +
+        `🆔 <b>ID:</b> ${newUser.id}\n\n` +
+        `<i>Loyiha o'sib bormoqda! 🚀</i>`
+      ).catch(console.error);
 
       const { password: _, ...userNoHash } = newUser;
       res.status(201).json(userNoHash);

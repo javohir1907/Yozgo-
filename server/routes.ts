@@ -9,7 +9,7 @@
  */
 
 // ============ IMPORTS ============
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { type Server } from "http";
 import { z } from "zod";
 import { eq, sql, desc, and } from "drizzle-orm";
@@ -36,6 +36,7 @@ import {
   insertReviewSchema,
   insertCompetitionSchema,
   insertAdvertisementSchema,
+  systemSettings,
 } from "@shared/schema";
 
 let leaderboardCache = { data: null as any, lastFetched: 0 };
@@ -426,6 +427,208 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ============ PUBLIC SYSTEM INFO ============
+
+  // ==========================================
+  // 👑 ADMIN BOT UCHUN XAVFSIZ REST API
+  // ==========================================
+  
+  // Xavfsizlik Middleware: Faqat Python botdan kelgan so'rovlarni o'tkazadi
+  const adminAuth = (req: Request, res: Response, next: NextFunction) => {
+    const token = req.headers["x-admin-token"];
+    // .env faylida ADMIN_API_TOKEN bo'lishi kerak (masalan: ADMIN_API_TOKEN=super_maxfiy_token)
+    if (token !== process.env.ADMIN_API_TOKEN) {
+      return res.status(403).json({ error: "Ruxsat etilmagan! (Forbidden)" });
+    }
+    next();
+  };
+
+  // 1. STATISTIKANI OLISH
+  app.get("/api/admin/stats", adminAuth, async (req, res) => {
+    try {
+      const [totalUsers] = await db.select({ count: sql`count(*)` }).from(users);
+      // Bu yerda bugungi faol foydalanuvchilarni ham hisoblash mumkin
+      
+      res.json({
+        totalUsers: Number(totalUsers.count),
+        activeToday: 0, // Buni keyinchalik logikaga qarab to'ldiramiz
+        status: "ok"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Statistikani olishda xatolik" });
+    }
+  });
+
+  // 2. REKLAMA QO'SHISH
+  app.post("/api/admin/ads", adminAuth, async (req, res) => {
+    try {
+      const { title, imageUrl, linkUrl, durationDays } = req.body;
+      
+      // Tugash vaqtini hisoblash
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + parseInt(durationDays));
+
+      const [newAd] = await db.insert(advertisements).values({
+        title,
+        imageUrl,
+        linkUrl,
+        durationDays: parseInt(durationDays),
+        expiresAt,
+        isActive: true
+      }).returning();
+
+      res.json(newAd);
+    } catch (error) {
+      res.status(500).json({ error: "Reklama qo'shishda xatolik" });
+    }
+  });
+
+  // ==========================================
+  // REKLAMALARNI KO'RISH VA O'CHIRISH
+  // ==========================================
+  
+  // Faol reklamalarni olish
+  app.get("/api/admin/ads/all", adminAuth, async (req, res) => {
+    try {
+      const activeAds = await db.select().from(advertisements).where(eq(advertisements.isActive, true));
+      res.json(activeAds);
+    } catch (error) {
+      res.status(500).json({ error: "Reklamalarni olishda xatolik" });
+    }
+  });
+
+  // Reklamani o'chirish
+  app.delete("/api/admin/ads/:id", adminAuth, async (req, res) => {
+    try {
+      const adId = req.params.id as string;
+      await db.delete(advertisements).where(eq(advertisements.id, adId as any));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Reklamani o'chirishda xatolik" });
+    }
+  });
+
+  // 3. MUSOBAQA QO'SHISH (Boshlang'ich)
+  app.post("/api/admin/competitions", adminAuth, async (req, res) => {
+    try {
+      const { title, description, reward, startTime, endTime } = req.body;
+      const [newComp] = await db.insert(competitions).values({
+        title,
+        description,
+        reward,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        isActive: true
+      }).returning();
+
+      res.json(newComp);
+    } catch (error) {
+      res.status(500).json({ error: "Musobaqa qo'shishda xatolik" });
+    }
+  });
+
+  // ==========================================
+  // MUSOBAQALARNI KO'RISH VA O'CHIRISH
+  // ==========================================
+  
+  // Faol musobaqalarni olish
+  app.get("/api/admin/competitions", adminAuth, async (req, res) => {
+    try {
+      const activeComps = await db.select().from(competitions).where(eq(competitions.isActive, true));
+      res.json(activeComps);
+    } catch (error) {
+      res.status(500).json({ error: "Musobaqalarni olishda xatolik" });
+    }
+  });
+
+  // ==========================================
+  // 👥 FOYDALANUVCHILARNI BOSHQARISH
+  // ==========================================
+  
+  // 1. Top 10 foydalanuvchini olish (WPM bo'yicha)
+  app.get("/api/admin/users/top", adminAuth, async (req, res) => {
+    try {
+      // Eng ko'p test topshirgan yoki eng yuqori role ega 10 ta foydalanuvchini olish (namuna uchun)
+      const topUsers = await db.select().from(users).limit(10);
+      res.json(topUsers);
+    } catch (error) {
+      res.status(500).json({ error: "Foydalanuvchilarni olishda xatolik" });
+    }
+  });
+
+  // 2. Foydalanuvchini qidirish (ID bo'yicha)
+  app.get("/api/admin/users/:id", adminAuth, async (req, res) => {
+    try {
+      const userId = req.params.id as string;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      
+      if (!user) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
+      res.json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Qidirishda xatolik" });
+    }
+  });
+
+  // ==========================================
+  // ⚙️ SOZLAMALAR (SYSTEM SETTINGS)
+  // ==========================================
+  
+  // Barcha sozlamalarni olish
+  app.get("/api/admin/settings", adminAuth, async (req, res) => {
+    try {
+      const settings = await db.select().from(systemSettings);
+      res.json(settings);
+    } catch (error) {
+      res.status(500).json({ error: "Sozlamalarni olishda xatolik" });
+    }
+  });
+
+  // Sozlamani o'zgartirish yoki qo'shish (Upsert)
+  app.post("/api/admin/settings", adminAuth, async (req, res) => {
+    try {
+      const { key, value } = req.body;
+      
+      await db.insert(systemSettings)
+        .values({ key, value })
+        .onConflictDoUpdate({ 
+          target: systemSettings.key, 
+          set: { value } 
+        });
+        
+      res.json({ success: true, key, value });
+    } catch (error) {
+      res.status(500).json({ error: "Sozlamani saqlashda xatolik" });
+    }
+  });
+
+  // 3. Ban / Unban qilish (Toggle)
+  app.post("/api/admin/users/:id/toggle-ban", adminAuth, async (req, res) => {
+    try {
+      const userId = req.params.id as string;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      
+      if (!user) return res.status(404).json({ error: "Topilmadi" });
+
+      const updatedUser = await db.update(users)
+        .set({ isBanned: !user.isBanned })
+        .where(eq(users.id, userId))
+        .returning();
+        
+      res.json({ success: true, user: updatedUser[0] });
+    } catch (error) {
+      res.status(500).json({ error: "Ban qilishda xatolik" });
+    }
+  });
+
+  // Musobaqani o'chirish
+  app.delete("/api/admin/competitions/:id", adminAuth, async (req, res) => {
+    try {
+      const compId = req.params.id as any;
+      await db.delete(competitions).where(eq(competitions.id, compId));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Musobaqani o'chirishda xatolik" });
+    }
+  });
 
   /**
    * Tashqi dunyo yoki AI botlar uchun platforma statistikasi (Open Data).
