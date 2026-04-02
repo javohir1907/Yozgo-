@@ -36,20 +36,23 @@ export function NavHeader() {
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b-[3px] border-primary shadow-[0_4px_10px_rgba(249,115,22,0.15)]">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity">
-            {/* Yorug' rejim (Light mode) uchun oq klaviaturali logotip */}
-            <img
-              src="/assets/logo-white-keys.png"
-              alt="YOZGO Logo (Light Mode)"
-              className="h-10 w-auto block dark:hidden drop-shadow-sm"
-            />
-
-            {/* Qorong'u rejim (Dark mode) uchun qora klaviaturali logotip */}
-            <img
-              src="/assets/logo-black-keys.png"
-              alt="YOZGO Logo (Dark Mode)"
-              className="h-10 w-auto hidden dark:block drop-shadow-sm"
-            />
+          <Link href="/" className="flex items-center group mr-6">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {["Y", "O", "Z", "G", "O"].map((letter, i) => (
+                <div
+                  key={i}
+                  className="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center cursor-pointer select-none rounded-lg border transition-all duration-75 font-sans font-black text-sm sm:text-base
+                             bg-white border-gray-200 text-gray-800 shadow-[0_4px_0_rgb(209,213,219)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_rgb(209,213,219)] active:translate-y-1 active:shadow-[0_0px_0_rgb(209,213,219)]
+                             dark:bg-[#28282b] dark:border-[#111] dark:text-[#fcfcfc] dark:shadow-[0_4px_0_rgb(10,10,10)] dark:hover:-translate-y-0.5 dark:hover:shadow-[0_6px_0_rgb(10,10,10)] dark:active:translate-y-1 dark:active:shadow-[0_0px_0_rgb(10,10,10)]"
+                >
+                  <span>{letter}</span>
+                  {/* Klaviaturalardagi F va J harflariga o'xshash orientir do'mboqchalar (O va G harflariga) */}
+                  {(i === 1 || i === 3) && (
+                    <div className="absolute bottom-[15%] w-[30%] h-[2px] bg-gray-400 dark:bg-[#555] rounded-full" />
+                  )}
+                </div>
+              ))}
+            </div>
           </Link>
 
           <nav className="hidden md:flex items-center gap-2">
