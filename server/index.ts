@@ -61,10 +61,6 @@ process.on("uncaughtException", (error: Error) => {
 
 // ============ MIDDLEWARES & SECURITY ============
 
-if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.requestHandler());
-  app.use(Sentry.Handlers.tracingHandler());
-}
 
 /**
  * Helmet: Xavfsizlik sarlavhalarini sozlash (CSP, HSTS, Frameguard)
@@ -240,7 +236,7 @@ if (!isTestEnvironment) {
   // ============ ERROR HANDLING ============
 
   if (process.env.SENTRY_DSN) {
-    app.use(Sentry.Handlers.errorHandler());
+    Sentry.setupExpressErrorHandler(app);
   }
 
   /**
