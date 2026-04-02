@@ -25,17 +25,12 @@ export const logger = winston.createLogger({
       datePattern: "YYYY-MM-DD",
       maxFiles: "14d",
     }),
-  ],
-});
-
-// Dasturlash (Development) jarayoni uchun chiroyli konsol log
-if (process.env.NODE_ENV !== "production") {
-  logger.add(
+    // Barcha muhitlarda ishlashi uchun Console transporti
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize(),
         winston.format.simple()
       ),
     })
-  );
-}
+  ],
+});
