@@ -29,8 +29,9 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
   const { t } = useI18n();
 
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden" data-testid="leaderboard-table">
-      <Table>
+    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full" data-testid="leaderboard-table">
+      <div className="overflow-x-auto w-full">
+        <Table className="min-w-[600px] w-full">
         <TableHeader className="bg-secondary/40">
           <TableRow>
             <TableHead className="w-[80px] text-center">#</TableHead>
@@ -107,6 +108,7 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   );
 }

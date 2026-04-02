@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Keyboard, Trophy, Users, Settings, User as UserIcon, LogOut, Globe, Moon, Sun } from "lucide-react";
+import { Keyboard, Trophy, Users, Settings, User as UserIcon, LogOut, Globe, Moon, Sun, Menu } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/lib/theme";
 import { useI18n, type UILanguage } from "@/lib/i18n";
@@ -81,6 +81,26 @@ export function NavHeader() {
         </div>
 
         <div className="flex items-center gap-2 border-l-2 border-muted pl-4">
+          {/* Mobil Menyusi (Gamburger) - Faqat telefonda ko'rinadi */}
+          <div className="md:hidden flex items-center mr-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                  <Menu className="w-6 h-6" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 font-sans font-medium rounded-xl border border-border shadow-md">
+                {navItems.map((item) => (
+                  <DropdownMenuItem key={item.href} asChild className="cursor-pointer py-3">
+                    <Link href={item.href} className="flex items-center w-full gap-3">
+                      <item.icon className="w-5 h-5 text-primary" />
+                      <span>{item.label}</span>
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

@@ -492,14 +492,14 @@ export default function BattlePage() {
                     </div>
                   )}
                   <div className={!isAttemptActive ? "blur-md pointer-events-none opacity-40" : ""}>
-                     <div className="flex justify-center gap-20 mb-10">
+                     <div className="flex justify-center gap-8 sm:gap-20 mb-6 sm:mb-10">
                         <div className="text-center">
-                          <div className="text-6xl font-black text-primary leading-none">{wpm}</div>
-                          <div className="text-xs font-bold text-muted-foreground mt-2">WPM (TEZLIK)</div>
+                          <div className="text-5xl sm:text-6xl font-black text-primary leading-none">{wpm}</div>
+                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2">WPM (TEZLIK)</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-6xl font-black text-primary leading-none">{accuracy}%</div>
-                          <div className="text-xs font-bold text-muted-foreground mt-2">ANIQLIK</div>
+                          <div className="text-5xl sm:text-6xl font-black text-primary leading-none">{accuracy}%</div>
+                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2">ANIQLIK</div>
                         </div>
                      </div>
                      <TypingArea 
