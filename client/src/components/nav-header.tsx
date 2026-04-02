@@ -38,17 +38,17 @@ export function NavHeader() {
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity">
             {/* Yorug' rejim (Light mode) uchun oq klaviaturali logotip */}
-            <img 
-              src="/assets/white-logo.png" 
-              alt="YOZGO Logo" 
-              className="h-10 w-auto block dark:hidden" 
+            <img
+              src="/assets/logo-white-keys.png"
+              alt="YOZGO Logo (Light Mode)"
+              className="h-10 w-auto block dark:hidden drop-shadow-sm"
             />
-            
+
             {/* Qorong'u rejim (Dark mode) uchun qora klaviaturali logotip */}
-            <img 
-              src="/assets/dark-logo.jpg" 
-              alt="YOZGO Logo" 
-              className="h-10 w-auto hidden dark:block" 
+            <img
+              src="/assets/logo-black-keys.png"
+              alt="YOZGO Logo (Dark Mode)"
+              className="h-10 w-auto hidden dark:block drop-shadow-sm"
             />
           </Link>
 
@@ -59,11 +59,10 @@ export function NavHeader() {
                 <Link key={item.href} href={item.href}>
                   <Button
                     variant="ghost"
-                    className={`relative gap-2 h-10 px-4 transition-all duration-300 font-bold ${
-                      isActive
+                    className={`relative gap-2 h-10 px-4 transition-all duration-300 font-bold ${isActive
                         ? "text-primary bg-primary/10 hover:bg-primary/20"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
+                      }`}
                     data-testid={`link-nav-${item.href.replace("/", "")}`}
                   >
                     {isActive && (

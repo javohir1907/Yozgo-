@@ -97,16 +97,19 @@ export default function LandingPage() {
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-background">
         <div className="container relative z-30 px-4 flex flex-col items-center justify-center pt-10">
           {/* Asosiy Katta Logotip */}
-          <div className="flex justify-center mb-10">
-            <img
-              src="/assets/oq%20logo%20yozgo.jpg"
-              alt="YOZGO Platformasi"
-              className="h-16 md:h-24 w-auto block dark:hidden drop-shadow-sm"
+          <div className="flex justify-center mb-10" data-testid="logo-container">
+            {/* Light mode: Yirik oq klavishli logo */}
+            <img 
+              src="/assets/logo-white-keys.png" 
+              alt="YOZGO Logo (Light Mode)" 
+              className="h-20 sm:h-28 md:h-36 w-auto block dark:hidden drop-shadow-lg transition-all" 
             />
-            <img
-              src="/assets/YOZGO-logotipi.jpg"
-              alt="YOZGO Platformasi"
-              className="h-16 md:h-24 w-auto hidden dark:block drop-shadow-sm"
+            
+            {/* Dark mode: Yirik qora klavishli logo */}
+            <img 
+              src="/assets/logo-black-keys.png" 
+              alt="YOZGO Logo (Dark Mode)" 
+              className="h-20 sm:h-28 md:h-36 w-auto hidden dark:block drop-shadow-lg transition-all" 
             />
           </div>
 
