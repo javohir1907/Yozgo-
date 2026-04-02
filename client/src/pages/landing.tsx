@@ -93,17 +93,17 @@ export default function LandingPage() {
         description="YOZGO - O'zbekistondagi eng yirik tez yozish va musobaqalar platformasi. Musobaqalarda qatnashing va mahoratingizni oshiring."
       />
 
-      {/* Hero Section - Edge-to-Edge Full Spread Style */}
-      <section className="relative min-h-[95vh] flex items-center justify-center overflow-hidden bg-background">
+      {/* Hero Section - Edge-to-Edge Full Spread Style (Title Top, Buttons Bottom) */}
+      <section className="relative min-h-[95vh] flex flex-col items-center justify-center overflow-hidden bg-background">
         
-        {/* 1. Background Image Container - Absolute Full Spread (ikki devorga tegadi) */}
+        {/* 1. Background Image Container - Absolute Full Spread */}
         <div className="absolute inset-0 w-full h-full z-0" data-testid="logo-background-container">
           {/* Light mode: Yirik oq klavishli rasm */}
           <img 
             src="/assets/logo-white-keys.png" 
             alt="YOZGO Background" 
             className="w-full h-full object-cover block dark:hidden" 
-            style={{ mixBlendMode: 'multiply' }} /* Blending fallback as requested */
+            style={{ mixBlendMode: 'multiply' }} 
           />
           
           {/* Dark mode: Yirik qora klavishli rasm */}
@@ -114,24 +114,30 @@ export default function LandingPage() {
           />
         </div>
 
-        {/* 2. Content Container (Matnlar va Tugmalar) - Rasmning toza qismiga tushadi */}
-        <div className="container relative z-10 px-4 flex flex-col items-center justify-center pt-64 md:pt-80 lg:pt-96 pb-12">
-            {/* 'pt' (padding-top) yordamida matnlarni klavishlar zonasidan pastga surdik */}
-          <div className="text-center max-w-4xl mx-auto flex flex-col items-center bg-background/80 backdrop-blur-lg p-10 rounded-3xl shadow-xl border border-border">
-            {/* Matnlarni glassmorphism kartochkasiga o'radik, bu o'qiluvchanlikni ta'minlaydi */}
+        {/* 2. Content Container - Split into Top (Title) and Bottom (Subtitle & Buttons) */}
+        <div className="container relative z-10 px-4 w-full min-h-[95vh] flex flex-col items-center justify-between pt-24 pb-12 md:pt-32 md:pb-20">
+          
+          {/* Yuqori qism: Asosiy Sarlavha (Klavishlar tepasida) */}
+          <div className="text-center w-full max-w-5xl mx-auto px-4 mt-4">
             <motion.h2
-              className="text-4xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground mb-6 tracking-tight drop-shadow-md"
-              initial={{ opacity: 0, y: 20 }}
+              className="text-4xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground tracking-tight drop-shadow-xl"
+              initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
               {t.landing.heroTitle}
             </motion.h2>
+          </div>
 
+          {/* O'rta bo'shliq (Klavishlarning aniq ko'rinishi uchun) */}
+          <div className="flex-1" />
+
+          {/* Pastki qism: Subtitle va Tugmalar (Klavishlar tagida) */}
+          <div className="text-center max-w-4xl mx-auto flex flex-col items-center bg-background/80 backdrop-blur-lg p-8 md:p-10 rounded-3xl shadow-xl border border-border">
             <motion.div
-              className="text-lg md:text-2xl text-foreground font-medium mb-10 bg-card px-8 py-4 rounded-full shadow-sm border border-border"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              className="text-lg md:text-2xl text-foreground font-medium mb-8 bg-card px-8 py-4 rounded-full shadow-sm border border-border"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
             >
               {t.landing.heroSubtitle}
@@ -145,11 +151,12 @@ export default function LandingPage() {
               </Link>
               <Link href="/leaderboard">
                 <Button size="lg" variant="outline" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase text-lg bg-background/90 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground shadow-lg">
-                  {t.leaderboard.title || "View Leaderboard"}
+                  {t.landing.viewLeaderboard}
                 </Button>
               </Link>
             </div>
           </div>
+
         </div>
       </section>
 
