@@ -93,11 +93,11 @@ export default function LandingPage() {
         description="YOZGO - O'zbekistondagi eng yirik tez yozish va musobaqalar platformasi. Musobaqalarda qatnashing va mahoratingizni oshiring."
       />
 
-      {/* Hero Section - Edge-to-Edge Full Spread Style (Title Top, Buttons Bottom) */}
+      {/* Hero Section - Edge-to-Edge Full Spread Style (Enhanced Dark Mode) */}
       <section className="relative min-h-[95vh] flex flex-col items-center justify-center overflow-hidden bg-background">
         
         {/* 1. Background Image Container - Absolute Full Spread */}
-        <div className="absolute inset-0 w-full h-full z-0" data-testid="logo-background-container">
+        <div className="absolute inset-0 w-full h-full z-0 opacity-80" data-testid="logo-background-container">
           {/* Light mode: Yirik oq klavishli rasm */}
           <img 
             src="/assets/logo-white-keys.png" 
@@ -106,11 +106,12 @@ export default function LandingPage() {
             style={{ mixBlendMode: 'multiply' }} 
           />
           
-          {/* Dark mode: Yirik qora klavishli rasm */}
+          {/* Dark mode: Yirik qora klavishli rasm - Kontrast oshirilgan ('upscale' effekti) */}
           <img 
             src="/assets/logo-black-keys.png" 
             alt="YOZGO Background" 
             className="w-full h-full object-cover hidden dark:block" 
+            style={{ filter: 'brightness(1.15) contrast(1.1)' }} /* Klavishlarni yaqqolroq ko'rsatish uchun kontrast */
           />
         </div>
 
