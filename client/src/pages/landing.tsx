@@ -93,26 +93,29 @@ export default function LandingPage() {
         description="YOZGO - O'zbekistondagi eng yirik tez yozish va musobaqalar platformasi. Musobaqalarda qatnashing va mahoratingizni oshiring."
       />
 
-      {/* Hero Section */}
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-background">
-        <div className="container relative z-30 px-4 flex flex-col items-center justify-center pt-10">
-          {/* Asosiy Katta Logotip */}
-          <div className="flex justify-center mb-12 w-full max-w-2xl mx-auto" data-testid="logo-container">
-            {/* Light mode: Yirik oq klavishli logo */}
-            <img 
-              src="/assets/logo-white-keys.png" 
-              alt="YOZGO Platformasi" 
-              className="w-full max-w-md md:max-w-lg lg:max-w-xl h-auto block dark:hidden drop-shadow-sm transition-all hover:scale-105" 
-              style={{ mixBlendMode: 'multiply' }} /* Helps blend solid backgrounds on light themes */
-            />
-            {/* Dark mode: Yirik qora klavishli logo */}
-            <img 
-              src="/assets/logo-black-keys.png" 
-              alt="YOZGO Platformasi" 
-              className="w-full max-w-md md:max-w-lg lg:max-w-xl h-auto hidden dark:block drop-shadow-sm transition-all hover:scale-105" 
-            />
-          </div>
+      {/* Hero Section - Full Width Background Image Style */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
+        
+        {/* 1. Logotip Konteyneri - Ekranga to'liq yoyish (ikki devor tegadi) */}
+        <div className="absolute inset-0 w-full h-full flex items-start justify-center pt-20 z-0 opacity-80" data-testid="logo-background-container">
+          {/* Light mode: Katta oq klavishli logo */}
+          <img 
+            src="/assets/logo-white-keys.png" 
+            alt="YOZGO Background" 
+            className="w-full max-w-[1400px] h-auto block dark:hidden object-contain" 
+            style={{ mixBlendMode: 'multiply' }} /* JPEG fonini biroz yashirishga yordam beradi */
+          />
+          
+          {/* Dark mode: Katta qora klavishli logo */}
+          <img 
+            src="/assets/logo-black-keys.png" 
+            alt="YOZGO Background" 
+            className="w-full max-w-[1400px] h-auto hidden dark:block object-contain" 
+          />
+        </div>
 
+        {/* 2. Kontent - Logotip ustida turadigan qism */}
+        <div className="container relative z-10 px-4 flex flex-col items-center justify-center pt-10 mt-[-150px]">
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
             <motion.h2
               className="text-3xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground mb-6 tracking-tight"
@@ -124,7 +127,7 @@ export default function LandingPage() {
             </motion.h2>
 
             <motion.div
-              className="text-base md:text-2xl bg-secondary text-secondary-foreground font-medium mb-12 px-6 py-3 rounded-full shadow-sm"
+              className="text-base md:text-2xl text-foreground/90 font-medium mb-12 bg-card px-6 py-3 rounded-full shadow-sm border border-border"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -134,12 +137,12 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto px-4">
               <Link href="/typing-test">
-                <Button size="lg" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase">
+                <Button size="lg" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase text-lg">
                   {t.landing.startTyping}
                 </Button>
               </Link>
               <Link href="/leaderboard">
-                <Button size="lg" variant="outline" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase">
+                <Button size="lg" variant="outline" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase text-lg bg-background hover:bg-accent hover:text-accent-foreground">
                   {t.landing.viewLeaderboard}
                 </Button>
               </Link>
