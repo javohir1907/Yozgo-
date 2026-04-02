@@ -88,8 +88,8 @@ export default function LandingPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <SEO 
-        title="YOZGO | O'zbekiston tez yozish platformasi" 
+      <SEO
+        title="YOZGO | O'zbekiston tez yozish platformasi"
         description="YOZGO - O'zbekistondagi eng yirik tez yozish va musobaqalar platformasi. Musobaqalarda qatnashing va mahoratingizni oshiring."
       />
 
@@ -98,15 +98,15 @@ export default function LandingPage() {
         <div className="container relative z-30 px-4 flex flex-col items-center justify-center pt-10">
           {/* Asosiy Katta Logotip */}
           <div className="flex justify-center mb-10">
-            <img 
-              src="/assets/oq%20logo%20yozgo.jpg" 
-              alt="YOZGO Platformasi" 
-              className="h-16 md:h-24 w-auto block dark:hidden drop-shadow-sm" 
+            <img
+              src="/assets/oq%20logo%20yozgo.jpg"
+              alt="YOZGO Platformasi"
+              className="h-16 md:h-24 w-auto block dark:hidden drop-shadow-sm"
             />
-            <img 
-              src="/assets/YOZGO-logotipi.jpg" 
-              alt="YOZGO Platformasi" 
-              className="h-16 md:h-24 w-auto hidden dark:block drop-shadow-sm" 
+            <img
+              src="/assets/YOZGO-logotipi.jpg"
+              alt="YOZGO Platformasi"
+              className="h-16 md:h-24 w-auto hidden dark:block drop-shadow-sm"
             />
           </div>
 
@@ -229,8 +229,8 @@ function FeatureCard({ icon, title, description }: FeatureCardProps) {
  */
 function CompetitionWaitlistModal({ competition, user, queryClient }: { competition: any, user: any, queryClient: any }) {
   const [open, setOpen] = useState(false);
-  
-  const { data: participants } = useQuery<any[]>({ 
+
+  const { data: participants } = useQuery<any[]>({
     queryKey: [`/api/competitions/${competition.id}/participants`],
     enabled: open
   });

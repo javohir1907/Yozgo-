@@ -39,14 +39,14 @@ export function NavHeader() {
           <Link href="/" className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity">
             {/* Yorug' rejim (Light mode) uchun oq klaviaturali logotip */}
             <img 
-              src="/assets/oq%20logo%20yozgo.jpg" 
+              src="/assets/white-logo.png" 
               alt="YOZGO Logo" 
               className="h-10 w-auto block dark:hidden" 
             />
             
             {/* Qorong'u rejim (Dark mode) uchun qora klaviaturali logotip */}
             <img 
-              src="/assets/YOZGO-logotipi.jpg" 
+              src="/assets/dark-logo.jpg" 
               alt="YOZGO Logo" 
               className="h-10 w-auto hidden dark:block" 
             />
