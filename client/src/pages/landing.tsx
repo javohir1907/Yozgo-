@@ -93,44 +93,43 @@ export default function LandingPage() {
         description="YOZGO - O'zbekistondagi eng yirik tez yozish va musobaqalar platformasi. Musobaqalarda qatnashing va mahoratingizni oshiring."
       />
 
-      {/* Hero Section - Full Width Background Image Style */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
+      {/* Hero Section - Professional Banner Style */}
+      <section className="relative min-h-[90vh] flex flex-col items-center justify-center overflow-hidden bg-background pt-24 pb-12">
         
-        {/* 1. Logotip Konteyneri - Ekranga to'liq yoyish (ikki devor tegadi) */}
-        <div className="absolute inset-0 w-full h-full flex items-start justify-center pt-20 z-0 opacity-80" data-testid="logo-background-container">
-          {/* Light mode: Katta oq klavishli logo */}
+        {/* Katta Banner Logotiplar */}
+        <div className="w-full max-w-5xl px-4 mb-12 relative z-10" data-testid="logo-container">
+          {/* Light mode: Oq klavishli rasm */}
           <img 
             src="/assets/logo-white-keys.png" 
-            alt="YOZGO Background" 
-            className="w-full max-w-[1400px] h-auto block dark:hidden object-contain" 
-            style={{ mixBlendMode: 'multiply' }} /* JPEG fonini biroz yashirishga yordam beradi */
+            alt="YOZGO Platformasi" 
+            className="w-full h-auto object-cover rounded-3xl shadow-xl block dark:hidden border border-border" 
           />
           
-          {/* Dark mode: Katta qora klavishli logo */}
+          {/* Dark mode: Qora klavishli rasm */}
           <img 
             src="/assets/logo-black-keys.png" 
-            alt="YOZGO Background" 
-            className="w-full max-w-[1400px] h-auto hidden dark:block object-contain" 
+            alt="YOZGO Platformasi" 
+            className="w-full h-auto object-cover rounded-3xl shadow-xl hidden dark:block border border-border" 
           />
         </div>
 
-        {/* 2. Kontent - Logotip ustida turadigan qism */}
-        <div className="container relative z-10 px-4 flex flex-col items-center justify-center pt-10 mt-[-150px]">
+        {/* Asosiy Matnlar va Tugmalar */}
+        <div className="container relative z-10 px-4 flex flex-col items-center justify-center">
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
             <motion.h2
-              className="text-3xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground mb-6 tracking-tight"
+              className="text-4xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground mb-6 tracking-tight"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+              transition={{ delay: 0.1 }}
             >
               {t.landing.heroTitle}
             </motion.h2>
 
             <motion.div
-              className="text-base md:text-2xl text-foreground/90 font-medium mb-12 bg-card px-6 py-3 rounded-full shadow-sm border border-border"
+              className="text-lg md:text-2xl text-foreground/90 font-medium mb-10 bg-card px-8 py-4 rounded-full shadow-sm border border-border"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 0.3 }}
             >
               {t.landing.heroSubtitle}
             </motion.div>
