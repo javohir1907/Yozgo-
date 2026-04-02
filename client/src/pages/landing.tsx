@@ -93,31 +93,31 @@ export default function LandingPage() {
         description="YOZGO - O'zbekistondagi eng yirik tez yozish va musobaqalar platformasi. Musobaqalarda qatnashing va mahoratingizni oshiring."
       />
 
-      {/* Hero Section - Professional Banner Style */}
-      <section className="relative min-h-[90vh] flex flex-col items-center justify-center overflow-hidden bg-background pt-24 pb-12">
+      {/* Hero Section - Overlapping Banner Style */}
+      <section className="relative min-h-[90vh] flex flex-col items-center justify-center overflow-hidden bg-background pt-12 pb-12">
         
         {/* Katta Banner Logotiplar */}
-        <div className="w-full max-w-5xl px-4 mb-12 relative z-10" data-testid="logo-container">
+        <div className="w-full max-w-3xl px-4 relative z-0" data-testid="logo-container">
           {/* Light mode: Oq klavishli rasm */}
           <img 
             src="/assets/logo-white-keys.png" 
             alt="YOZGO Platformasi" 
-            className="w-full h-auto object-cover rounded-3xl shadow-xl block dark:hidden border border-border" 
+            className="w-full h-auto object-cover rounded-3xl shadow-xl block dark:hidden border border-border mx-auto" 
           />
           
           {/* Dark mode: Qora klavishli rasm */}
           <img 
             src="/assets/logo-black-keys.png" 
             alt="YOZGO Platformasi" 
-            className="w-full h-auto object-cover rounded-3xl shadow-xl hidden dark:block border border-border" 
+            className="w-full h-auto object-cover rounded-3xl shadow-xl hidden dark:block border border-border mx-auto" 
           />
         </div>
 
-        {/* Asosiy Matnlar va Tugmalar */}
-        <div className="container relative z-10 px-4 flex flex-col items-center justify-center">
+        {/* Asosiy Matnlar va Tugmalar (Rasm ustiga chiqadi) */}
+        <div className="container relative z-10 px-4 flex flex-col items-center justify-center -mt-20 sm:-mt-28 md:-mt-36 lg:-mt-44">
           <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
             <motion.h2
-              className="text-4xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground mb-6 tracking-tight"
+              className="text-4xl md:text-5xl lg:text-6xl font-sans font-black uppercase text-foreground mb-6 tracking-tight drop-shadow-md"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -126,7 +126,7 @@ export default function LandingPage() {
             </motion.h2>
 
             <motion.div
-              className="text-lg md:text-2xl text-foreground/90 font-medium mb-10 bg-card px-8 py-4 rounded-full shadow-sm border border-border"
+              className="text-lg md:text-2xl text-foreground font-medium mb-10 bg-card/95 backdrop-blur-md px-8 py-4 rounded-full shadow-md border border-border"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
@@ -136,12 +136,12 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto px-4">
               <Link href="/typing-test">
-                <Button size="lg" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase text-lg">
+                <Button size="lg" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase text-lg shadow-lg">
                   {t.landing.startTyping}
                 </Button>
               </Link>
               <Link href="/leaderboard">
-                <Button size="lg" variant="outline" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase text-lg bg-background hover:bg-accent hover:text-accent-foreground">
+                <Button size="lg" variant="outline" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase text-lg bg-background/90 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground shadow-lg">
                   {t.landing.viewLeaderboard}
                 </Button>
               </Link>
