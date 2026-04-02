@@ -29,9 +29,9 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
   const { t } = useI18n();
 
   return (
-    <div className="rounded-md border bg-card" data-testid="leaderboard-table">
+    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden" data-testid="leaderboard-table">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-secondary/40">
           <TableRow>
             <TableHead className="w-[80px] text-center">#</TableHead>
             <TableHead>Foydalanuvchi</TableHead>
@@ -52,7 +52,10 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
             return (
               <TableRow
                 key={`${entry.rank}-${entry.userId}`}
-                className={cn(isCurrentUser && "bg-primary/10")}
+                className={cn(
+                  "hover:bg-secondary/20 transition-colors cursor-default", 
+                  isCurrentUser && "bg-primary/10 hover:bg-primary/20"
+                )}
                 data-testid={`row-user-${entry.username}`}
               >
                 <TableCell className="font-mono text-center font-bold">

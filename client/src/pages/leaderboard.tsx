@@ -46,7 +46,7 @@ export default function LeaderboardPage() {
           </p>
         </header>
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-muted/30 p-4 rounded-lg border">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-secondary/50 p-4 rounded-xl border border-border shadow-sm">
           <Tabs value={language} onValueChange={setLanguage} className="w-full md:w-auto">
             <TabsList data-testid="tabs-leaderboard-language">
               <TabsTrigger value="all">Hammasi</TabsTrigger>
@@ -89,7 +89,7 @@ export default function LeaderboardPage() {
 
                   if (displayEntries.length === 0) {
                     return (
-                      <div className="flex flex-col items-center justify-center py-24 px-4 text-center border-2 border-dashed rounded-xl bg-card/50">
+                      <div className="flex flex-col items-center justify-center py-24 px-4 text-center border-2 border-dashed border-border rounded-xl bg-secondary/20 shadow-sm">
                         <Trophy className="w-12 h-12 text-muted-foreground/30 mb-4" />
                         <p className="text-xl text-muted-foreground font-medium">Hali hech kim reytingga kirish uchun yetarli vaqt to'plamagan.</p>
                         <p className="text-muted-foreground/70 mt-2">Sizda reytingga kiradigan birinchi foydalanuvchi bo'lish imkoni bor (30 daqiqa yozing)!</p>

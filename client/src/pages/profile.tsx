@@ -147,7 +147,7 @@ export default function Profile() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-card/50 backdrop-blur-sm border-primary/10 hover-elevate transition-all">
+        <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               {t.profile.totalTests}
@@ -161,7 +161,7 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-primary/10 hover-elevate transition-all">
+        <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               {t.profile.bestWpm}
@@ -175,7 +175,7 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-primary/10 hover-elevate transition-all">
+        <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               {t.profile.avgWpm}
@@ -189,7 +189,7 @@ export default function Profile() {
           </CardContent>
         </Card>
 
-        <Card className="bg-card/50 backdrop-blur-sm border-primary/10 hover-elevate transition-all">
+        <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
               {t.profile.avgAccuracy}
@@ -204,7 +204,7 @@ export default function Profile() {
         </Card>
       </div>
 
-      <Card className="bg-card/50 backdrop-blur-sm border-primary/10">
+      <Card className="bg-card border border-border shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-primary" />
@@ -218,7 +218,7 @@ export default function Profile() {
         </CardContent>
       </Card>
 
-      <Card className="bg-card/50 backdrop-blur-sm border-primary/10">
+      <Card className="bg-card border border-border shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Key className="w-5 h-5 text-primary" />
@@ -255,7 +255,7 @@ export default function Profile() {
         </CardContent>
       </Card>
 
-      <Card className="bg-card/50 backdrop-blur-sm border-primary/10">
+      <Card className="bg-card border border-border shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <History className="w-5 h-5 text-primary" />
@@ -264,7 +264,7 @@ export default function Profile() {
         </CardHeader>
         <CardContent>
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-secondary/40">
               <TableRow>
                 <TableHead>WPM</TableHead>
                 <TableHead>{t.typing.accuracy}</TableHead>

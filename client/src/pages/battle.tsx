@@ -428,7 +428,7 @@ export default function BattlePage() {
       <SEO title={`Jang: ${battleCode} | YOZGO`} />
       
       {/* Top Bar */}
-      <div className="flex justify-between items-center mb-10 bg-black/5 p-4 rounded-2xl border border-white/5">
+      <div className="flex justify-between items-center mb-10 bg-secondary/50 p-4 rounded-2xl border border-border shadow-sm">
         <div className="flex items-center gap-4">
           <Badge className="text-xl font-mono px-4 py-1.5">{battleCode}</Badge>
           {isAdmin && <Badge variant="secondary" className="gap-1 animate-pulse"><Crown className="w-3" /> Admin</Badge>}
@@ -449,7 +449,7 @@ export default function BattlePage() {
                 <h2 className="text-3xl font-black uppercase mb-2">Lobbyda kutilmoqda</h2>
                 <p className="text-muted-foreground mb-8">Hozirda {room?.players.length || 0} ishtirokchi yig'ildi</p>
                 {isAdmin && (
-                  <div className="flex flex-col items-center gap-6 w-full max-w-md mb-8 bg-black/5 p-6 rounded-2xl border border-white/5">
+                  <div className="flex flex-col items-center gap-6 w-full max-w-md mb-8 bg-secondary/50 p-6 rounded-2xl border border-border shadow-sm">
                     <div className="w-full space-y-3">
                       <Label className="flex justify-between text-muted-foreground">Test urinish vaqti (soniya): <span className="font-black text-foreground">{testDuration}s</span></Label>
                       <Slider value={[testDuration]} max={120} min={15} step={15} onValueChange={(v) => setTestDuration(v[0])} />
@@ -476,9 +476,9 @@ export default function BattlePage() {
                        <Timer className="text-primary" /> {totalTimer !== null ? `${Math.floor(totalTimer/60)}:${(totalTimer%60).toString().padStart(2, '0')}` : "--:--"}
                     </span>
                   </div>
-                  <div className={`p-6 rounded-3xl border-2 transition-all text-center ${isAttemptActive ? "bg-orange-500/10 border-orange-500/30" : "bg-black/5 border-dashed"}`}>
+                  <div className={`p-6 rounded-3xl border transition-all text-center shadow-sm ${isAttemptActive ? "bg-primary/10 border-primary/30" : "bg-secondary/50 border-dashed"}`}>
                     <span className="text-sm font-bold opacity-50 block mb-1">TEST VAQTI</span>
-                    <span className="text-4xl font-black font-mono text-orange-500">{attemptTimer}s</span>
+                    <span className="text-4xl font-black font-mono text-primary">{attemptTimer}s</span>
                   </div>
                 </div>
 
@@ -498,7 +498,7 @@ export default function BattlePage() {
                           <div className="text-xs font-bold text-muted-foreground mt-2">WPM (TEZLIK)</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-6xl font-black text-orange-500 leading-none">{accuracy}%</div>
+                          <div className="text-6xl font-black text-primary leading-none">{accuracy}%</div>
                           <div className="text-xs font-bold text-muted-foreground mt-2">ANIQLIK</div>
                         </div>
                      </div>
@@ -528,7 +528,7 @@ export default function BattlePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {room?.players.map((p: any, i: number) => (
-                <div key={p.id} className="relative overflow-hidden flex items-center justify-between p-3 rounded-2xl bg-black/5 border border-transparent hover:border-primary/20 transition-all">
+                <div key={p.id} className="relative overflow-hidden flex items-center justify-between p-3 rounded-xl bg-secondary/40 border border-transparent hover:border-border transition-all">
                   {/* Live Progress Bar Background */}
                   <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
                   
