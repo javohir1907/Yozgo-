@@ -2,132 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GLOBAL ORANGE THEME */
-:root {
-  --background: 19 83% 51%; /* #eb6016 - Solid Orange */
-  --foreground: 0 0% 100%; /* White text */
-  --border: 19 50% 40%;
-  --card: 19 75% 45%;
-  --card-foreground: 0 0% 100%;
-  --card-border: 19 50% 40%;
-  
-  --sidebar: 19 83% 51%;
-  --sidebar-foreground: 0 0% 100%;
-  --sidebar-border: 19 50% 40%;
-  --sidebar-primary: 0 0% 15%; /* Dark Keys */
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 19 75% 45%;
-  --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-ring: 0 0% 100%;
-  
-  --popover: 19 75% 45%;
-  --popover-foreground: 0 0% 100%;
-  --popover-border: 19 50% 40%;
-  
-  --primary: 0 0% 15%; /* #262626 Dark Keys */
-  --primary-foreground: 0 0% 100%;    
-  
-  --secondary: 19 60% 35%; 
-  --secondary-foreground: 0 0% 100%; 
-  
-  --muted: 19 60% 40%;
-  --muted-foreground: 19 30% 90%;
-  
-  --accent: 19 75% 45%;
-  --accent-foreground: 0 0% 100%;
-  
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  
-  --input: 19 50% 40%;
-  --ring: 0 0% 100%;
-  --caret: 0 0% 100%;
-  
-  --correct: 142 76% 36%;
-  --error: 0 84% 60%;
-  --pending: 19 30% 90%;
+@layer base {
+  /* GLOBAL THEME - LIGHT MODE (Yorug' rejim) */
+  :root {
+    --background: 240 5% 96%; /* #F4F4F5 - Sokin och kulrang fon */
+    --foreground: 240 6% 10%; /* #18181B - To'q qora matn */
+    
+    --card: 0 0% 100%;
+    --card-foreground: 240 6% 10%;
+    --card-border: 240 6% 90%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 6% 10%;
+    --popover-border: 240 6% 90%;
+    
+    --primary: 25 95% 53%; /* #F97316 - To'q sariq (Accent rang) */
+    --primary-foreground: 0 0% 100%;    
+    
+    --secondary: 240 5% 90%; 
+    --secondary-foreground: 240 6% 10%; 
+    
+    --muted: 240 5% 90%;
+    --muted-foreground: 240 4% 46%; /* WCAG mos o'qiladigan kulrang matn */
+    
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 25 95% 53%; /* Focus effekti uchun to'q sariq */
+    --caret: 240 6% 10%;
+    
+    --correct: 142 76% 36%;
+    --error: 0 84% 60%;
+    --pending: 240 5% 90%;
 
-  --chart-1: 0 0% 15%;
-  --chart-2: 0 0% 15%;
-  --chart-3: 142 76% 36%;
-  --chart-4: 0 84% 60%;
-  --chart-5: 19 60% 40%;
+    --sidebar: 240 5% 96%;
+    --sidebar-foreground: 240 6% 10%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-primary: 25 95% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 90%;
+    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-ring: 25 95% 53%;
 
-  --font-sans: "Outfit", sans-serif;
-  --font-heading: "Outfit", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
-  
-  --radius: 0.75rem; 
-  --shadow-2xs: 0px 2px 0px 0px hsl(0, 0%, 0% / 0.1);
-  --shadow-xs: 0px 4px 0px 0px hsl(0, 0%, 0% / 0.15);
-  --shadow-sm: 0px 6px 0px 0px hsl(0, 0%, 0% / 0.2);
-  --shadow: 0px 8px 0px 0px hsl(0, 0%, 0% / 0.25);
-  --shadow-md: 0px 10px 0px 0px hsl(0, 0%, 0% / 0.3);
-  --shadow-lg: 0px 12px 10px -5px hsl(0, 0%, 0% / 0.4);
-  --shadow-xl: 0px 16px 15px -5px hsl(0, 0%, 0% / 0.5);
-  --shadow-2xl: 0px 20px 20px -10px hsl(0, 0%, 0% / 0.6);
-  --tracking-normal: 0em;
-  --spacing: 0.25rem;
+    --chart-1: 25 95% 53%;
+    --chart-2: 240 6% 10%;
+    --chart-3: 142 76% 36%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 240 4% 46%;
 
-  --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --primary-border: hsl(var(--primary));
-  --secondary-border: hsl(var(--secondary));
-  --muted-border: hsl(var(--muted));
-  --accent-border: hsl(var(--accent));
-  --destructive-border: hsl(var(--destructive));
-}
+    --font-sans: "Outfit", sans-serif;
+    --font-heading: "Outfit", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+    
+    --radius: 0.75rem; 
+  }
 
-.dark {
-  --background: 0 0% 5%;
-  --foreground: 0 0% 98%;
-  
-  --border: 0 0% 20%;
-  --card: 0 0% 8%;
-  --card-foreground: 0 0% 98%;
-  --card-border: 0 0% 15%;
-  
-  --sidebar: 0 0% 8%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-border: 0 0% 15%;
-  --sidebar-primary: 0 0% 15%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 15%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-ring: 0 0% 98%;
-  
-  --popover: 0 0% 8%;
-  --popover-foreground: 0 0% 98%;
-  --popover-border: 0 0% 15%;
-  
-  --primary: 19 83% 51%; /* Keep orange primary */
-  --primary-foreground: 0 0% 100%;
-  
-  --secondary: 0 0% 15%;
-  --secondary-foreground: 0 0% 98%;
-  
-  --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 65%;
-  
-  --accent: 19 83% 51%;
-  --accent-foreground: 0 0% 100%;
-  
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  
-  --input: 0 0% 20%;
-  --ring: 0 0% 80%;
-  --caret: 0 0% 98%;
-  
-  --correct: 142 76% 25%;
-  --error: 0 84% 40%;
-  --pending: 0 0% 20%;
-  
-  --chart-1: 0 0% 15%;
-  --chart-2: 0 0% 20%;
-  --chart-3: 142 76% 25%;
-  --chart-4: 0 84% 40%;
-  --chart-5: 0 0% 25%;
+  /* GLOBAL THEME - DARK MODE (Qorong'u rejim) */
+  .dark {
+    --background: 240 10% 4%; /* #09090B - Sokin to'q kulrang fon (ko'zni charchatmaydi) */
+    --foreground: 0 0% 98%; /* #FAFAFA - Oqish matn */
+    
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+    --card-border: 240 4% 16%;
+    
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
+    --popover-border: 240 4% 16%;
+    
+    --primary: 25 95% 53%; /* #F97316 - To'q sariq (Accent rang) */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
+    
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 25 95% 53%;
+    --caret: 0 0% 98%;
+    
+    --correct: 142 76% 25%;
+    --error: 0 84% 40%;
+    --pending: 240 4% 16%;
+
+    --sidebar: 240 10% 6%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-primary: 25 95% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4% 16%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-ring: 25 95% 53%;
+    
+    --chart-1: 25 95% 53%;
+    --chart-2: 0 0% 98%;
+    --chart-3: 142 76% 25%;
+    --chart-4: 0 84% 40%;
+    --chart-5: 240 5% 65%;
+  }
 }
 
 

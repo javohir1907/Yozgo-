@@ -36,20 +36,20 @@ export function NavHeader() {
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b-[3px] border-primary shadow-[0_4px_10px_rgba(249,115,22,0.15)]">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center group">
-            <div className="flex items-center gap-1.5 sm:gap-2 mr-4">
-              {["Y", "O", "Z", "G", "O"].map((letter, i) => (
-                <div
-                  key={i}
-                  className="keyboard-key-3d key-hover-ready w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center cursor-pointer select-none"
-                >
-                  <span className="keyboard-key-text text-sm sm:text-base">{letter}</span>
-                  {(i === 1 || i === 3) && (
-                    <div className="absolute bottom-[20%] w-[30%] h-[2px] bg-[#111] rounded-full z-10 opacity-70 shadow-[0_1px_0_rgba(255,255,255,0.1)]" />
-                  )}
-                </div>
-              ))}
-            </div>
+          <Link href="/" className="flex items-center gap-2 shrink-0 hover:opacity-90 transition-opacity">
+            {/* Yorug' rejim (Light mode) uchun oq klaviaturali logotip */}
+            <img 
+              src="/assets/oq%20logo%20yozgo.jpg" 
+              alt="YOZGO Logo" 
+              className="h-10 w-auto block dark:hidden" 
+            />
+            
+            {/* Qorong'u rejim (Dark mode) uchun qora klaviaturali logotip */}
+            <img 
+              src="/assets/YOZGO-logotipi.jpg" 
+              alt="YOZGO Logo" 
+              className="h-10 w-auto hidden dark:block" 
+            />
           </Link>
 
           <nav className="hidden md:flex items-center gap-2">

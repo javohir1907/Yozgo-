@@ -28,7 +28,7 @@ const WordBox = React.memo(
         return (
           <span
             ref={ref}
-            className="inline-block whitespace-nowrap text-muted-foreground/50 transition-colors word-box"
+            className="inline-block whitespace-nowrap text-muted-foreground/80 transition-colors word-box"
             data-testid={`word-${wordIdx}`}
           >
             {word.split("").map((char, charIdx) => (
@@ -41,7 +41,7 @@ const WordBox = React.memo(
       }
 
       const renderChar = (char: string, charIdx: number) => {
-        let colorClass = "text-muted-foreground/50";
+        let colorClass = "text-muted-foreground/80";
 
         if (charIdx < typedWord.length) {
           const typedChar = typedWord[charIdx];
@@ -261,7 +261,7 @@ export function TypingArea({
 
       <div
         ref={wordsRef}
-        className="flex flex-wrap gap-x-3 gap-y-3 text-[1.7rem] font-mono leading-relaxed select-none px-2 relative"
+        className="flex flex-wrap gap-x-3 gap-y-3 text-[1.5rem] md:text-[1.6rem] font-mono leading-relaxed select-none px-2 relative"
         style={{
           transform: `translateY(${offsetY}px)`,
           transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",

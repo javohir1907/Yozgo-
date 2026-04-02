@@ -85,26 +85,6 @@ export default function LandingPage() {
 
   // ============ RENDER HELPERS ============
 
-  /**
-   * 3D Effektli Logo harflarini generatsiya qilish.
-   */
-  const renderLogoCaps = () => (
-    <div className="flex gap-2 sm:gap-4 md:gap-6 mb-12">
-      {["Y", "O", "Z", "G", "O"].map((letter, i) => (
-        <div
-          key={i}
-          className="keyboard-key-3d key-hover-ready w-[4.5rem] h-[4.5rem] sm:w-24 sm:h-24 md:w-32 md:h-32 flex items-center justify-center cursor-default select-none group"
-        >
-          <span className="keyboard-key-text text-4xl sm:text-5xl md:text-7xl group-active:translate-y-[2px] transition-transform">
-            {letter}
-          </span>
-          {(i === 1 || i === 3) && (
-            <div className="absolute bottom-[20%] w-[30%] h-[3px] md:h-[4px] bg-[#111] rounded-full z-10 opacity-70 shadow-[0_1px_0_rgba(255,255,255,0.1)] group-active:translate-y-[2px] transition-transform" />
-          )}
-        </div>
-      ))}
-    </div>
-  );
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -116,9 +96,21 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-background">
         <div className="container relative z-30 px-4 flex flex-col items-center justify-center pt-10">
-          {renderLogoCaps()}
+          {/* Asosiy Katta Logotip */}
+          <div className="flex justify-center mb-10">
+            <img 
+              src="/assets/oq%20logo%20yozgo.jpg" 
+              alt="YOZGO Platformasi" 
+              className="h-16 md:h-24 w-auto block dark:hidden drop-shadow-sm" 
+            />
+            <img 
+              src="/assets/YOZGO-logotipi.jpg" 
+              alt="YOZGO Platformasi" 
+              className="h-16 md:h-24 w-auto hidden dark:block drop-shadow-sm" 
+            />
+          </div>
 
-          <div className="text-center max-w-4xl mx-auto flex flex-col items-center mt-4">
+          <div className="text-center max-w-4xl mx-auto flex flex-col items-center">
             <motion.h2
               className="text-3xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground mb-6 tracking-tight"
               initial={{ opacity: 0, y: 20 }}
@@ -129,7 +121,7 @@ export default function LandingPage() {
             </motion.h2>
 
             <motion.div
-              className="text-base md:text-2xl text-foreground/90 font-medium mb-12 bg-black/5 px-6 py-3 rounded-full shadow-sm"
+              className="text-base md:text-2xl bg-secondary text-secondary-foreground font-medium mb-12 px-6 py-3 rounded-full shadow-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -163,7 +155,7 @@ export default function LandingPage() {
       {/* About Us */}
       <section className="py-24 bg-background">
         <div className="container px-4">
-          <div className="max-w-4xl mx-auto border-t-4 border-foreground bg-black/5 p-8 rounded-2xl text-center">
+          <div className="max-w-4xl mx-auto border border-border bg-card shadow-sm p-8 md:p-12 rounded-2xl text-center">
             <h2 className="text-3xl lg:text-4xl font-bold mb-6">Biz Haqimizda</h2>
             <p className="text-muted-foreground md:text-lg leading-relaxed mb-4">
               YOZGO — bu yozish tezligini oshirishni xohlovchilar uchun maxsus platforma.
@@ -173,7 +165,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-24 bg-black/5">
+      <section className="py-24 bg-secondary/50">
         <div className="container px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <FeatureCard icon={<Zap />} title={t.landing.featureSpeed} description={t.landing.featureSpeedDesc} />
           <FeatureCard icon={<Globe />} title={t.landing.featureMultilingual} description={t.landing.featureMultilingualDesc} />
@@ -201,7 +193,7 @@ export default function LandingPage() {
       )}
 
       {/* Footer */}
-      <footer className="py-12 border-t mt-auto bg-black/5">
+      <footer className="py-12 border-t mt-auto bg-muted/30">
         <div className="container px-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <span className="font-bold text-2xl">YOZGO</span>
           <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} YOZGO.</p>
