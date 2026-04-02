@@ -11,11 +11,11 @@ router = Router()
 # ==========================================
 # 📢 REKLAMA ASOSIY MENYUSI
 # ==========================================
-@router.message(F.text == "📢 Reklamalar")
+@router.message(F.text.contains("Reklamalar"))
 async def ads_menu(message: Message):
     await message.answer("📢 Reklama bo'limiga xush kelibsiz. Nima qilamiz?", reply_markup=ads_menu_kb())
 
-@router.message(F.text == "🔙 Asosiy menyu")
+@router.message(F.text.contains("Asosiy menyu"))
 async def back_to_main(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("Asosiy menyu:", reply_markup=main_menu_kb())
@@ -23,7 +23,7 @@ async def back_to_main(message: Message, state: FSMContext):
 # ==========================================
 # ➕ REKLAMA QO'SHISH (FSM QADAMLARI)
 # ==========================================
-@router.message(F.text == "➕ Reklama qo'shish")
+@router.message(F.text.contains("Reklama qo'shish"))
 async def ad_start(message: Message, state: FSMContext):
     await state.set_state(AdState.title)
     await message.answer("1️⃣ Reklama sarlavhasi (yoki matnini) kiriting:", reply_markup=cancel_kb())
@@ -71,7 +71,7 @@ async def ad_duration(message: Message, state: FSMContext):
 # ==========================================
 # 📋 FAOL REKLAMALARNI KO'RISH
 # ==========================================
-@router.message(F.text == "📋 Faol reklamalar")
+@router.message(F.text.contains("Faol reklamalar"))
 async def show_active_ads(message: Message):
     msg = await message.answer("🔄 Reklamalar yuklanmoqda...")
     ads_data = await api_request("GET", "/ads/all")

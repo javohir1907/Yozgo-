@@ -12,14 +12,14 @@ router = Router()
 # ==========================================
 # 🏆 MUSOBAQALAR ASOSIY MENYUSI
 # ==========================================
-@router.message(F.text == "🏆 Musobaqalar")
+@router.message(F.text.contains("Musobaqalar"))
 async def comps_menu(message: Message):
     await message.answer("🏆 Musobaqalar bo'limiga xush kelibsiz. Nima qilamiz?", reply_markup=comps_menu_kb())
 
 # ==========================================
 # ➕ MUSOBAQA YARATISH (FSM QADAMLARI)
 # ==========================================
-@router.message(F.text == "➕ Musobaqa yaratish")
+@router.message(F.text.contains("Musobaqa yaratish"))
 async def comp_start(message: Message, state: FSMContext):
     await state.set_state(CompState.title)
     await message.answer("1️⃣ Musobaqa sarlavhasini kiriting:", reply_markup=cancel_kb())
@@ -86,7 +86,7 @@ async def comp_end_time(message: Message, state: FSMContext):
 # ==========================================
 # 📋 FAOL MUSOBAQALAR
 # ==========================================
-@router.message(F.text == "📋 Faol musobaqalar")
+@router.message(F.text.contains("Faol musobaqalar"))
 async def show_active_comps(message: Message):
     msg = await message.answer("🔄 Musobaqalar yuklanmoqda...")
     comps_data = await api_request("GET", "/competitions")

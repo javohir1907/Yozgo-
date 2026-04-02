@@ -11,14 +11,14 @@ router = Router()
 # ==========================================
 # 👥 FOYDALANUVCHILAR ASOSIY MENYUSI
 # ==========================================
-@router.message(F.text == "👥 Foydalanuvchilar")
+@router.message(F.text.contains("Foydalanuvchilar"))
 async def users_menu(message: Message):
     await message.answer("👥 Foydalanuvchilarni boshqarish bo'limi:", reply_markup=users_menu_kb())
 
 # ==========================================
 # 🏆 TOP LIDERLARNI KO'RISH
 # ==========================================
-@router.message(F.text == "🏆 Top Liderlar")
+@router.message(F.text.contains("Top Liderlar"))
 async def show_top_users(message: Message):
     msg = await message.answer("🔄 Liderlar yuklanmoqda...")
     data = await api_request("GET", "/users/top")
@@ -36,7 +36,7 @@ async def show_top_users(message: Message):
 # ==========================================
 # 🔍 FOYDALANUVCHINI QIDIRISH VA BAN QILISH
 # ==========================================
-@router.message(F.text == "🔍 Foydalanuvchini izlash")
+@router.message(F.text.contains("Foydalanuvchini izlash"))
 async def search_user_start(message: Message, state: FSMContext):
     await state.set_state(UserSearchState.user_id)
     await message.answer("🔍 Qidirmoqchi bo'lgan foydalanuvchining <b>ID raqamini / UUID</b> yuboring:", reply_markup=cancel_kb())

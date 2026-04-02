@@ -5,7 +5,7 @@ from api import api_request
 
 router = Router()
 
-@router.message(F.text == "⚙️ Sozlamalar")
+@router.message(F.text.contains("Sozlamalar"))
 async def settings_menu(message: Message):
     msg = await message.answer("🔄 Sozlamalar yuklanmoqda...")
     
