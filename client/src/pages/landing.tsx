@@ -93,16 +93,16 @@ export default function LandingPage() {
         description="YOZGO - O'zbekistondagi eng yirik tez yozish va musobaqalar platformasi. Musobaqalarda qatnashing va mahoratingizni oshiring."
       />
 
-      {/* Hero Section - Edge-to-Edge Full Spread Style (Enhanced Dark Mode) */}
+      {/* Hero Section - Edge-to-Edge Full Spread Style (Mobile Responsive Setup) */}
       <section className="relative min-h-[95vh] flex flex-col items-center justify-center overflow-hidden bg-background">
         
         {/* 1. Background Image Container - Absolute Full Spread */}
-        <div className="absolute inset-0 w-full h-full z-0 opacity-80" data-testid="logo-background-container">
+        <div className="absolute inset-0 w-full h-full z-0 opacity-80 flex items-center justify-center" data-testid="logo-background-container">
           {/* Light mode: Yirik oq klavishli rasm */}
           <img 
             src="/assets/logo-white-keys.png" 
             alt="YOZGO Background" 
-            className="w-full h-full object-cover block dark:hidden" 
+            className="w-full h-full object-contain md:object-cover object-center block dark:hidden p-4 md:p-0" 
             style={{ mixBlendMode: 'multiply' }} 
           />
           
@@ -110,16 +110,16 @@ export default function LandingPage() {
           <img 
             src="/assets/logo-black-keys.png" 
             alt="YOZGO Background" 
-            className="w-full h-full object-cover hidden dark:block" 
+            className="w-full h-full object-contain md:object-cover object-center hidden dark:block p-4 md:p-0" 
             style={{ filter: 'brightness(1.15) contrast(1.1)' }} /* Klavishlarni yaqqolroq ko'rsatish uchun kontrast */
           />
         </div>
 
         {/* 2. Content Container - Split into Top (Title) and Bottom (Subtitle & Buttons) */}
-        <div className="container relative z-10 px-4 w-full min-h-[95vh] flex flex-col items-center justify-between pt-24 pb-12 md:pt-32 md:pb-20">
+        <div className="container relative z-10 px-4 w-full min-h-[95vh] flex flex-col items-center justify-between pt-16 pb-8 md:pt-32 md:pb-20">
           
           {/* Yuqori qism: Asosiy Sarlavha (Klavishlar tepasida) */}
-          <div className="text-center w-full max-w-5xl mx-auto px-4 mt-4">
+          <div className="text-center w-full max-w-5xl mx-auto px-4 mt-2 md:mt-4">
             <motion.h2
               className="text-4xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground tracking-tight drop-shadow-xl"
               initial={{ opacity: 0, y: -20 }}
@@ -131,12 +131,12 @@ export default function LandingPage() {
           </div>
 
           {/* O'rta bo'shliq (Klavishlarning aniq ko'rinishi uchun) */}
-          <div className="flex-1" />
+          <div className="flex-1 min-h-[20vh] md:min-h-0" />
 
           {/* Pastki qism: Subtitle va Tugmalar (Klavishlar tagida) */}
-          <div className="text-center max-w-4xl mx-auto flex flex-col items-center bg-background/80 backdrop-blur-lg p-8 md:p-10 rounded-3xl shadow-xl border border-border">
+          <div className="text-center w-full max-w-4xl mx-auto flex flex-col items-center bg-background/80 backdrop-blur-lg p-6 md:p-10 rounded-3xl shadow-xl border border-border">
             <motion.div
-              className="text-lg md:text-2xl text-foreground font-medium mb-8 bg-card px-8 py-4 rounded-full shadow-sm border border-border"
+              className="text-base sm:text-lg md:text-2xl text-foreground font-medium mb-6 md:mb-8 bg-card px-6 py-3 md:px-8 md:py-4 rounded-full shadow-sm border border-border"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -144,14 +144,14 @@ export default function LandingPage() {
               {t.landing.heroSubtitle}
             </motion.div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center w-full sm:w-auto px-4 relative z-10">
-              <Link href="/typing-test">
-                <Button size="lg" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase text-lg shadow-lg">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center w-full sm:w-auto px-2 md:px-4 relative z-10">
+              <Link href="/typing-test" className="w-full sm:w-auto">
+                <Button size="lg" className="btn-3d w-full px-8 py-6 font-bold uppercase text-base md:text-lg shadow-lg">
                   {t.landing.startTyping}
                 </Button>
               </Link>
-              <Link href="/leaderboard">
-                <Button size="lg" variant="outline" className="btn-3d w-full sm:w-auto px-10 py-6 font-bold uppercase text-lg bg-background/90 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground shadow-lg">
+              <Link href="/leaderboard" className="w-full sm:w-auto">
+                <Button size="lg" variant="outline" className="btn-3d w-full px-8 py-6 font-bold uppercase text-base md:text-lg bg-background/90 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground shadow-lg">
                   {t.landing.viewLeaderboard}
                 </Button>
               </Link>
