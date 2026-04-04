@@ -465,12 +465,10 @@ export function startBot() {
       await bot?.sendMessage(chatId, "Yuklanmoqda...");
       try {
         await db.insert(advertisements).values({
-          title: state.title,
-          description: state.description,
-          imageUrl: state.imageUrl,
-          linkUrl: state.linkUrl,
-          startDate: new Date(),
-          endDate: new Date("2030-12-31T23:59:59.000Z"),
+          title: state.title || "Untitled",
+          imageUrl: state.imageUrl || null,
+          linkUrl: state.linkUrl || null,
+          expiresAt: new Date("2030-12-31T23:59:59.000Z"),
           isActive: true,
         });
         bot?.sendMessage(chatId, "Reklama saytga muvaffaqiyatli qo'shildi.");
@@ -491,7 +489,7 @@ export function startBot() {
           })
           .from(competitionParticipants)
           .innerJoin(users, eq(competitionParticipants.userId, users.id))
-          .where(eq(competitionParticipants.competitionId, id));
+          .where(eq(competitionParticipants.competitionId, Number(id)));
 
         if (participants.length === 0) {
           bot?.sendMessage(chatId, "Hali hech kim ushbu musobaqa uchun ro'yxatdan o'tmagan.");
@@ -511,10 +509,11 @@ export function startBot() {
       await bot?.sendMessage(chatId, "Yuklanmoqda...");
       try {
         await storage.createCompetition({
-          title: state.title,
-          date: new Date(state.date),
-          prize: state.prize || null,
-        });
+          title: state.title || "Untitled",
+          startTime: new Date(state.date || Date.now()),
+          endTime: new Date(state.date || Date.now()),
+          reward: state.prize || null,
+        } as any);
         bot?.sendMessage(chatId, "Musobaqa saytga joylandi.");
       } catch (e) {
         bot?.sendMessage(chatId, "Xatolik: " + (e as any).message);
@@ -526,8 +525,8 @@ export function startBot() {
       const id = query.data.replace("comp_cancel_", "");
       try {
         const { competitionParticipants } = require("@shared/schema");
-        await db.delete(competitionParticipants).where(eq(competitionParticipants.competitionId, id));
-        await db.delete(competitions).where(eq(competitions.id, id));
+        await db.delete(competitionParticipants).where(eq(competitionParticipants.competitionId, Number(id)));
+        await db.delete(competitions).where(eq(competitions.id, Number(id)));
         bot?.sendMessage(chatId, "Musobaqa bekor qilindi.");
       } catch (e) {
         bot?.sendMessage(chatId, "Xato: " + (e as any).message);
@@ -577,13 +576,13 @@ export function startBot() {
       }
       for (const ad of ads) {
         const status = ad.isActive ? "Aktiv" : "Nofaol";
-        const dateStr = ad.startDate ? new Date(ad.startDate).toLocaleString("uz-UZ") : "Noma'lum";
+        const dateStr = ad.createdAt ? new Date(ad.createdAt).toLocaleString("uz-UZ") : "Noma'lum";
         const text =
           `- ID: ${ad.id}\n` +
           `- Homiy nomi: ${ad.title}\n` +
           `- Havola: ${ad.linkUrl}\n` +
           `- Qo'shilgan sana: ${dateStr}\n` +
-          `- Click soni: ${ad.clicks || 0} marta\n` +
+          `- Kutilgan kunlar: ${ad.durationDays || 7} marta\n` +
           `- Holati: ${status}\n\n` +
           `Aktivlashtirish: /reklama_on ${ad.id}\n` +
           `O'chirish: /reklama_off ${ad.id}`;
@@ -627,19 +626,17 @@ export function startBot() {
       for (const c of comps) {
         let status = "Aktiv";
         if (!c.isActive) status = "Tugagan";
-        else if (new Date(c.date) > now) status = "Kutilmoqda";
+        else if (new Date(c.startTime || c.createdAt) > now) status = "Kutilmoqda";
 
         let text =
           `- ID raqami: ${c.id}\n` +
           `- Nomi: ${c.title}\n` +
-          `- Sanasi va vaqti: ${new Date(c.date).toLocaleString("uz-UZ")}\n` +
-          `- Sovrini: ${c.prize}\n` +
-          `- Ro'yxatdan o'tganlar soni: ${c.participantsCount || 0} kishi\n` +
+          `- Sanasi: ${new Date(c.startTime || c.createdAt).toLocaleString("uz-UZ")}\n` +
+          `- Sovrini: ${c.reward}\n` +
           `- Holati: ${status}`;
 
-        if (c.winnerName) text += `\n- G'olib: ${c.winnerName}`;
         if (c.isActive)
-          text += `\n\nG'olibni e'lon qilish va tugatish uchun:\n/musobaqa_tugat ${c.id} FOYDALANUVCHI_ISMI`;
+          text += `\n\nTugatish uchun:\n/musobaqa_tugat ${c.id} FOYDALANUVCHI_ISMI`;
 
         const opts = {
           reply_markup: c.isActive
@@ -669,8 +666,8 @@ export function startBot() {
     await bot?.sendMessage(msg.chat.id, "O'chirilmoqda...");
     try {
       const { competitionParticipants } = require("@shared/schema");
-      await db.delete(competitionParticipants).where(eq(competitionParticipants.competitionId, id));
-      await db.delete(competitions).where(eq(competitions.id, id));
+      await db.delete(competitionParticipants).where(eq(competitionParticipants.competitionId, Number(id)));
+      await db.delete(competitions).where(eq(competitions.id, Number(id)));
       bot?.sendMessage(msg.chat.id, "Musobaqa. o'chirildi.");
     } catch (e) {
       bot?.sendMessage(msg.chat.id, "Xato: " + (e as any).message);
@@ -684,8 +681,8 @@ export function startBot() {
     try {
       await db
         .update(competitions)
-        .set({ isActive: false, winnerName })
-        .where(eq(competitions.id, id));
+        .set({ isActive: false })
+        .where(eq(competitions.id, Number(id)));
       bot?.sendMessage(msg.chat.id, `Musobaqa tugatildi. G'olib: ${winnerName}`);
     } catch (e) {
       bot?.sendMessage(msg.chat.id, "Xatolik: " + (e as any).message);
@@ -693,15 +690,15 @@ export function startBot() {
   });
 
   // Scheduled check every 10 min
-  const alertedIds = new Set<string>();
+  const alertedIds = new Set<number>();
   setInterval(
     async () => {
       try {
         const comps = await db.select().from(competitions).where(eq(competitions.isActive, true));
         const now = new Date();
         for (const c of comps) {
-          if (!c.date) continue;
-          const diffHrs = (new Date(c.date).getTime() - now.getTime()) / (1000 * 3600);
+          if (!c.startTime) continue;
+          const diffHrs = (new Date(c.startTime).getTime() - now.getTime()) / (1000 * 3600);
           if (diffHrs > 0 && diffHrs <= 1 && !alertedIds.has(c.id)) {
             alertedIds.add(c.id);
             bot?.sendMessage(

@@ -262,7 +262,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(competitions)
       .where(eq(competitions.isActive, true))
-      .orderBy(competitions.date);
+      .orderBy(competitions.startTime);
   }
 
   async getActiveAdvertisements(): Promise<Advertisement[]> {
@@ -270,7 +270,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(advertisements)
       .where(eq(advertisements.isActive, true))
-      .orderBy(desc(advertisements.startDate));
+      .orderBy(desc(advertisements.createdAt));
   }
 
   async getAllAdvertisements(): Promise<Advertisement[]> {
@@ -281,19 +281,15 @@ export class DatabaseStorage implements IStorage {
     const [updatedAd] = await db
       .update(advertisements)
       .set({ isActive })
-      .where(eq(advertisements.id, id))
+      .where(eq(advertisements.id, Number(id)))
       .returning();
     return updatedAd;
   }
 
   async trackAdClick(id: string): Promise<void> {
-    const [adRecord] = await db.select().from(advertisements).where(eq(advertisements.id, id));
-    if (adRecord) {
-      await db
-        .update(advertisements)
-        .set({ clicks: (adRecord.clicks || 0) + 1 })
-        .where(eq(advertisements.id, id));
-    }
+    const numericId = Number(id);
+    const [adRecord] = await db.select().from(advertisements).where(eq(advertisements.id, numericId));
+    // Schema no longer has clicks, so we just return
   }
 
   async createCompetition(competition: InsertCompetition): Promise<Competition> {
