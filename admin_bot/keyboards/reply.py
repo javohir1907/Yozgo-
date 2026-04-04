@@ -38,6 +38,7 @@ def users_menu_kb():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="🏆 Top Liderlar"), KeyboardButton(text="🔍 Foydalanuvchini izlash")],
+            [KeyboardButton(text="📊 Bazani yuklash")],
             [KeyboardButton(text="🔙 Asosiy menyu")]
         ],
         resize_keyboard=True

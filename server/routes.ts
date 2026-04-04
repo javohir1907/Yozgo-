@@ -458,6 +458,73 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // ==========================================
+  // OMMAVIY XABAR (BROADCAST) API
+  // ==========================================
+  app.post("/api/admin/broadcast", adminAuth, async (req, res) => {
+    try {
+      const { text, photoId, videoId } = req.body;
+      
+      // Barcha foydalanuvchilarning Telegram ID'larini bazadan tortib olamiz
+      const allUsers = await db.execute(sql`SELECT telegram_id FROM users WHERE telegram_id IS NOT NULL`);
+      const userRows = allUsers.rows;
+      
+      if (!userRows || userRows.length === 0) {
+        return res.status(404).json({ error: "Bazada foydalanuvchilar topilmadi" });
+      }
+
+      // API darhol javob berishi uchun "await" qilmasdan 200 OK qaytaramiz.
+      res.status(200).json({ success: true, message: "Tarqatish orqa fonda boshlandi" });
+
+      // ORQA FONDA XABAR TARQATISH LOGIKASI (BACKGROUND)
+      const { getUserBot } = require("./userBot");
+      const bot = getUserBot();
+      if (!bot) {
+        console.warn("User bot is not connected. Broadcast failed.");
+        return;
+      }
+
+      const BATCH_SIZE = 25; // Telegram limitiga tushmaslik uchun (sekundiga max 30)
+      
+      for (let i = 0; i < userRows.length; i += BATCH_SIZE) {
+        const batch = userRows.slice(i, i + BATCH_SIZE);
+        
+        const promises = batch.map(async (user: any) => {
+          try {
+              const tgId = Number(user.telegram_id);
+              if (!tgId) throw new Error("Invalid telegram ID");
+
+              // node-telegram-bot-api metodi
+              if (photoId) {
+                  return await bot.sendPhoto(tgId, photoId, { caption: text || "", parse_mode: 'HTML' });
+              } else if (videoId) {
+                  return await bot.sendVideo(tgId, videoId, { caption: text || "", parse_mode: 'HTML' });
+              } else {
+                  return await bot.sendMessage(tgId, text || "", { parse_mode: 'HTML' });
+              }
+          } catch (err: any) {
+              console.error(`User ${user.telegram_id} ga xabar bormadi. Sababi:`, err.message);
+              throw err; 
+          }
+        });
+
+        // Bitta "batch"ni (25 kishiga) birdaniga jo'natish.
+        await Promise.allSettled(promises);
+        
+        // Keyingi batch'ga o'tishdan oldin 1 sekund kutib turamiz (Rate limitdan saqlanish)
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      
+      console.log("✅ Ommaviy xabar barchaga muvaffaqiyatli tarqatildi!");
+
+    } catch (error) {
+      console.error("Broadcast API Xatosi:", error);
+      if (!res.headersSent) {
+          res.status(500).json({ error: "Serverda xatolik yuz berdi" });
+      }
+    }
+  });
+
   // 2. REKLAMA QO'SHISH
   app.post("/api/admin/ads", adminAuth, async (req, res) => {
     try {
@@ -544,6 +611,46 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // 👥 FOYDALANUVCHILARNI BOSHQARISH
   // ==========================================
   
+  // GET /api/admin/users/export
+  app.get('/api/admin/users/export', adminAuth, async (req, res) => {
+    try {
+      // 1. Bazadan barcha foydalanuvchilarni olish
+      const allUsers = await db.select().from(users);
+      
+      if (!allUsers || allUsers.length === 0) {
+        return res.status(404).json({ error: "Bazada foydalanuvchilar topilmadi" });
+      }
+
+      // 2. CSV faylining sarlavhalari (Ustun nomlari)
+      let csv = '\uFEFF'; // UTF-8 BOM qo'shamiz (Excelda rus/o'zbek harflari xatosiz chiqishi uchun)
+      csv += 'ID,Telegram ID,Ism,Username,Rol,Yaratilgan sana\n';
+      
+      // 3. Har bir userni tsiklda aylanib, qatorlarga qo'shish
+      allUsers.forEach((user: any) => {
+        // Ism va usernamedagi ehtimoliy vergullarni bo'sh joyga almashtiramiz (CSV strukturasi buzilmasligi uchun)
+        const name = user.firstName ? user.firstName.replace(/,/g, '') : 'Noma\'lum';
+        const username = user.username ? user.username.replace(/,/g, '') : '-';
+        const role = user.role || 'user';
+        
+        // Sanani chiroyli formatlash
+        const date = user.createdAt ? new Date(user.createdAt).toLocaleString('ru-RU') : '-';
+        
+        csv += `${user.id},${user.telegramId},${name},${username},${role},${date}\n`;
+      });
+
+      // 4. Brauzer yoki Bot buni oddiy JSON emas, fayl deb qabul qilishi uchun Headerlarni sozlaymiz
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="yozgo_foydalanuvchilar.csv"');
+      
+      // Matnni yuboramiz (U avtomat faylga aylanadi)
+      res.send(csv);
+
+    } catch (error) {
+      console.error("Export API xatosi:", error);
+      res.status(500).json({ error: "Server xatosi" });
+    }
+  });
+
   // 1. Top 10 foydalanuvchini olish (WPM bo'yicha)
   app.get("/api/admin/users/top", adminAuth, async (req, res) => {
     try {

@@ -15,3 +15,7 @@ class CompState(StatesGroup):
 
 class UserSearchState(StatesGroup):
     user_id = State()
+
+class BroadcastState(StatesGroup):
+    content = State()
+    confirm = State()

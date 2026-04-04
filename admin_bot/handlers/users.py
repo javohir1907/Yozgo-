@@ -1,7 +1,9 @@
+import aiohttp
+from config import API_URL, ADMIN_API_TOKEN
 from aiogram import Router, F
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, BufferedInputFile
 from aiogram.fsm.context import FSMContext
-from states.forms import UserSearchState
+from states.forms import UserSearchState, BroadcastState
 from keyboards.reply import main_menu_kb, cancel_kb, users_menu_kb
 from keyboards.inline import user_action_kb
 from api import api_request
@@ -87,3 +89,111 @@ async def toggle_ban_callback(call: CallbackQuery):
         await msg.edit_text("❌ Xatolik yuz berdi!")
     
     await call.answer()
+
+# ==========================================
+# 📢 OMMAVIY XABAR (BROADCAST) YUBORISH
+# ==========================================
+@router.message(F.text.contains("Hammaga xabar") | F.text.contains("Xabar yuborish"))
+async def broadcast_start(message: Message, state: FSMContext):
+    await state.set_state(BroadcastState.content)
+    await message.answer(
+        "📢 <b>Barcha foydalanuvchilarga xabar yuborish bo'limi.</b>\n\n"
+        "Matnni xuddi foydalanuvchilarga qanday borishi kerak bo'lsa shunday yuboring "
+        "(Rasm va video ham qo'shishingiz mumkin):",
+        reply_markup=cancel_kb()
+    )
+
+@router.message(BroadcastState.content)
+async def broadcast_content(message: Message, state: FSMContext):
+    # Xabarning barcha HTML formatlarini (bold, italic, link) saqlab olamiz
+    html_text = message.html_text if message.text else (message.caption or "")
+    
+    # Kelajakda API rasm/videolarni qabul qiladigan qilsangiz kerak bo'ladi
+    photo_id = message.photo[-1].file_id if message.photo else None 
+    video_id = message.video.file_id if message.video else None
+
+    await state.update_data(
+        html_text=html_text,
+        photo_id=photo_id,
+        video_id=video_id
+    )
+    
+    # Tasdiqlash klaviaturasi
+    confirm_kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Hammaga yuborish", callback_data="confirm_broadcast")],
+        [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel_broadcast")]
+    ])
+    
+    await state.set_state(BroadcastState.confirm)
+    
+    # Adminga xabar aslida qanday ko'rinishini jo'natib ko'rsatamiz
+    await message.send_copy(chat_id=message.chat.id)
+    await message.answer("👆 Xabar ko'rinishi shunday bo'ladi. Hammaga yuboramizmi?", reply_markup=confirm_kb)
+
+@router.callback_query(F.data == "confirm_broadcast", BroadcastState.confirm)
+async def confirm_broadcast(call: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    
+    await call.message.edit_text("🔄 Xabar Node.js orqali hammaga tarqatilmoqda... Bu biroz vaqt olishi mumkin.")
+    
+    # Node.js API'ga payload tayyorlash
+    payload = {
+        "text": data.get("html_text"),
+        "photoId": data.get("photo_id"),
+        "videoId": data.get("video_id")
+    }
+    
+    # DIQQAT: API_URL manzilingizdagi /broadcast (yoki /users/broadcast) endpointiga POST jo'natamiz.
+    # Agar backend'da endpoint nomi boshqa bo'lsa, pastdagi "/broadcast" ni o'zgartiring!
+    response = await api_request("POST", "/broadcast", payload=payload)
+    
+    if response:
+        await call.message.edit_text("✅ <b>Ommaviy xabar barcha YOZGO foydalanuvchilariga muvaffaqiyatli tarqatildi!</b>")
+        # Asosiy menyu klaviaturasini qaytarish uchun
+        await call.message.answer("Asosiy menyu:", reply_markup=main_menu_kb())
+    else:
+        await call.message.edit_text(
+            "❌ Xatolik! Node.js API bilan bog'lanib bo'lmadi.\n"
+            "Backend'da <code>/broadcast</code> endpointi tayyor ekanligini tekshiring."
+        )
+        
+    await state.clear()
+
+@router.callback_query(F.data == "cancel_broadcast", BroadcastState.confirm)
+async def cancel_broadcast(call: CallbackQuery, state: FSMContext):
+    await call.message.edit_text("❌ Ommaviy xabar yuborish bekor qilindi.")
+    await call.message.answer("Asosiy menyu:", reply_markup=main_menu_kb())
+    await state.clear()
+
+# ==========================================
+# 📊 BAZANI YUKLAB OLISH (CSV EXPORT)
+# ==========================================
+@router.message(F.text.contains("Bazani yuklash") | F.text.contains("Export"))
+async def export_users_db(message: Message):
+    msg = await message.answer("🔄 Baza tayyorlanmoqda, kuting...")
+    
+    headers = {
+        "X-Admin-Token": ADMIN_API_TOKEN,
+        "X-Bot-Secret": ADMIN_API_TOKEN
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            # Node.js dan faylni so'raymiz
+            async with session.get(f"{API_URL}/users/export", headers=headers) as resp:
+                if resp.status == 200:
+                    # Faylni bytes formatida o'qib olamiz (.json() emas!)
+                    csv_data = await resp.read() 
+                    
+                    # Uni Telegram tushunadigan virtual faylga aylantiramiz
+                    file = BufferedInputFile(csv_data, filename="yozgo_foydalanuvchilar.csv")
+                    
+                    await message.answer_document(
+                        document=file, 
+                        caption="📊 <b>YOZGO - Barcha foydalanuvchilar bazasi</b>\n\nBu faylni bemalol Excel yoki Google Sheets orqali ochishingiz mumkin."
+                    )
+                    await msg.delete()
+                else:
+                    await msg.edit_text("❌ Bazani yuklab olishda xatolik yuz berdi (API javob qaytarmadi).")
+    except Exception as e:
+        await msg.edit_text(f"❌ Xatolik yuz berdi: {str(e)}")
