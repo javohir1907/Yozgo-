@@ -3,7 +3,6 @@ import { db } from "./db";
 import { users, battles, roomAccessCodes, adminMessages } from "@shared/schema";
 import { isNotNull, sql, eq, and } from "drizzle-orm";
 import crypto from "crypto";
-import { getAdminBot } from "./bot";
 import { processInChunks } from "./utils/async-chunker";
 import { BotStateService } from "./services/bot-state.service";
 
@@ -107,11 +106,19 @@ export function startUserBot() {
           );
 
           // Forward to Admin
-          const adminBot = getAdminBot();
-          const adminIdStr = process.env.ADMIN_TELEGRAM_ID;
-          if (adminBot && adminIdStr) {
+          const adminBotToken = process.env.ADMIN_BOT_TOKEN;
+          const adminIdStr = process.env.ADMIN_CHAT_ID || process.env.ADMIN_TELEGRAM_ID;
+          if (adminBotToken && adminIdStr) {
             const adminMsg = `📦 G'olibdan ma'lumotlar keldi: ${msg.from?.first_name || "Noma'lum"}\n📱 Tel: ${state.phone}\n📍 Manzil: ${state.location}`;
-            adminBot.sendPhoto(parseInt(adminIdStr, 10), state.photo, { caption: adminMsg });
+            fetch(`https://api.telegram.org/bot${adminBotToken}/sendPhoto`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: adminIdStr,
+                photo: state.photo,
+                caption: adminMsg
+              })
+            }).catch(e => console.error("Admin botga rasm yuborishda xato:", e));
           }
           await BotStateService.clearState(chatId);
         } else {

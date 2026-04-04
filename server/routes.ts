@@ -225,13 +225,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         creatorId: userId,
       });
 
-      // Telegram Bot integratsiyasi: Xona yaratilgani haqida xabar yuborish
-      try {
-        const { sendRoomCreatedMessage } = require("./bot");
-        sendRoomCreatedMessage(createdBattle.code);
-      } catch (telegramError) {
-        console.error("[BOT] Failed to notify about new room:", telegramError);
-      }
+      // Hozirda Xona yaratiganda bot orqali xabar yuborish yopilgan (Eski bot)
 
       res.status(HTTP_STATUS.CREATED).json(createdBattle);
     } catch (error) {
@@ -446,11 +440,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/admin/stats", adminAuth, async (req, res) => {
     try {
       const [totalUsers] = await db.select({ count: sql`count(*)` }).from(users);
-      // Bu yerda bugungi faol foydalanuvchilarni ham hisoblash mumkin
+      const dailyActiveResult = await db.execute(sql`SELECT count(DISTINCT user_id) as count FROM test_results WHERE date(created_at) = current_date`);
       
       res.json({
         totalUsers: Number(totalUsers.count),
-        activeToday: 0, // Buni keyinchalik logikaga qarab to'ldiramiz
+        activeToday: Number(dailyActiveResult.rows[0].count || 0),
         status: "ok"
       });
     } catch (error) {

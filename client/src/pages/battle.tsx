@@ -282,7 +282,9 @@ export default function BattlePage() {
   const handleCreateBattle = async () => {
     setIsCreating(true);
     try {
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const array = new Uint8Array(3);
+      window.crypto.getRandomValues(array);
+      const code = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
       await apiRequest("POST", "/api/battles", {
         code,
         status: "waiting",

@@ -19,13 +19,13 @@ import crypto from "crypto";
 
 import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
-import { sendBotMessage } from "./bot";
+// (bot import removed)
 import { sendEmail } from "./mailer";
 import { sendAdminNotification } from "./utils/notifier";
 
 // ============ CONSTANTS ============
 const SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 kun
-const MIN_PASSWORD_LENGTH = 6;
+const MIN_PASSWORD_LENGTH = 8;
 const NICKNAME_REGEX = /^[a-z0-9_]{4,20}$/;
 
 // ============ TYPES ============
@@ -41,6 +41,10 @@ interface SessionRequest extends Request {
  * @param app - Express ilovasi
  */
 export function setupAuth(app: Express): void {
+  if (!process.env.SESSION_SECRET) {
+    throw new Error("XAVF: SESSION_SECRET muhit o'zgaruvchisi o'rnatilmagan! Server xavfsizlik maqsadida to'xtatildi.");
+  }
+
   // Proxy orqasida (Render/Nginx) ishonchni sozlash
   app.set("trust proxy", 1);
 
@@ -55,7 +59,7 @@ export function setupAuth(app: Express): void {
 
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || "yozgo-default-dev-secret",
+      secret: process.env.SESSION_SECRET,
       store: sessionStore,
       resave: false,
       saveUninitialized: false,
@@ -91,6 +95,10 @@ export function setupAuth(app: Express): void {
 
       if (password.length < MIN_PASSWORD_LENGTH) {
         return res.status(400).json({ message: `Parol kamida ${MIN_PASSWORD_LENGTH} belgidan iborat bo'lishi kerak` });
+      }
+
+      if (!/(?=.*[A-Za-z])(?=.*\\d)/.test(password)) {
+        return res.status(400).json({ message: "Parol kamida bitta harf va bitta raqamdan iborat bo'lishi kerak" });
       }
 
       // 2. Email bandligini tekshirish
@@ -199,6 +207,13 @@ export function setupAuth(app: Express): void {
 
       if (calculatedHmac !== hashField) {
         return res.status(401).json({ message: "Telegram validatsiyasi xato" });
+      }
+
+      // Replay attack prevention: auth_date tekshiruvi (5 daqiqa ruxsat)
+      const authDate = Number(urlParams.get("auth_date"));
+      const now = Math.floor(Date.now() / 1000);
+      if (!authDate || now - authDate > 300) {
+        return res.status(401).json({ message: "Telegram sessiyasi muddati tugagan (Replay Attack)" });
       }
 
       const tgUserRaw = JSON.parse(urlParams.get("user") || "{}");

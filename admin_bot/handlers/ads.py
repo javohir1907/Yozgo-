@@ -113,4 +113,4 @@ async def delete_ad_callback(call: CallbackQuery):
 
 @router.callback_query(F.data == "ignore")
 async def ignore_callback(call: CallbackQuery):
-    await call.answer() # O'rtadagi bet raqami bosilsa hech narsa qilmaydi
+    await call.answer("Siz shu sahifadasiz 📖")

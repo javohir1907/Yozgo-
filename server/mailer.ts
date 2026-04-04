@@ -5,8 +5,12 @@ export async function sendEmail(to: string, subject: string, text: string) {
   const pass = process.env.SMTP_PASS;
 
   if (!user || !pass) {
-    console.warn(`[MAIL SIMULATION] To: ${to}\nSubject: ${subject}\nText: ${text}`);
-    console.warn("DIQQAT: SMTP logini yo'q (server .env ichiga SMTP_USER va SMTP_PASS kiritilmadi), shuning uchun bular Gmailga bormaydi.");
+    if (process.env.NODE_ENV === "production") {
+      console.error("🔥 CRITICAL WARNING: Production muhitida SMTP_USER yoki SMTP_PASS o'rnatilmagan! Emaillar manzillariga yetib bormaydi!");
+    } else {
+      console.warn(`[MAIL SIMULATION] To: ${to}\nSubject: ${subject}\nText: ${text}`);
+      console.warn("DIQQAT: SMTP logini yo'q (server .env ichiga SMTP_USER va SMTP_PASS kiritilmadi), shuning uchun bular Gmailga bormaydi.");
+    }
     return;
   }
 

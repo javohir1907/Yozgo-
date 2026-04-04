@@ -138,8 +138,21 @@ export class BattleManager {
         }
       });
 
+      let typingEventCount = 0;
+      let typingEventResetTime = Date.now();
+
       // Yozish progressini real-vaqtda kuzatish
       socket.on("typing-progress", (data: { progress: number; wpm: number }) => {
+        const now = Date.now();
+        if (now - typingEventResetTime > 1000) {
+          typingEventCount = 0;
+          typingEventResetTime = now;
+        }
+        typingEventCount++;
+
+        // Rate Limit: 1 soniyada 5 tadan ortiq xit bo'lsa e'tibor bermaslik (Anti-DoS)
+        if (typingEventCount > 5) return;
+
         if (currentRoomCode && currentUserId) {
           this.handleTypingProgress(currentRoomCode, currentUserId, data.progress, data.wpm);
         }

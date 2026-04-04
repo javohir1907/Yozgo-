@@ -1,7 +1,7 @@
 import { defineConfig } from "drizzle-kit";
 
 if (!process.env.DATABASE_URL) {
-  console.log("DATABASE_URL is missing, skipping DB credentials");
+  throw new Error("DATABASE_URL is missing in environment variables");
 }
 
 export default defineConfig({
@@ -9,6 +9,6 @@ export default defineConfig({
   schema: "./shared/schema.ts",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL || "postgresql://dummy:dummy@localhost:5432/dummy",
+    url: process.env.DATABASE_URL,
   },
 });
