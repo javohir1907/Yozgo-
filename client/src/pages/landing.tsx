@@ -50,7 +50,7 @@ interface ReviewEntry {
 interface CompetitionEntry {
   id: string;
   title: string;
-  prize?: string;
+  reward?: string;
   date: string;
   participantsCount: number;
 }
@@ -192,16 +192,67 @@ export default function LandingPage() {
 
       {/* Competitions */}
       {competitions && competitions.length > 0 && (
-        <section className="py-24 bg-background border-t">
-          <div className="container px-4">
-            <h2 className="text-3xl font-bold mb-10 text-center">Musobaqalar</h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {competitions.map((comp) => (
-                <div key={comp.id} className="p-6 rounded-xl border bg-card flex flex-col items-center">
-                  <h3 className="text-xl font-bold mb-2">{comp.title}</h3>
-                  <p className="text-amber-500 font-semibold mb-4">🏆 {comp.prize}</p>
-                  <CompetitionWaitlistModal competition={comp} user={user} queryClient={queryClient} />
-                </div>
+        <section className="relative py-24 overflow-hidden bg-gradient-to-b from-background to-secondary/20">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/10 via-background to-background z-0"></div>
+          
+          <div className="container relative z-10 px-4">
+            <div className="text-center mb-16">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-bold tracking-wide uppercase text-sm border border-primary/20 mb-4"
+              >
+                <Trophy className="w-5 h-5" /> Faol Turnirlar
+              </motion.div>
+              <h2 className="text-4xl md:text-5xl font-black mb-4">Katta Musobaqalar</h2>
+              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+                Yangi musobaqalarda ishtirok eting va o'z mahoratingizni ko'rsatib, qimmatbaho sovrinlarni yutib oling.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {competitions.map((comp, idx) => (
+                <motion.div
+                  key={comp.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="group relative p-1 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 shadow-2xl hover:shadow-primary/20 transition-all duration-300"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl -z-10"></div>
+                  <div className="h-full bg-card/90 backdrop-blur-xl p-8 rounded-[14px] border border-white/10 flex flex-col items-start relative overflow-hidden">
+                    
+                    {/* Background Graphic */}
+                    <div className="absolute -right-10 -top-10 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
+                      <Zap className="w-48 h-48" />
+                    </div>
+
+                    <div className="w-full flex justify-between items-start mb-6 z-10">
+                      <div className="p-3 bg-gradient-to-br from-orange-500/20 to-red-500/20 text-orange-500 rounded-xl">
+                        <Trophy className="w-8 h-8" />
+                      </div>
+                      <span className="px-3 py-1 text-xs font-bold bg-green-500/20 text-green-400 rounded-full border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                        Qabul Ochiq
+                      </span>
+                    </div>
+
+                    <h3 className="text-2xl font-bold mb-3 z-10 group-hover:text-primary transition-colors">{comp.title}</h3>
+                    
+                    {comp.reward && (
+                      <div className="w-full p-4 mb-6 rounded-xl bg-orange-500/10 border border-orange-500/20 text-center z-10 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
+                        <p className="text-xs text-orange-300 uppercase tracking-widest font-black mb-1">Mukofot</p>
+                        <p className="text-lg text-orange-400 font-extrabold">{comp.reward}</p>
+                      </div>
+                    )}
+                    
+                    <div className="mt-auto w-full z-10">
+                      <CompetitionWaitlistModal competition={comp} user={user} queryClient={queryClient} />
+                    </div>
+                  </div>
+                </motion.div>
               ))}
             </div>
           </div>
