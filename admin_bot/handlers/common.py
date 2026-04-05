@@ -12,12 +12,9 @@ async def handle_forward_battle(callback: CallbackQuery):
     invite_code = f"BTL-{battle_code}"
     
     channel_msg = (
-        f"⚔️ <b>YOZGO Platformasida Yozish Tezligi bo'yicha Jang Xonasi ochildi!</b>\n\n"
-        f"Bizga qo'shiling va o'z tezligingizni sinab ko'ring!\n\n"
-        f"1️⃣ <i>Ushbu xona kodini ustiga bosib nusxalab oling:</i>\n"
-        f"<code>{invite_code}</code>\n\n"
-        f"2️⃣ <i>Kodni ushbu botga yuboring:</i> @yozgo_bot\n"
-        f"3️⃣ Bot sizga Xonaga kirish huquqini beruvchi individual o'qish kodini beradi."
+        f"⚡️ <b>JANG XONASIGA KIRISH OCHILDI!</b>\n\n"
+        f"🚀 Asl Xona Kodi: <code>{battle_code}</code>\n\n"
+        f"👆 <i>Xona kodining ustiga bosib nusxalab oling va </i>@yozgo_bot<i> ga yuborib individual (bir martalik) kodingizni oling. Jangga kirish uchun o'sha koddan foydalanasiz. Omad!</i>"
     )
     
     try:

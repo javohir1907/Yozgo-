@@ -228,14 +228,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const [userRecord] = await db.select().from(users).where(eq(users.id, userId));
       
-      const battleInviteCode = `BTL-${createdBattle.code}`;
-      const creatorEmail = userRecord?.email || "Noma'lum foydalanuvchi";
-      
-      const adminMsg = `⚔️ <b>Yangi Jang Xonasi Ochildi!</b>\n\n` +
-                       `Yaratuvchi: ${creatorEmail}\n` +
-                       `Asl Xona Kodi: <code>${createdBattle.code}</code>\n\n` +
-                       `Telegramdagi O'yin kodi: <code>${battleInviteCode}</code>\n` +
-                       `Kanalga jo'natish uchun quyidagi tugmani bosing:`;
+      const adminMsg = `⚡️ <b>JANG XONASIGA KIRISH OCHILDI!</b>\n\n` +
+                       `🚀 Asl Xona Kodi: <code>${createdBattle.code}</code>\n\n` +
+                       `👆 <i>Xona kodining ustiga bossangiz avtomatik nusxa olinadi. Nuxsalangan kodni tegishli @yozgo_bot ga yuborib, o'z individual bir martalik kodingizni oling.</i>`;
                        
       const markup = {
         inline_keyboard: [[
