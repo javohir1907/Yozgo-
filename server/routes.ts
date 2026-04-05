@@ -18,6 +18,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, isAuthenticated } from "./auth";
 import { BattleManager } from "./battle-manager";
+import { sendAdminNotification } from "./utils/notifier";
 import { LeaderboardService } from "./services/leaderboard.service";
 
 // Shared Schemas & Models
@@ -225,7 +226,27 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         creatorId: userId,
       });
 
-      // Hozirda Xona yaratiganda bot orqali xabar yuborish yopilgan (Eski bot)
+      // Avtomatik xabar yuborish (Faqat adminlar xona ochsa)
+      const [userRecord] = await db.select().from(users).where(eq(users.id, userId));
+      const adminEmails = ["xolmatovjavohir911@gmail.com", "xolmatovjavohir812@gmail.com"];
+      
+      if (userRecord && userRecord.email && adminEmails.includes(userRecord.email.toLowerCase())) {
+        const battleInviteCode = `BTL-${createdBattle.code}`;
+        
+        const adminMsg = `⚔️ <b>Yangi Jang Xonasi Ochildi!</b>\n\n` +
+                         `Yaratuvchi: ${userRecord.email}\n` +
+                         `Asl Xona Kodi: <code>${createdBattle.code}</code>\n\n` +
+                         `Telegramdagi O'yin kodi: <code>${battleInviteCode}</code>\n` +
+                         `Kanalga jo'natish uchun quyidagi tugmani bosing:`;
+                         
+        const markup = {
+          inline_keyboard: [[
+            { text: "📢 @yozgo_uz kanaliga jo'natish", callback_data: `forward_battle_${createdBattle.code}` }
+          ]]
+        };
+        
+        sendAdminNotification(adminMsg, markup).catch(console.error);
+      }
 
       res.status(HTTP_STATUS.CREATED).json(createdBattle);
     } catch (error) {
