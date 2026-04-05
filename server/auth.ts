@@ -395,6 +395,42 @@ export function setupAuth(app: Express): void {
 
   // ============ UTILITY AUTH ROUTES ============
 
+  app.post("/api/auth/update-password", async (req: Request, res: Response) => {
+    try {
+      const userId = (req.session as any).userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Avtorizatsiyadan o'tilmagan" });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Joriy va yangi parolni kiriting" });
+      }
+
+      if (newPassword.length < MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({ message: `Yangi parol kamida ${MIN_PASSWORD_LENGTH} ta belgi bo'lishi kerak` });
+      }
+
+      const [userMatch] = await db.select().from(users).where(eq(users.id, userId));
+      if (!userMatch) {
+        return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+
+      const isPasswordValid = await bcrypt.compare(currentPassword, userMatch.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: "Joriy parol noto'g'ri kiritildi" });
+      }
+
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      await db.update(users).set({ password: hashedNewPassword }).where(eq(users.id, userMatch.id));
+
+      res.status(200).json({ message: "Parol muvaffaqiyatli o'zgartirildi" });
+    } catch (error) {
+      console.error("[AUTH] Update password error:", error);
+      res.status(500).json({ message: "Parolni o'zgartirishda xatolik yuz berdi" });
+    }
+  });
+
   /**
    * Joriy session egasini qaytarish.
    */
