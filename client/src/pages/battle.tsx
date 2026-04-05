@@ -175,7 +175,7 @@ export default function BattlePage() {
     };
 
     if (isAttemptActive && attemptStartTime) {
-      statsInterval = setInterval(updateLiveStats, 500);
+      statsInterval = setInterval(updateLiveStats, 200);
     }
     return () => clearInterval(statsInterval);
   }, [isAttemptActive, attemptStartTime, currentIndex, currentWords.length, sendProgress]);
@@ -223,7 +223,7 @@ export default function BattlePage() {
       const word = currentWords[currentIndex];
       if (!word) return;
 
-      if (value.endsWith(" ")) {
+      if (value.endsWith(" ") || value.endsWith("\u00A0")) {
         const currentTyped = value.slice(0, -1);
         
         if (currentTyped.length > userInput.length) {
@@ -445,7 +445,21 @@ export default function BattlePage() {
         {/* Main Content Area */}
         <div className="lg:col-span-8 space-y-6">
           <AnimatePresence mode="wait">
-            {!battleStart ? (
+            {battleEnd ? (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center py-20 bg-card/60 rounded-3xl border-2 border-primary shadow-2xl">
+                <Trophy className="w-24 h-24 text-yellow-500 mb-6 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                <h2 className="text-4xl font-black uppercase mb-4 text-center">Jang Yakunlandi!</h2>
+                <div className="text-center mb-8">
+                  <p className="text-muted-foreground text-lg">G'olib ishtirokchi aniqlandi.</p>
+                  <p className="font-bold text-2xl text-primary mt-2">
+                    {battleEnd.winnerId ? battleEnd.results.find((r: any) => r.id === battleEnd.winnerId)?.username || "Noma'lum" : "Hech kim g'olib bo'lmadi"}
+                  </p>
+                </div>
+                <Button onClick={() => setLocation("/")} size="lg" className="px-10 rounded-full font-bold">
+                  Bosh Sahifaga Qaytish
+                </Button>
+              </motion.div>
+            ) : !battleStart ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center py-20 bg-card/60 rounded-3xl border-2 border-dashed border-primary/20">
                 <Users className="w-20 h-20 text-primary/20 mb-6" />
                 <h2 className="text-3xl font-black uppercase mb-2">Lobbyda kutilmoqda</h2>

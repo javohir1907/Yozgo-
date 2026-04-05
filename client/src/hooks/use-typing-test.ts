@@ -148,7 +148,7 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       const word = words[currentIndex];
       if (!word) return;
 
-      if (value.endsWith(" ")) {
+      if (value.endsWith(" ") || value.endsWith("\u00A0")) {
         const currentTyped = value.slice(0, -1);
 
         // Tezkor yozishda: State birdaniga yangilanib probel bilan qo'shilib qolgan harflarni hisoblash
