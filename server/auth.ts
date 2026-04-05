@@ -302,10 +302,13 @@ export function setupAuth(app: Express): void {
       }
 
       (req.session as any).userId = existingUser.id;
-      res.redirect("/");
+      
+      const frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
+      res.redirect(frontendUrl);
     } catch (error) {
       console.error("[AUTH] Google Callback Error:", error);
-      res.redirect("/auth?error=ServerError");
+      const frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
+      res.redirect(`${frontendUrl}/auth?error=ServerError`);
     }
   });
 
