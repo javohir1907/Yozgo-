@@ -247,7 +247,7 @@ export function setupAuth(app: Express): void {
   // ============ GOOGLE OAUTH INTEGRATION ============
 
   app.get("/api/auth/google", (req: Request, res: Response) => {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientId = process.env.GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
     if (!clientId) return res.status(500).json({ message: "Google Client ID o'rnatilmagan" });
     const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
     const scope = "email profile";
@@ -260,8 +260,8 @@ export function setupAuth(app: Express): void {
     if (!code) return res.redirect("/auth?error=NoCode");
 
     try {
-      const clientId = process.env.GOOGLE_CLIENT_ID;
-      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      const clientId = process.env.GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET;
       const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
 
       // Token olish
