@@ -254,6 +254,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  app.get("/api/test-telegram", async (req: Request, res: Response) => {
+    try {
+      const result = await sendAdminNotification(
+        "🛠 DIAGNOSTIC BATTLE MESSAGE TEST. If this works, the notification module works.", 
+        { inline_keyboard: [[{ text: "Test", callback_data: "test" }]] }
+      );
+      res.json({ success: true, result });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message, stack: err.stack });
+    }
+  });
+
   /**
    * Berilgan kod orqali jang haqida ma'lumot va ishtirokchilarni olish.
    */
