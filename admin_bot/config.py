@@ -5,7 +5,7 @@ load_dotenv()
 
 # Sizdagi Secrets panelidagi nomlarga to'liq moslashtirildi:
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-API_URL = os.getenv("API_URL", "https://yozgo.uz/api/admin")
+API_URL = os.getenv("API_URL", "https://yozgo-backend.onrender.com/api/admin")
 ADMIN_API_TOKEN = os.getenv("ADMIN_API_TOKEN") or os.getenv("BOT_SECRET")
 if not ADMIN_API_TOKEN:
     raise ValueError("ADMIN_API_TOKEN yoki BOT_SECRET muhit o'zgaruvchisi topilmadi! Tizim xavfsizligi doirasida bot ishlashdan to'xtatildi.")
