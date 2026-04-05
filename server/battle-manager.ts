@@ -16,6 +16,7 @@ import { Server as SocketServer, Socket } from "socket.io";
 import { storage } from "./storage";
 import { words } from "../shared/words";
 import { type User } from "@shared/schema";
+import { sendAdminNotification } from "./utils/notifier";
 
 // ============ TYPES & INTERFACES ============
 
@@ -329,10 +330,28 @@ export class BattleManager {
       }
     }
 
+    const formattedResults = this.getFormattedPlayers(room);
+
     this.io.to(code).emit("battle-end", {
       winnerId,
-      results: this.getFormattedPlayers(room),
+      results: formattedResults,
     });
+
+    // Telegram Adminga natijalarni yuborish
+    try {
+      let leaderText = `🏁 <b>Jang yakunlandi!</b>\n\n`;
+      leaderText += `Xona kodi: <code>${code}</code>\n`;
+      leaderText += `Ishtirokchilar: ${formattedResults.length} ta\n\n`;
+      
+      formattedResults.forEach((p, index) => {
+         const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🔸";
+         leaderText += `${medal} <b>${p.username}</b> - ${p.bestWpm} WPM (${p.bestAccuracy}% aniqlik)\n`;
+      });
+      
+      sendAdminNotification(leaderText);
+    } catch (e) {
+      console.error("[BATTLE] Admin botga natijani yuborishda xatolik:", e);
+    }
   }
 
   // ============ HELPERS ============
