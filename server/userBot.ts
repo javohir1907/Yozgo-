@@ -61,79 +61,84 @@ export function startUserBot() {
   });
 
   userBot.on("message", async (msg) => {
-    if (!msg.text && !msg.contact && !msg.location && !msg.photo) return;
-    const chatId = msg.chat.id;
-    const state = await BotStateService.getState(chatId);
+    try {
+      if (!msg.text && !msg.contact && !msg.location && !msg.photo) return;
+      const chatId = msg.chat.id;
+      const state = await BotStateService.getState(chatId);
 
-    // Winner Data Collection Flow
-    if (state?.type === "winner_data") {
-      if (state.step === "phone") {
-        if (msg.contact?.phone_number || msg.text) {
-          state.phone = msg.contact?.phone_number || msg.text;
-          state.step = "location";
-          userBot?.sendMessage(
-            chatId,
-            "📍 Endi manzilingizni yuboring (Location jo'nating yoki matn ko'rinishida yozing):",
-            {
-              reply_markup: {
-                keyboard: [[{ text: "Manzilni yuborish 📍", request_location: true }]],
-                resize_keyboard: true,
-                one_time_keyboard: true,
-              },
-            }
-          );
-        }
-      } else if (state.step === "location") {
-        if (msg.location || msg.text) {
-          state.location = msg.location
-            ? `${msg.location.latitude}, ${msg.location.longitude}`
-            : msg.text;
-          state.step = "photo";
-          userBot?.sendMessage(
-            chatId,
-            "🤳 Pasport yoki ID karta rasmini yuboring (Sovrin topshirilishi uchun majburiy):",
-            {
-              reply_markup: { remove_keyboard: true },
-            }
-          );
-        }
-      } else if (state.step === "photo") {
-        if (msg.photo) {
-          state.photo = msg.photo[msg.photo.length - 1].file_id;
-          userBot?.sendMessage(
-            chatId,
-            "✅ Rahmat! Ma'lumotlaringiz adminga yuborildi. Tez orada siz bilan bog'lanamiz!"
-          );
-
-          // Forward to Admin
-          const adminBotToken = process.env.ADMIN_BOT_TOKEN;
-          const adminIdStr = process.env.ADMIN_CHAT_ID || process.env.ADMIN_TELEGRAM_ID;
-          if (adminBotToken && adminIdStr) {
-            const adminMsg = `📦 G'olibdan ma'lumotlar keldi: ${msg.from?.first_name || "Noma'lum"}\n📱 Tel: ${state.phone}\n📍 Manzil: ${state.location}`;
-            fetch(`https://api.telegram.org/bot${adminBotToken}/sendPhoto`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: adminIdStr,
-                photo: state.photo,
-                caption: adminMsg
-              })
-            }).catch(e => console.error("Admin botga rasm yuborishda xato:", e));
+      // Winner Data Collection Flow
+      if (state?.type === "winner_data") {
+        if (state.step === "phone") {
+          if (msg.contact?.phone_number || msg.text) {
+            state.phone = msg.contact?.phone_number || msg.text;
+            state.step = "location";
+            userBot?.sendMessage(
+              chatId,
+              "📍 Endi manzilingizni yuboring (Location jo'nating yoki matn ko'rinishida yozing):",
+              {
+                reply_markup: {
+                  keyboard: [[{ text: "Manzilni yuborish 📍", request_location: true }]],
+                  resize_keyboard: true,
+                  one_time_keyboard: true,
+                },
+              }
+            );
           }
-          await BotStateService.clearState(chatId);
-        } else {
-          userBot?.sendMessage(chatId, "Iltimos rasm formatida yuboring.");
+        } else if (state.step === "location") {
+          if (msg.location || msg.text) {
+            state.location = msg.location
+              ? `${msg.location.latitude}, ${msg.location.longitude}`
+              : msg.text;
+            state.step = "photo";
+            userBot?.sendMessage(
+              chatId,
+              "🤳 Pasport yoki ID karta rasmini yuboring (Sovrin topshirilishi uchun majburiy):",
+              {
+                reply_markup: { remove_keyboard: true },
+              }
+            );
+          }
+        } else if (state.step === "photo") {
+          if (msg.photo) {
+            state.photo = msg.photo[msg.photo.length - 1].file_id;
+            userBot?.sendMessage(
+              chatId,
+              "✅ Rahmat! Ma'lumotlaringiz adminga yuborildi. Tez orada siz bilan bog'lanamiz!"
+            );
+
+            // Forward to Admin
+            const adminBotToken = process.env.ADMIN_BOT_TOKEN;
+            const adminIdStr = process.env.ADMIN_CHAT_ID || process.env.ADMIN_TELEGRAM_ID;
+            if (adminBotToken && adminIdStr) {
+              const adminMsg = `📦 G'olibdan ma'lumotlar keldi: ${msg.from?.first_name || "Noma'lum"}\n📱 Tel: ${state.phone}\n📍 Manzil: ${state.location}`;
+              fetch(`https://api.telegram.org/bot${adminBotToken}/sendPhoto`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  chat_id: adminIdStr,
+                  photo: state.photo,
+                  caption: adminMsg
+                })
+              }).catch(e => console.error("Admin botga rasm yuborishda xato:", e));
+            }
+            await BotStateService.clearState(chatId);
+          } else {
+            userBot?.sendMessage(chatId, "Iltimos rasm formatida yuboring.");
+          }
+        }
+        return;
+      }
+
+      // Checking for raw room codes (if user types ROOM2025 directly)
+      if (msg.text && !msg.text.startsWith("/")) {
+        const isMaybeCode = msg.text.length >= 4 && msg.text.length <= 10;
+        if (isMaybeCode) {
+          await handleRoomCode(chatId, msg.text.toUpperCase(), msg.from?.id);
         }
       }
-      return;
-    }
-
-    // Checking for raw room codes (if user types ROOM2025 directly)
-    if (msg.text && !msg.text.startsWith("/")) {
-      const isMaybeCode = msg.text.length >= 4 && msg.text.length <= 10;
-      if (isMaybeCode) {
-        await handleRoomCode(chatId, msg.text.toUpperCase(), msg.from?.id);
-      }
+    } catch (e: any) {
+      console.error("userBot message handler error:", e);
+      userBot?.sendMessage(msg.chat.id, `XATOLIK YUZ BERDI: ${e.message}`);
     }
   });
 
