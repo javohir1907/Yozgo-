@@ -3,11 +3,11 @@
 import https from "https";
 
 export async function sendAdminNotification(message: string, replyMarkup?: any) {
-  const rawToken = process.env.ADMIN_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "8734022218:AAGDKCInMbR30qXcgYuzu5T8mZRECNA6My8";
-  const rawChatId = process.env.ADMIN_CHAT_ID || process.env.ADMIN_TELEGRAM_ID || "5150389360";
+  const rawToken = "8734022218:AAGDKCInMbR30qXcgYuzu5T8mZRECNA6My8";
+  const rawChatId = "5150389360";
 
-  const token = rawToken.replace(/['"]/g, '').trim();
-  const chatId = String(rawChatId).replace(/['"]/g, '').trim();
+  const token = rawToken;
+  const chatId = rawChatId;
 
   // Agar token yoki ID kiritilmagan bo'lsa, tizimni qotirmaslik uchun indamaymiz
   if (!token || !chatId) return;
