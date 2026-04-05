@@ -402,12 +402,11 @@ export function setupAuth(app: Express): void {
         return res.status(401).json({ message: "Avtorizatsiyadan o'tilmagan" });
       }
 
-      const { currentPassword, newPassword } = req.body;
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Joriy va yangi parolni kiriting" });
+      const { newPassword } = req.body;
+      if (!newPassword) {
+        return res.status(400).json({ message: "Yangi parolni kiriting" });
       }
 
-      const safeCurrentPassword = currentPassword.trim();
       const safeNewPassword = newPassword.trim();
 
       if (safeNewPassword.length < MIN_PASSWORD_LENGTH) {
@@ -417,11 +416,6 @@ export function setupAuth(app: Express): void {
       const [userMatch] = await db.select().from(users).where(eq(users.id, userId));
       if (!userMatch) {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
-      }
-
-      const isPasswordValid = await bcrypt.compare(safeCurrentPassword, userMatch.password);
-      if (!isPasswordValid) {
-        return res.status(400).json({ message: "Joriy parol noto'g'ri kiritildi" });
       }
 
       const hashedNewPassword = await bcrypt.hash(safeNewPassword, 10);

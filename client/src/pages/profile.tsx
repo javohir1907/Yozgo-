@@ -60,6 +60,14 @@ export default function Profile() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (newPassword !== currentPassword) {
+      toast({
+        title: "Xatolik",
+        description: "Kiritilgan parollar bir-biriga mos kelmadi",
+        variant: "destructive",
+      });
+      return;
+    }
     if (newPassword.length < 6) {
       toast({
         title: "Xatolik",
@@ -71,7 +79,6 @@ export default function Profile() {
     setIsChangingPassword(true);
     try {
       await apiRequest("POST", "/api/auth/update-password", {
-        currentPassword,
         newPassword,
       });
       toast({
@@ -228,22 +235,23 @@ export default function Profile() {
         <CardContent>
           <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
             <div>
-              <label className="text-sm font-medium mb-1 block">Joriy parol</label>
-              <Input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Hozirgi parolingiz"
-                required
-              />
-            </div>
-            <div>
               <label className="text-sm font-medium mb-1 block">Yangi parol</label>
               <Input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Yangi parol (kamida 6 ta belgi)"
+                required
+                minLength={6}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Parolni tasdiqlang</label>
+              <Input
+                type="password"
+                value={currentPassword} // using currentPassword state as confirmPassword to minimize changes
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Yangi parolni qayta kiriting"
                 required
                 minLength={6}
               />
