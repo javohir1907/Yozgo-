@@ -3,9 +3,11 @@
 import https from "https";
 
 export async function sendAdminNotification(message: string, replyMarkup?: any) {
-  const token = (process.env.ADMIN_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "8734022218:AAGDKCInMbR30qXcgYuzu5T8mZRECNA6My8").trim();
-  // Eng quyi ehtiyot chorasi sifatida, o'zingizning aniq guruh/shaxsiy IDingiz kiritildi:
-  const chatId = (process.env.ADMIN_CHAT_ID || process.env.ADMIN_TELEGRAM_ID || "5150389360").trim();
+  const rawToken = process.env.ADMIN_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || "8734022218:AAGDKCInMbR30qXcgYuzu5T8mZRECNA6My8";
+  const rawChatId = process.env.ADMIN_CHAT_ID || process.env.ADMIN_TELEGRAM_ID || "5150389360";
+
+  const token = rawToken.replace(/['"]/g, '').trim();
+  const chatId = String(rawChatId).replace(/['"]/g, '').trim();
 
   // Agar token yoki ID kiritilmagan bo'lsa, tizimni qotirmaslik uchun indamaymiz
   if (!token || !chatId) return;
