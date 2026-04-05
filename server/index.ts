@@ -27,6 +27,9 @@ import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { sendAdminNotification } from "./utils/notifier";
 
 // Sentry'ni ishga tushirish (DSN .env dan olinadi, agar yo'q bo'lsa Sentry o'chirilgan holatda turadi)
+// Vaqtincha Sentry ni o'chirib qo'yamiz, sababi u Telegram tokenlaridagi ":" belgisi 
+// bilan 'path-to-regexp' kutubxonasida konflikt qilib, barcha Telegram API larni (shu jumladan userBotni) bloklamoqda.
+/*
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
@@ -36,6 +39,7 @@ if (process.env.SENTRY_DSN) {
   });
   logger.info("🛡️ [SYSTEM] Sentry Monitoring is ACTIVE.");
 }
+*/
 
 /**
  * Global HTTP turlarini kengaytirish
