@@ -28,7 +28,7 @@ export function Banner({ ads }: { ads: Ad[] }) {
       {ads.map((ad) => (
         <a
           key={ad.id}
-          href={ad.linkUrl}
+          href={ad.linkUrl || "#"}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => handleLinkClick(ad, e)}

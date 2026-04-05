@@ -1,6 +1,7 @@
 import math
 import aiohttp
-from aiogram import Router, F
+import base64
+from aiogram import Bot, Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from states.forms import AdState
@@ -30,9 +31,21 @@ async def ad_start(message: Message, state: FSMContext):
 async def ad_title(message: Message, state: FSMContext):
     await state.update_data(title=message.text)
     await state.set_state(AdState.image_url)
-    await message.answer("2️⃣ Rasm ssilkasini (URL) yuboring.\n(Agar rasm kerak bo'lmasa, <b>yoq</b> deb yozing)")
+    await message.answer("2️⃣ REKLAMA RASMINI YUBORING (Rasm yuklang).\n(Agar rasm kerak bo'lmasa, <b>yoq</b> deb yozing)")
 
-@router.message(AdState.image_url)
+@router.message(AdState.image_url, F.photo)
+async def ad_image_photo(message: Message, state: FSMContext, bot: Bot):
+    photo = message.photo[-1]
+    file = await bot.get_file(photo.file_id)
+    file_data = await bot.download_file(file.file_path)
+    base64_str = base64.b64encode(file_data.read()).decode('utf-8')
+    data_uri = f"data:image/jpeg;base64,{base64_str}"
+    
+    await state.update_data(imageUrl=data_uri)
+    await state.set_state(AdState.link_url)
+    await message.answer("3️⃣ Reklama ustiga bosganda qaysi manzilga (URL) o'tsin?\n(Agar manzil yo'q bo'lsa <b>yoq</b> deb yozing)")
+
+@router.message(AdState.image_url, F.text)
 async def ad_image(message: Message, state: FSMContext):
     img = None if message.text.lower() == 'yoq' else message.text
     await state.update_data(imageUrl=img)
