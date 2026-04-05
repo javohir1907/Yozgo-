@@ -18,6 +18,7 @@ import TypingTestPage from "@/pages/typing-test";
 import ProfilePage from "@/pages/profile";
 import AuthPage from "@/pages/auth";
 import AdminPage from "@/pages/admin";
+import ResetPasswordPage from "@/pages/reset-password";
 
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -47,6 +48,7 @@ function Router() {
           <Route path="/typing-test" component={TypingTestPage} />
           <Route path="/profile" component={ProfilePage} />
           <Route path="/admin" component={AdminPage} />
+          <Route path="/reset-password" component={ResetPasswordPage} />
           <Route component={NotFound} />
         </Switch>
       </motion.div>

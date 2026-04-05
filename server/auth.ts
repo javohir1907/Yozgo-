@@ -244,6 +244,143 @@ export function setupAuth(app: Express): void {
     }
   });
 
+  // ============ GOOGLE OAUTH INTEGRATION ============
+
+  app.get("/api/auth/google", (req: Request, res: Response) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) return res.status(500).json({ message: "Google Client ID o'rnatilmagan" });
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
+    const scope = "email profile";
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
+    res.redirect(googleAuthUrl);
+  });
+
+  app.get("/api/auth/google/callback", async (req: Request, res: Response) => {
+    const { code } = req.query;
+    if (!code) return res.redirect("/auth?error=NoCode");
+
+    try {
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
+
+      // Token olish
+      const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: clientId || "",
+          client_secret: clientSecret || "",
+          code: String(code),
+          grant_type: "authorization_code",
+          redirect_uri: redirectUri,
+        }),
+      });
+      const tokenData = await tokenRes.json();
+      if (!tokenData.access_token) return res.redirect("/auth?error=GoogleAuthFailed");
+
+      // Foydalanuvchi profile ni olish
+      const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      const profileData = await profileRes.json();
+
+      let [existingUser] = await db.select().from(users).where(eq(users.email, profileData.email.toLowerCase()));
+
+      if (!existingUser) {
+        const dummyPassword = crypto.randomBytes(16).toString("hex");
+        const [newUser] = await db.insert(users).values({
+          email: profileData.email.toLowerCase(),
+          password: await bcrypt.hash(dummyPassword, 10),
+          firstName: (profileData.given_name || profileData.name || "user").toLowerCase().replace(/[^a-z0-9_]/g, "") + "_" + crypto.randomBytes(2).toString("hex"),
+          lastName: profileData.family_name || null,
+          profileImageUrl: profileData.picture || null,
+        }).returning();
+        existingUser = newUser;
+        
+        sendAdminNotification(`🔔 <b>Google orqali yangi hisob:</b> ${existingUser.email}`).catch(() => {});
+      }
+
+      (req.session as any).userId = existingUser.id;
+      res.redirect("/");
+    } catch (error) {
+      console.error("[AUTH] Google Callback Error:", error);
+      res.redirect("/auth?error=ServerError");
+    }
+  });
+
+  // ============ PASSWORD RESET ============
+
+  app.post("/api/auth/forgot-password", async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ message: "Email talab qilinadi" });
+
+      const [userMatch] = await db.select().from(users).where(eq(users.email, email.toLowerCase()));
+      if (!userMatch) {
+         // Security: Xavfsizlik uchun email topilmasa ham 200 qaytaramiz (Enumeration attack ni oldini olish)
+         return res.json({ message: "Email ga ko'rsatma yuborildi" });
+      }
+
+      // Xavfsiz JWT-o'rniga HMAC token yaratamiz (muddati 15 daqiqa)
+      const expiry = Date.now() + 15 * 60 * 1000;
+      const payload = `${userMatch.id}:${expiry}`;
+      const signature = crypto.createHmac("sha256", process.env.SESSION_SECRET + userMatch.password).update(payload).digest("hex");
+      const resetToken = encodeURIComponent(`${payload}:${signature}`);
+      
+      const resetLink = `https://${req.get("host")}/reset-password?token=${resetToken}`;
+      
+      await sendEmail(
+        userMatch.email, 
+        "YOZGO: Parolni tiklash", 
+        `Sizning YOZGO hisobingiz uchun parolni tiklash so'raldi.\n\nQuyidagi ssilka orqali o'tib parolni yangilang (15 daqiqagacha amal qiladi):\n${resetLink}\n\nAgar bu siz bo'lmasangiz, bu xabarni inkor eting.`
+      );
+
+      res.json({ message: "Email ga ko'rsatma yuborildi" });
+    } catch (error) {
+      console.error("[AUTH] Forgot password xatosi:", error);
+      res.status(500).json({ message: "Xatolik yuz berdi" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req: Request, res: Response) => {
+    try {
+      const { token, newPassword } = req.body;
+      if (!token || !newPassword) return res.status(400).json({ message: "Token va yangi parol kiritilmadi" });
+
+      if (newPassword.length < MIN_PASSWORD_LENGTH) {
+        return res.status(400).json({ message: `Parol kamida ${MIN_PASSWORD_LENGTH} ta belgi bo'lishi kerak` });
+      }
+
+      const decodedToken = decodeURIComponent(token);
+      const parts = decodedToken.split(":");
+      if (parts.length !== 3) return res.status(400).json({ message: "Noto'g'ri token" });
+      
+      const [userId, expiryStr, signature] = parts;
+      const expiry = parseInt(expiryStr, 10);
+
+      if (Date.now() > expiry) {
+        return res.status(400).json({ message: "Token muddati tugagan" });
+      }
+
+      const [userMatch] = await db.select().from(users).where(eq(users.id, userId));
+      if (!userMatch) return res.status(400).json({ message: "Foydalanuvchi topilmadi" });
+
+      const expectedSignature = crypto.createHmac("sha256", process.env.SESSION_SECRET + userMatch.password).update(`${userId}:${expiryStr}`).digest("hex");
+      if (signature !== expectedSignature) {
+        return res.status(400).json({ message: "Token haqiqiy emas yoki bekor qilingan" });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await db.update(users).set({ password: hashedPassword }).where(eq(users.id, userId));
+
+      res.json({ message: "Parol muvaffaqiyatli o'zgartirildi" });
+    } catch (error) {
+      console.error("[AUTH] Reset password xatosi:", error);
+      res.status(500).json({ message: "Xatolik yuz berdi" });
+    }
+  });
+
   // ============ UTILITY AUTH ROUTES ============
 
   /**
