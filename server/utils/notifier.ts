@@ -19,37 +19,36 @@ export async function sendAdminNotification(message: string, replyMarkup?: any) 
     ...(replyMarkup && { reply_markup: replyMarkup })
   });
 
-  const options = {
-    hostname: 'api.telegram.org',
-    port: 443,
-    path: `/bot${token.trim()}/sendMessage`,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(payloadData)
-    }
-  };
-
   return new Promise((resolve, reject) => {
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => { data += chunk; });
-      res.on('end', () => { 
-        if (res.statusCode && res.statusCode >= 400) {
-          console.error(`[TELEGRAM API XATOLIGI] Status: ${res.statusCode}, Batafsil:`, data);
-        } else {
-          console.log(`[TELEGRAM SUCCESS]`, data); 
-        }
-        resolve(data); 
-      });
+    const { spawn } = require("child_process");
+    const curl = spawn("curl", [
+      "-s",
+      "-X", "POST",
+      `https://api.telegram.org/bot${token}/sendMessage`,
+      "-H", "Content-Type: application/json",
+      "-d", payloadData
+    ]);
+
+    let data = '';
+    curl.stdout.on("data", (chunk: any) => { data += chunk.toString(); });
+    
+    curl.stderr.on("data", (chunk: any) => {
+      console.error("[cURL STDERR]:", chunk.toString());
     });
 
-    req.on('error', (e) => {
-      console.error("Telegram admin botga xabar yuborishda TRYCATCH xatolik:", e);
-      reject(e);
+    curl.on("close", (code: number) => {
+      if (code === 0) {
+        console.log(`[TELEGRAM SUCCESS cURL]`, data);
+        resolve(data);
+      } else {
+        console.error(`[TELEGRAM API cURL XATOLIGI] Exit code: ${code}`);
+        reject(new Error(`curl exit code ${code}`));
+      }
     });
 
-    req.write(payloadData);
-    req.end();
+    curl.on("error", (err: any) => {
+      console.error("Telegram admin botga xabar yuborishda cURL xatoligi:", err);
+      reject(err);
+    });
   });
 }
