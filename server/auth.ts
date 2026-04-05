@@ -407,7 +407,10 @@ export function setupAuth(app: Express): void {
         return res.status(400).json({ message: "Joriy va yangi parolni kiriting" });
       }
 
-      if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      const safeCurrentPassword = currentPassword.trim();
+      const safeNewPassword = newPassword.trim();
+
+      if (safeNewPassword.length < MIN_PASSWORD_LENGTH) {
         return res.status(400).json({ message: `Yangi parol kamida ${MIN_PASSWORD_LENGTH} ta belgi bo'lishi kerak` });
       }
 
@@ -416,12 +419,12 @@ export function setupAuth(app: Express): void {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
       }
 
-      const isPasswordValid = await bcrypt.compare(currentPassword, userMatch.password);
+      const isPasswordValid = await bcrypt.compare(safeCurrentPassword, userMatch.password);
       if (!isPasswordValid) {
         return res.status(400).json({ message: "Joriy parol noto'g'ri kiritildi" });
       }
 
-      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+      const hashedNewPassword = await bcrypt.hash(safeNewPassword, 10);
       await db.update(users).set({ password: hashedNewPassword }).where(eq(users.id, userMatch.id));
 
       res.status(200).json({ message: "Parol muvaffaqiyatli o'zgartirildi" });
