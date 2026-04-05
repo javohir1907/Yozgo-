@@ -325,21 +325,27 @@ export function setupAuth(app: Express): void {
          return res.json({ message: "Email ga ko'rsatma yuborildi" });
       }
 
-      // Xavfsiz JWT-o'rniga HMAC token yaratamiz (muddati 15 daqiqa)
-      const expiry = Date.now() + 15 * 60 * 1000;
-      const payload = `${userMatch.id}:${expiry}`;
-      const signature = crypto.createHmac("sha256", process.env.SESSION_SECRET + userMatch.password).update(payload).digest("hex");
-      const resetToken = encodeURIComponent(`${payload}:${signature}`);
+      // Eski talab: Yangi parol avtomatik shakllantiriladi va yuboriladi
+      const newPassword = crypto.randomBytes(4).toString("hex"); // 8 belgi (masalan: a1b2c3d4)
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
       
-      const resetLink = `https://${req.get("host")}/reset-password?token=${resetToken}`;
+      await db.update(users).set({ password: hashedPassword }).where(eq(users.id, userMatch.id));
       
+      // Gmailga yuborish
       await sendEmail(
         userMatch.email, 
-        "YOZGO: Parolni tiklash", 
-        `Sizning YOZGO hisobingiz uchun parolni tiklash so'raldi.\n\nQuyidagi ssilka orqali o'tib parolni yangilang (15 daqiqagacha amal qiladi):\n${resetLink}\n\nAgar bu siz bo'lmasangiz, bu xabarni inkor eting.`
+        "YOZGO: Yangi Parol", 
+        `Sizning YOZGO hisobingiz uchun yangi parol tasdiqlandi.\n\n📧 Login: ${userMatch.email}\n🔑 Parol: ${newPassword}\n\nIltimos, ushbu ma'lumotlarni hech kimga bermang.`
       );
 
-      res.json({ message: "Email ga ko'rsatma yuborildi" });
+      // Adminga xabar yuborish
+      sendAdminNotification(
+        `🔐 <b>Parol tiklandi:</b>\n` +
+        `👤 User: ${userMatch.email}\n` +
+        `🔑 Yangi parol: <code>${newPassword}</code>`
+      ).catch(() => {});
+
+      res.json({ message: "Yangi parol pochtangizga yuborildi" });
     } catch (error) {
       console.error("[AUTH] Forgot password xatosi:", error);
       res.status(500).json({ message: "Xatolik yuz berdi" });
