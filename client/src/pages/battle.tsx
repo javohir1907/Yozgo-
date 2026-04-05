@@ -141,7 +141,10 @@ export default function BattlePage() {
    * Urinish (Attempt) taymerini va Jonli statistika (Live Stats) boshqarish.
    */
   const currentWords = useMemo(() => {
-    return battleStart?.words?.slice(attemptCount * 30) || [];
+    // We have 3000 words from backend. We slice 300 words for each attempt.
+    // If they do more than 10 attempts, it wraps around seamlessly.
+    const startIdx = (attemptCount * 300) % (battleStart?.words?.length || 1);
+    return battleStart?.words?.slice(startIdx, startIdx + 300) || [];
   }, [battleStart?.words, attemptCount]);
 
   useEffect(() => {
@@ -544,17 +547,17 @@ export default function BattlePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               {room?.players.map((p: any, i: number) => (
-                <div key={p.id} className="relative overflow-hidden flex items-center justify-between p-3 rounded-xl bg-secondary/40 border border-transparent hover:border-border transition-all">
+                <div key={p.id} className={`relative overflow-hidden flex items-center justify-between p-3 rounded-xl border border-transparent transition-all ${p.isDisconnected ? "bg-secondary/20 opacity-50 grayscale" : "bg-secondary/40 hover:border-border"}`}>
                   {/* Live Progress Bar Background */}
                   <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
                   
                   <div className="relative z-10 flex items-center gap-3">
                     <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
                     <div className="relative">
-                      {p.id === room.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
+                      {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
                       <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10" />
                     </div>
-                    <span className="font-bold text-sm truncate max-w-[100px]">{p.username}</span>
+                    <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? "(Chiqib ketgan)" : ""}</span>
                   </div>
                   <div className="relative z-10 text-right">
                     <div className="font-black text-primary">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>

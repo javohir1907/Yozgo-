@@ -33,6 +33,7 @@ interface Player {
   attempts: number;
   isReady: boolean;
   isFinished: boolean;
+  isDisconnected?: boolean;
 }
 
 /**
@@ -196,7 +197,7 @@ export class BattleManager {
           totalTime: 5,
           maxAttempts: 10,
         },
-        testWords: this.generateTestWords(battleRecord.language, 200),
+        testWords: this.generateTestWords(battleRecord.language, 3000),
       };
       this.rooms.set(code, room);
     }
@@ -233,7 +234,7 @@ export class BattleManager {
 
     room.settings = settings;
     room.language = settings.language || room.language;
-    room.testWords = this.generateTestWords(room.language, 200);
+    room.testWords = this.generateTestWords(room.language, 3000);
     room.status = "playing";
     room.startTime = Date.now();
     room.endTime = room.startTime + settings.totalTime * 60 * 1000;
@@ -340,12 +341,23 @@ export class BattleManager {
     const room = this.rooms.get(code);
     if (!room) return;
 
-    room.players.delete(userId);
-    if (room.players.size === 0) {
+    if (room.status === "waiting") {
+      room.players.delete(userId);
+    } else {
+      const player = room.players.get(userId);
+      if (player) {
+        player.isDisconnected = true;
+      }
+    }
+
+    const activePlayersCount = Array.from(room.players.values()).filter(p => !p.isDisconnected).length;
+
+    if (room.players.size === 0 || activePlayersCount === 0) {
       this.rooms.delete(code);
     } else {
       if (room.adminId === userId) {
-        room.adminId = (room.players.keys().next().value as string) || "";
+        const nextAdmin = Array.from(room.players.values()).find(p => !p.isDisconnected);
+        room.adminId = nextAdmin ? nextAdmin.user.id : "";
       }
       this.broadcastRoomUpdate(room);
     }
@@ -375,6 +387,7 @@ export class BattleManager {
         bestAccuracy: p.bestAccuracy,
         attempts: p.attempts,
         isAdmin: p.user.id === room.adminId,
+        isDisconnected: !!p.isDisconnected,
       }))
       .sort((a, b) => b.bestWpm - a.bestWpm);
   }
