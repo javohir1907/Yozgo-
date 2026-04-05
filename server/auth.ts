@@ -166,12 +166,15 @@ export function setupAuth(app: Express): void {
         return res.status(400).json({ message: "Email va parol kiritilmadi" });
       }
 
-      const [userMatch] = await db.select().from(users).where(eq(users.email, email.toLowerCase()));
+      const safeEmail = email.trim().toLowerCase();
+      const safePassword = password.trim();
+
+      const [userMatch] = await db.select().from(users).where(eq(users.email, safeEmail));
       if (!userMatch) {
         return res.status(401).json({ message: "Email yoki parol xato" });
       }
 
-      const isPasswordValid = await bcrypt.compare(password, userMatch.password);
+      const isPasswordValid = await bcrypt.compare(safePassword, userMatch.password);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Email yoki parol xato" });
       }
