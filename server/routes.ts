@@ -428,9 +428,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   
   // Xavfsizlik Middleware: Faqat Python botdan kelgan so'rovlarni o'tkazadi
   const adminAuth = (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers["x-admin-token"];
-    // .env faylida ADMIN_API_TOKEN bo'lishi kerak (masalan: ADMIN_API_TOKEN=super_maxfiy_token)
-    if (token !== process.env.ADMIN_API_TOKEN) {
+    const token = req.headers["x-admin-token"] || req.headers["x-bot-secret"];
+    const secret = process.env.BOT_SECRET || process.env.ADMIN_API_TOKEN;
+    
+    if (!secret || token !== secret) {
       return res.status(403).json({ error: "Ruxsat etilmagan! (Forbidden)" });
     }
     next();
