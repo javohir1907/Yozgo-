@@ -41,16 +41,17 @@ async def show_top_users(message: Message):
 @router.message(F.text.contains("Foydalanuvchini izlash"))
 async def search_user_start(message: Message, state: FSMContext):
     await state.set_state(UserSearchState.user_id)
-    await message.answer("🔍 Qidirmoqchi bo'lgan foydalanuvchining <b>ID raqamini / UUID</b> yuboring:", reply_markup=cancel_kb())
+    await message.answer("🔍 Qidirmoqchi bo'lgan foydalanuvchining <b>ID raqami, ismi yoki emailini</b> yuboring:", reply_markup=cancel_kb())
 
 @router.message(UserSearchState.user_id)
 async def search_user_result(message: Message, state: FSMContext):
-    user_id = message.text
+    query = message.text
     msg = await message.answer("🔄 Izlanmoqda...", reply_markup=users_menu_kb())
     
-    user_data = await api_request("GET", f"/users/{user_id}")
+    users_data = await api_request("GET", f"/users/search/{query}")
     
-    if user_data:
+    if users_data and isinstance(users_data, list) and len(users_data) > 0:
+        user_data = users_data[0] # Birinchi topilgan foydalanuvchini ko'rsatamiz
         is_banned = user_data.get('isBanned', False)
         status = "🔴 BAN qilingan" if is_banned else "🟢 Faol"
         username = user_data.get('firstName') or user_data.get('email') or 'Noma\'lum'
@@ -62,9 +63,12 @@ async def search_user_result(message: Message, state: FSMContext):
             f"📊 Holati: <b>{status}</b>\n"
             f"📅 Ro'yxatdan o'tgan: {user_data.get('createdAt', '')[:10]}"
         )
+        if len(users_data) > 1:
+            text += f"\n\n<i>Qidiruv bo'yicha yana {len(users_data) - 1} ta foydalanuvchi topildi. Aniqroq izlang.</i>"
+            
         await msg.edit_text(text, reply_markup=user_action_kb(user_data['id'], is_banned))
     else:
-        await msg.edit_text("❌ Bunday ID ga ega foydalanuvchi topilmadi.")
+        await msg.edit_text("❌ Bunday ma'lumotga ega foydalanuvchi topilmadi.")
         
     await state.clear()
 

@@ -5,8 +5,7 @@ from config import API_URL, ADMIN_API_TOKEN
 async def api_request(method: str, endpoint: str, payload: dict = None):
     # Node.js backend muammosiz qabul qilishi uchun ehtiyot shart ikkala sarlavhani ham qo'shamiz
     headers = {
-        "X-Admin-Token": ADMIN_API_TOKEN,
-        "X-Bot-Secret": ADMIN_API_TOKEN
+        "X-Admin-Token": ADMIN_API_TOKEN
     }
     url = f"{API_URL}{endpoint}"
     

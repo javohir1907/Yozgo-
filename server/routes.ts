@@ -656,7 +656,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  // 2. Foydalanuvchini qidirish (ID bo'yicha)
+  // 2. Foydalanuvchini qidirish (ID bo'yicha yoki email/ismi bo'yicha)
+  app.get("/api/admin/users/search/:query", adminAuth, async (req, res) => {
+    try {
+      const q = `%${req.params.query}%`;
+      const isNumber = !isNaN(Number(req.params.query));
+      
+      const foundUsers = await db.select().from(users).where(
+        sql`${users.id}::text = ${req.params.query} OR ${users.firstName} ILIKE ${q} OR ${users.email} ILIKE ${q}`
+      ).limit(5);
+      
+      res.json(foundUsers);
+    } catch (error) {
+      res.status(500).json({ error: "Qidirishda xatolik" });
+    }
+  });
+
   app.get("/api/admin/users/:id", adminAuth, async (req, res) => {
     try {
       const userId = req.params.id as string;
