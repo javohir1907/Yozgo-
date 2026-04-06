@@ -25,8 +25,11 @@ import { sendAdminNotification } from "./utils/notifier";
 
 // ============ CONSTANTS ============
 const SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 kun
-const MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_LENGTH = 6;
 const NICKNAME_REGEX = /^[a-z0-9_]{4,20}$/;
+
+const otpStore = new Map<string, { code: string; expiresAt: number; data?: any }>();
+const OTP_EXPIRY = 5 * 60 * 1000;
 
 // ============ TYPES ============
 interface SessionRequest extends Request {
@@ -77,6 +80,34 @@ export function setupAuth(app: Express): void {
 
   // ============ REGISTER & LOGIN ROUTES ============
 
+  app.post("/api/auth/send-register-otp", async (req: Request, res: Response) => {
+    try {
+      const { email, firstName } = req.body;
+      if (!email || !firstName) return res.status(400).json({ message: "Email va Nickname kiritilmadi" });
+
+      const emailStr = email.toLowerCase();
+      const [existingUserByEmail] = await db.select().from(users).where(eq(users.email, emailStr));
+      if (existingUserByEmail) return res.status(409).json({ message: "Ushbu email allaqachon ro'yxatdan o'tgan" });
+      
+      const [existingUserByNick] = await db.select().from(users).where(ilike(users.firstName, firstName.trim()));
+      if (existingUserByNick) return res.status(409).json({ message: "Ushbu nickname band, boshqasini tanlang" });
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      otpStore.set(emailStr, { code: otp, expiresAt: Date.now() + OTP_EXPIRY });
+
+      await sendEmail(
+         emailStr,
+         "YOZGO: Ro'yxatdan o'tish uchun kod",
+         `Sizning YOZGO tasdiqlash kodingiz: ${otp}\nUshbu kod 5 daqiqa davomida amal qiladi.`
+      );
+
+      res.status(200).json({ message: "Kod yuborildi" });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ message: "Xatolik" });
+    }
+  });
+
   /**
    * @openapi
    * /api/auth/register:
@@ -86,7 +117,7 @@ export function setupAuth(app: Express): void {
    */
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
-      const { email, password, firstName, lastName } = req.body;
+      const { email, password, firstName, lastName, otp } = req.body;
 
       // 1. Asosiy validatsiya
       if (!email || !password) {
@@ -97,8 +128,12 @@ export function setupAuth(app: Express): void {
         return res.status(400).json({ message: `Parol kamida ${MIN_PASSWORD_LENGTH} belgidan iborat bo'lishi kerak` });
       }
 
-      if (!/(?=.*[A-Za-z])(?=.*\\d)/.test(password)) {
-        return res.status(400).json({ message: "Parol kamida bitta harf va bitta raqamdan iborat bo'lishi kerak" });
+      if (!otp) {
+        return res.status(400).json({ message: "Tasdiqlash kodi talab qilinadi" });
+      }
+      const storedOtp = otpStore.get(email.toLowerCase());
+      if (!storedOtp || storedOtp.code !== otp || Date.now() > storedOtp.expiresAt) {
+        return res.status(400).json({ message: "Kod xato yoki muddati o'tgan" });
       }
 
       // 2. Email bandligini tekshirish
@@ -130,6 +165,8 @@ export function setupAuth(app: Express): void {
           lastName: lastName || null,
         })
         .returning();
+
+      otpStore.delete(email.toLowerCase());
 
       // Sessionga biriktirish
       (req.session as any).userId = newUser.id;
@@ -290,28 +327,66 @@ export function setupAuth(app: Express): void {
 
       let [existingUser] = await db.select().from(users).where(eq(users.email, profileData.email.toLowerCase()));
 
+      let frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
+
       if (!existingUser) {
-        const dummyPassword = crypto.randomBytes(16).toString("hex");
-        const [newUser] = await db.insert(users).values({
-          email: profileData.email.toLowerCase(),
-          password: await bcrypt.hash(dummyPassword, 10),
-          firstName: (profileData.given_name || profileData.name || "user").toLowerCase().replace(/[^a-z0-9_]/g, "") + "_" + crypto.randomBytes(2).toString("hex"),
-          lastName: profileData.family_name || null,
-          profileImageUrl: profileData.picture || null,
-        }).returning();
-        existingUser = newUser;
-        
-        sendAdminNotification(`🔔 <b>Google orqali yangi hisob:</b> ${existingUser.email}`).catch(() => {});
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        // save their google profile in otpStore
+        otpStore.set("google:" + profileData.email.toLowerCase(), {
+          code: otp,
+          expiresAt: Date.now() + OTP_EXPIRY,
+          data: profileData
+        });
+
+        await sendEmail(
+           profileData.email,
+           "YOZGO: Google orqali kirish tasdiqlash kodi",
+           `Sizning YOZGO tasdiqlash kodingiz: ${otp}\nUshbu kod 5 daqiqa davomida amal qiladi.`
+        );
+
+        return res.redirect(`${frontendUrl}/auth?googleOtpEmail=${encodeURIComponent(profileData.email.toLowerCase())}`);
       }
 
       (req.session as any).userId = existingUser.id;
       
-      const frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
       res.redirect(frontendUrl);
     } catch (error) {
       console.error("[AUTH] Google Callback Error:", error);
       const frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
       res.redirect(`${frontendUrl}/auth?error=ServerError`);
+    }
+  });
+
+  app.post("/api/auth/google-verify", async (req: Request, res: Response) => {
+    try {
+      const { email, otp } = req.body;
+      if (!email || !otp) return res.status(400).json({ message: "Ma'lumotlar to'liq emas" });
+
+      const stored = otpStore.get("google:" + email.toLowerCase());
+      if (!stored || stored.code !== otp || Date.now() > stored.expiresAt) {
+           return res.status(400).json({ message: "Kod xato yoki muddati o'tgan" });
+      }
+      
+      const profileData = stored.data;
+      const dummyPassword = crypto.randomBytes(16).toString("hex");
+      const [newUser] = await db.insert(users).values({
+        email: profileData.email.toLowerCase(),
+        password: await bcrypt.hash(dummyPassword, 10),
+        firstName: (profileData.given_name || profileData.name || "user").toLowerCase().replace(/[^a-z0-9_]/g, "") + "_" + crypto.randomBytes(2).toString("hex"),
+        lastName: profileData.family_name || null,
+        profileImageUrl: profileData.picture || null,
+      }).returning();
+      
+      otpStore.delete("google:" + email.toLowerCase());
+
+      sendAdminNotification(`🔔 <b>Google orqali yangi hisob:</b> ${newUser.email}`).catch(() => {});
+      
+      (req.session as any).userId = newUser.id;
+      const { password: _, ...safeProfile } = newUser;
+      res.status(200).json(safeProfile);
+    } catch (error) {
+      console.error("[AUTH] Google Verify Error:", error);
+      res.status(500).json({ message: "Xatolik yuz berdi" });
     }
   });
 

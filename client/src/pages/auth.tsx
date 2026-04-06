@@ -20,9 +20,23 @@ export default function AuthPage() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
+
+  const [showOtp, setShowOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [googleOtpEmail, setGoogleOtpEmail] = useState("");
+
   const { login, register, isLoggingIn, isRegistering, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const { t } = useI18n();
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const gEmail = searchParams.get("googleOtpEmail");
+    if (gEmail) {
+      setGoogleOtpEmail(gEmail);
+      setShowOtp(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (isLogin || !firstName || firstName.trim() === "") {
@@ -68,26 +82,38 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         await login({ email, password });
+        
+        const joinComp = sessionStorage.getItem("joinComp");
+        if (joinComp) {
+          try {
+            const { apiRequest } = await import("@/lib/queryClient");
+            await apiRequest("POST", `/api/competitions/${joinComp}/register`);
+          } catch(e) {}
+          sessionStorage.removeItem("joinComp");
+          setLocation("/");
+        } else {
+          setLocation("/typing-test");
+        }
       } else {
         if (!firstName || firstName.length < 4) {
-          setError(
-            "Nickname faqat kichik harf va raqamlardan iborat bo'lishi kerak, kamida 4 ta belgi"
-          );
+          setError("Nickname faqat kichik harf va raqamlardan iborat bo'lishi kerak, kamida 4 ta belgi");
           return;
         }
-        await register({ email, password, firstName });
-      }
-      
-      const joinComp = sessionStorage.getItem("joinComp");
-      if (joinComp) {
-        try {
-          const { apiRequest } = await import("@/lib/queryClient");
-          await apiRequest("POST", `/api/competitions/${joinComp}/register`);
-        } catch(e) {}
-        sessionStorage.removeItem("joinComp");
-        setLocation("/"); // Return to landing showing waitlist update
-      } else {
-        setLocation("/typing-test");
+        
+        // Send OTP first
+        setIsCheckingUsername(true);
+        const baseUrl = import.meta.env.VITE_API_URL || "";
+        const res = await fetch(`${baseUrl}/api/auth/send-register-otp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, firstName })
+        });
+        setIsCheckingUsername(false);
+        if (!res.ok) {
+          const data = await res.json().catch(()=>({}));
+          throw new Error(data.message || "Xatolik yuz berdi");
+        }
+        setShowOtp(true);
       }
     } catch (err: any) {
       const body = err?.message || "Something went wrong";
@@ -99,6 +125,48 @@ export default function AuthPage() {
         } else {
           setError(msg);
         }
+      } catch {
+        setError(body);
+      }
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    try {
+      if (googleOtpEmail) {
+        const baseUrl = import.meta.env.VITE_API_URL || "";
+        const res = await fetch(`${baseUrl}/api/auth/google-verify`, {
+           method: "POST",
+           headers: { "Content-Type": "application/json" },
+           body: JSON.stringify({ email: googleOtpEmail, otp: otpCode })
+        });
+        if (!res.ok) {
+           const data = await res.json().catch(()=>({}));
+           throw new Error(data.message || "Kod xato");
+        }
+        window.location.href = "/typing-test";
+      } else {
+        await register({ email, password, firstName, otp: otpCode });
+        
+        const joinComp = sessionStorage.getItem("joinComp");
+        if (joinComp) {
+          try {
+            const { apiRequest } = await import("@/lib/queryClient");
+            await apiRequest("POST", `/api/competitions/${joinComp}/register`);
+          } catch(e) {}
+          sessionStorage.removeItem("joinComp");
+          setLocation("/");
+        } else {
+          setLocation("/typing-test");
+        }
+      }
+    } catch(err: any) {
+      const body = err?.message || "Xatolik";
+      try {
+        const parsed = JSON.parse(body.split(": ").slice(1).join(": "));
+        setError(parsed.message || body);
       } catch {
         setError(body);
       }
@@ -126,6 +194,61 @@ export default function AuthPage() {
   };
 
   const isPending = isLoggingIn || isRegistering;
+
+  if (showOtp) {
+    return (
+      <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Keyboard className="w-8 h-8 text-primary" />
+              <span className="font-bold text-2xl tracking-tighter">YOZGO</span>
+            </div>
+            <CardTitle>Emailni tasdiqlash</CardTitle>
+            <CardDescription>
+              {googleOtpEmail ? googleOtpEmail : email} manziliga yuborilgan kodni kiriting
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleVerifyOtp} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="otp">Tasdiqlash kodi</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="Kodni kiriting (6 xonali)"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  required
+                  className="text-center text-lg tracking-widest"
+                  maxLength={6}
+                />
+              </div>
+              {error && (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{error}</span>
+                </div>
+              )}
+              <Button type="submit" className="w-full" disabled={isRegistering}>
+                {isRegistering ? "Tasdiqlanmoqda..." : "Tasdiqlash"}
+              </Button>
+              <button
+                type="button"
+                className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => {
+                  setShowOtp(false);
+                  setGoogleOtpEmail("");
+                }}
+              >
+                Ortga qaytish
+              </button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (showForgotPassword) {
     return (
