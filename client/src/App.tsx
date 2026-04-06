@@ -23,9 +23,12 @@ import ResetPasswordPage from "@/pages/reset-password";
 import { motion, AnimatePresence } from "framer-motion";
 
 function Router() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
   React.useEffect(() => {
+    if (location !== "/" && location.endsWith("/")) {
+      setLocation(location.slice(0, -1), { replace: true });
+    }
     ReactGA.send({ hitType: "pageview", page: location });
   }, [location]);
 

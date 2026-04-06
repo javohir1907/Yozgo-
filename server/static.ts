@@ -25,7 +25,7 @@ export function serveStatic(app: Express) {
   app.use(express.static(finalPath, { index: false }));
 
   // CATCH-ALL ROUTE: Must be last to handle SPA routing without swallowing API calls
-  app.get("*", (req, res, next) => {
+  app.use((req, res, next) => {
     // If the request is for /api, don't serve index.html
     if (req.path.startsWith("/api")) {
       return next();
