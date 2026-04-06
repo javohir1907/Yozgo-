@@ -6,7 +6,7 @@ from keyboards.reply import main_menu_kb
 
 router = Router()
 
-@router.callback_query(F.data.startswith("forward_battle_"))
+@router.callback_query(F.data.startswith("send_channel_"))
 async def handle_forward_battle(callback: CallbackQuery):
     battle_code = callback.data.split("_")[2]
     invite_code = f"BTL-{battle_code}"

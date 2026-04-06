@@ -208,18 +208,37 @@ export class BattleManager {
       return;
     }
 
-    // O'yinchini xonaga qo'shish
+    const existingPlayer = room.players.get(user.id);
+
+    // Agar jang boshlangan bo'lsa va ishtirokchi qisqa uzilishdan keyin yana qaytsa
+    if (existingPlayer && room.status === "playing") {
+      existingPlayer.socket = socket;
+      existingPlayer.isDisconnected = false;
+      
+      socket.join(code);
+      socket.emit("battle-start", {
+        settings: room.settings,
+        startTime: room.startTime,
+        endTime: room.endTime,
+        words: room.testWords,
+      });
+      this.broadcastRoomUpdate(room);
+      return;
+    }
+
+    // O'yinchini xonaga qo'shish (Yangi kelgan yoki kutish xonasida bo'lsa almashtirish)
     room.players.set(user.id, {
       socket,
       user,
-      progress: 0,
-      wpm: 0,
-      accuracy: 100,
-      bestWpm: 0,
-      bestAccuracy: 100,
-      attempts: 0,
-      isReady: false,
-      isFinished: false,
+      progress: existingPlayer ? existingPlayer.progress : 0,
+      wpm: existingPlayer ? existingPlayer.wpm : 0,
+      accuracy: existingPlayer ? existingPlayer.accuracy : 100,
+      bestWpm: existingPlayer ? existingPlayer.bestWpm : 0,
+      bestAccuracy: existingPlayer ? existingPlayer.bestAccuracy : 100,
+      attempts: existingPlayer ? existingPlayer.attempts : 0,
+      isReady: existingPlayer ? existingPlayer.isReady : false,
+      isFinished: existingPlayer ? existingPlayer.isFinished : false,
+      isDisconnected: false,
     });
 
     socket.join(code);
