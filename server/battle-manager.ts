@@ -393,10 +393,9 @@ export class BattleManager {
     if (room.players.size === 0 || activePlayersCount === 0) {
       this.rooms.delete(code);
     } else {
-      if (room.adminId === userId) {
-        const nextAdmin = Array.from(room.players.values()).find(p => !p.isDisconnected);
-        room.adminId = nextAdmin ? nextAdmin.user.id : "";
-      }
+      // FIX: Admin xonadan uzilganda (masalan qisqa network drop) adminlikni 
+      // boshqa foydalanuvchiga tortib olib berish funksiyasi olib tashlandi.
+      // Admin xonaga qaytganida o'z huquqlarini tiklab oladi.
       this.broadcastRoomUpdate(room);
     }
   }
