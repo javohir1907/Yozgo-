@@ -648,9 +648,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       // 3. Har bir userni tsiklda aylanib, qatorlarga qo'shish
       allUsers.forEach((user: any) => {
         // Ism va usernamedagi ehtimoliy vergullarni bo'sh joyga almashtiramiz (CSV strukturasi buzilmasligi uchun)
-        const name = user.firstName ? user.firstName.replace(/,/g, '') : 'Noma\'lum';
-        const username = user.username ? user.username.replace(/,/g, '') : '-';
+        let name = user.firstName ? user.firstName.replace(/,/g, '') : 'Noma\'lum';
+        let username = user.username ? user.username.replace(/,/g, '') : '-';
         const role = user.role || 'user';
+        
+        // Kiberxavfsizlik (CSV Injection / Formula Injection oldini olish)
+        if (/^[=\-+\@]/.test(name)) name = "'" + name;
+        if (/^[=\-+\@]/.test(username)) username = "'" + username;
         
         // Sanani chiroyli formatlash
         const date = user.createdAt ? new Date(user.createdAt).toLocaleString('ru-RU') : '-';

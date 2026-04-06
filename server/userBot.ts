@@ -14,7 +14,7 @@ export function getUserBot() {
 }
 
 export function startUserBot() {
-  const token = "8639149817:AAEt6amRcVhWdX895ysvjpS3wpTIVsch-aw";
+  const token = process.env.USER_BOT_TOKEN;
   if (!token) {
     console.warn("⚠️ USER_BOT_TOKEN not set — user bot disabled");
     return;

@@ -38,6 +38,8 @@ interface SessionRequest extends Request {
 
 // ============ AUTHENTICATION SYSTEM ============
 
+export let sessionMiddleware: any = null;
+
 /**
  * Passport.js va Express Session tizimini sozlaydi.
  * 
@@ -60,8 +62,7 @@ export function setupAuth(app: Express): void {
     tableName: "sessions",
   });
 
-  app.use(
-    session({
+  sessionMiddleware = session({
       secret: process.env.SESSION_SECRET,
       store: sessionStore,
       resave: false,
@@ -72,8 +73,9 @@ export function setupAuth(app: Express): void {
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: SESSION_EXPIRY,
       },
-    })
-  );
+  });
+
+  app.use(sessionMiddleware);
 
   app.use(passport.initialize());
   app.use(passport.session());

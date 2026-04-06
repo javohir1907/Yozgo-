@@ -17,6 +17,7 @@ import { storage } from "./storage";
 import { words } from "../shared/words";
 import { type User } from "@shared/schema";
 import { sendAdminNotification } from "./utils/notifier";
+import { sessionMiddleware } from "./auth";
 
 // ============ TYPES & INTERFACES ============
 
@@ -95,6 +96,12 @@ export class BattleManager {
     });
     this.setupSocketIO();
 
+    // XAVFSIZLIK: WebSockets orqali avtorizatsiyani ta'minlash
+    if (sessionMiddleware) {
+      const wrap = (middleware: any) => (socket: Socket, next: any) => middleware(socket.request, {}, next);
+      this.io.use(wrap(sessionMiddleware));
+    }
+
     // Har 15 daqiqada tozala
     setInterval(() => this.cleanupInactiveRooms(), 15 * 60 * 1000);
   }
@@ -120,10 +127,28 @@ export class BattleManager {
 
       // Xonaga qo'shilish
       socket.on("join-room", async (data: { code: string; user: User }) => {
-        const { code, user } = data;
-        await this.handleJoinRoom(socket, code, user);
+        const req = socket.request as any;
+        const secureUserId = req.session?.userId;
+        
+        // Anti-Spoofing: Dasturga ulanayotgan shaxs anonim bo'lmasligi kerak
+        if (!secureUserId) {
+           socket.emit("error-message", { message: "Ruxsat etilmagan: Avtorizatsiyadan o'tilmagan" });
+           return;
+        }
+
+        // Agar client jo'natgan yuzer ID real ID bilan mos kelmasa radd qilamiz (ID Spoofing)
+        if (data.user?.id !== secureUserId) {
+           socket.emit("error-message", { message: "Xavfsizlik xatosi: Kiritilgan ma'lumotlar soxta!" });
+           console.warn(`[SECURITY] ID Spoofing Attack Detected: Socket ${socket.id} tried to claim ID ${data.user?.id} but real session ID is ${secureUserId}`);
+           return;
+        }
+
+        const code = data.code;
+        // Baza ustidan bazaviy ishonchli 'secureUser' obyektini yuklash kerak bo'lsa, qilsa bo'ladi.
+        // Hozirgi client yuborgan obyekt ID si validatsiyadan o'tganligi uchun undan foydalanish mumkin
+        await this.handleJoinRoom(socket, code, data.user);
         currentRoomCode = code;
-        currentUserId = user.id;
+        currentUserId = secureUserId;
       });
 
       // Jangni boshlash (faqat Admin)
