@@ -219,6 +219,10 @@ export function setupAuth(app: Express): void {
         return res.status(401).json({ message: "Email yoki parol xato" });
       }
 
+      if (!userMatch.password) {
+        return res.status(401).json({ message: "Bu elektron pochta orqali faqat Google yordamida kirish mumkin." });
+      }
+
       const isPasswordValid = await bcrypt.compare(safePassword, userMatch.password);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Email yoki parol xato" });
@@ -333,14 +337,20 @@ export function setupAuth(app: Express): void {
       });
       const profileData = await profileRes.json();
 
-      let [existingUser] = await db.select().from(users).where(eq(users.email, profileData.email.toLowerCase()));
-
       let frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
+
+      if (!profileData || !profileData.email) {
+         return res.redirect(`${frontendUrl}/auth?error=EmailNotProvidedByGoogle`);
+      }
+
+      const emailStr = profileData.email.toLowerCase();
+
+      let [existingUser] = await db.select().from(users).where(eq(users.email, emailStr));
 
       if (!existingUser) {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         // save their google profile in otpStore
-        otpStore.set("google:" + profileData.email.toLowerCase(), {
+        otpStore.set("google:" + emailStr, {
           code: otp,
           expiresAt: Date.now() + OTP_EXPIRY,
           data: profileData
@@ -361,7 +371,7 @@ export function setupAuth(app: Express): void {
     } catch (error) {
       console.error("[AUTH] Google Callback Error:", error);
       const frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
-      res.redirect(`${frontendUrl}/auth?error=ServerError`);
+      res.redirect(`${frontendUrl}/auth?error=${encodeURIComponent(error instanceof Error ? error.message : String(error))}`);
     }
   });
 
