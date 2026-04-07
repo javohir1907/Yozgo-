@@ -70,8 +70,8 @@ export function setupAuth(app: Express): void {
       proxy: true, // Render kabi proksilar uchun muhim
       cookie: {
         httpOnly: true,
-        secure: true, // Render HTTPS ishlatadi, shuning uchun true qilamiz
-        sameSite: "none", // Cross-domain (yozgo.uz -> onrender.com) uchun shart
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Localda muammo qilmasligi uchun lax, serverda kross-domen uchratsa none
         maxAge: SESSION_EXPIRY,
       },
   });
@@ -301,7 +301,8 @@ export function setupAuth(app: Express): void {
   app.get("/api/auth/google", (req: Request, res: Response) => {
     const clientId = process.env.GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
     if (!clientId) return res.status(500).json({ message: "Google Client ID o'rnatilmagan" });
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
+    const BACKEND_URL = process.env.BACKEND_URL || `${req.protocol}://${req.get("host")}`;
+    const redirectUri = `${BACKEND_URL}/api/auth/google/callback`;
     const scope = "email profile";
     const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}`;
     res.redirect(googleAuthUrl);
@@ -314,7 +315,8 @@ export function setupAuth(app: Express): void {
     try {
       const clientId = process.env.GOOGLE_ID || process.env.GOOGLE_CLIENT_ID;
       const clientSecret = process.env.GOOGLE_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-      const redirectUri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
+      const BACKEND_URL = process.env.BACKEND_URL || `${req.protocol}://${req.get("host")}`;
+      const redirectUri = `${BACKEND_URL}/api/auth/google/callback`;
 
       // Token olish
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
