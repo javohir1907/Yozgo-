@@ -9,16 +9,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
 import { NavHeader } from "@/components/nav-header";
-import LandingPage from "@/pages/landing";
-import SettingsPage from "@/pages/settings";
-import NotFound from "@/pages/not-found";
-import LeaderboardPage from "@/pages/leaderboard";
-import BattlePage from "@/pages/battle";
-import TypingTestPage from "@/pages/typing-test";
-import ProfilePage from "@/pages/profile";
-import AuthPage from "@/pages/auth";
-import AdminPage from "@/pages/admin";
-import ResetPasswordPage from "@/pages/reset-password";
+import { Loader2 } from "lucide-react";
+
+const LandingPage = React.lazy(() => import("@/pages/landing"));
+const SettingsPage = React.lazy(() => import("@/pages/settings"));
+const NotFound = React.lazy(() => import("@/pages/not-found"));
+const LeaderboardPage = React.lazy(() => import("@/pages/leaderboard"));
+const BattlePage = React.lazy(() => import("@/pages/battle"));
+const TypingTestPage = React.lazy(() => import("@/pages/typing-test"));
+const ProfilePage = React.lazy(() => import("@/pages/profile"));
+const AuthPage = React.lazy(() => import("@/pages/auth"));
+const AdminPage = React.lazy(() => import("@/pages/admin"));
+const ResetPasswordPage = React.lazy(() => import("@/pages/reset-password"));
 
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -33,29 +35,36 @@ function Router() {
   }, [location]);
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={location}
-        initial={{ opacity: 0, y: 5 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -5 }}
-        transition={{ duration: 0.15, ease: "easeOut" }}
-        className="h-full w-full"
-      >
-        <Switch>
-          <Route path="/" component={LandingPage} />
-          <Route path="/auth" component={AuthPage} />
-          <Route path="/settings" component={SettingsPage} />
-          <Route path="/leaderboard" component={LeaderboardPage} />
-          <Route path="/battle" component={BattlePage} />
-          <Route path="/typing-test" component={TypingTestPage} />
-          <Route path="/profile" component={ProfilePage} />
-          <Route path="/admin" component={AdminPage} />
-          <Route path="/reset-password" component={ResetPasswordPage} />
-          <Route component={NotFound} />
-        </Switch>
-      </motion.div>
-    </AnimatePresence>
+    <React.Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+          className="h-full w-full"
+        >
+          <Switch>
+            <Route path="/" component={LandingPage} />
+            <Route path="/auth" component={AuthPage} />
+            <Route path="/settings" component={SettingsPage} />
+            <Route path="/leaderboard" component={LeaderboardPage} />
+            <Route path="/battle" component={BattlePage} />
+            <Route path="/typing-test" component={TypingTestPage} />
+            <Route path="/profile" component={ProfilePage} />
+            <Route path="/profile/:userId" component={ProfilePage} />
+            <Route path="/admin" component={AdminPage} />
+            <Route path="/reset-password" component={ResetPasswordPage} />
+            <Route component={NotFound} />
+          </Switch>
+        </motion.div>
+      </AnimatePresence>
+    </React.Suspense>
   );
 }
 

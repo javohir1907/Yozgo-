@@ -52,6 +52,14 @@ export const battles = pgTable("battles", {
   language: text("language").notNull(),
   mode: text("mode").notNull(),
   creatorId: varchar("creator_id").references(() => users.id),
+  maxParticipants: integer("max_participants").default(10), // Default bepul limit
+  genderRestriction: text("gender_restriction").default("all"), // all, male, female
+  isOfficial: boolean("is_official").default(false), // Adminlar uchun (xolmatovlar)
+  roomPrice: integer("room_price").default(0), // Xona uchun to'lov summasi
+  accessCode: text("access_code"), // Admin bergan maxsus pre-authorized kod
+  duration: integer("duration").default(60), // Test davomiyligi (soniya)
+  competitionLength: integer("competition_length").default(10), // Musobaqa davomiyligi (daqiqa)
+  role: text("creator_role").default("participant"), // creator as spectator or participant
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -160,6 +168,17 @@ export const adminMessages = pgTable("admin_messages", {
     .notNull(),
   message: text("message").notNull(),
   sentAt: timestamp("sent_at").defaultNow().notNull(),
+});
+
+export const competitionCreationCodes = pgTable("competition_creation_codes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: varchar("code").notNull().unique(), // Admin beradigan kod (masalan: YOZGO-9V2K)
+  maxParticipants: integer("max_participants").notNull(),
+  isUsed: boolean("is_used").default(false).notNull(),
+  createdBy: text("created_by").notNull(), // Uni yaratgan admin Telegram ID
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  usedByUserId: varchar("used_by_user_id").references(() => users.id),
+  usedAt: timestamp("used_at"),
 });
 
 export const botStates = pgTable("bot_states", {

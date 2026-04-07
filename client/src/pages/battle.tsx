@@ -72,6 +72,7 @@ export default function BattlePage() {
   const [inputCode, setInputCode] = useState<string>("");
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [isJoining, setIsJoining] = useState<boolean>(false);
+  const [activationCode, setActivationCode] = useState<string>("");
   
   // --- STATE: Gameplay ---
   const [userInput, setUserInput] = useState<string>("");
@@ -386,6 +387,18 @@ export default function BattlePage() {
                     <option value="ru">Русский</option>
                   </select>
                 </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="flex justify-between">
+                  <span>Aktivatsiya kodi (ixtiyoriy)</span>
+                  <span className="text-[10px] text-primary">@uergo dan olingan</span>
+                </Label>
+                <Input 
+                  placeholder="Y-XXXXXX" 
+                  value={activationCode} 
+                  onChange={e => setActivationCode(e.target.value)} 
+                  className="font-mono text-center uppercase"
+                />
               </div>
               <Button onClick={handleCreateBattle} disabled={isCreating} className="w-full font-bold h-12">
                 {isCreating ? <Loader2 className="animate-spin" /> : "XONA OCHISH"}

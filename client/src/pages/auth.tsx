@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Keyboard, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
+  const [gender, setGender] = useState<"male" | "female">("male");
   const [showPassword, setShowPassword] = useState(false);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
@@ -148,7 +150,7 @@ export default function AuthPage() {
         }
         window.location.href = "/typing-test";
       } else {
-        await register({ email, password, firstName, otp: otpCode });
+        await register({ email, password, firstName, otp: otpCode, gender });
         
         const joinComp = sessionStorage.getItem("joinComp");
         if (joinComp) {
@@ -374,6 +376,37 @@ export default function AuthPage() {
                 {!isLogin && firstName && isCheckingUsername && (
                   <p className="text-sm text-yellow-500">Tekshirilmoqda...</p>
                 )}
+              </div>
+            )}
+            {!isLogin && (
+              <div className="space-y-2">
+                <Label>Jinsingiz (majburiy)</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setGender("male")}
+                    className={cn(
+                      "flex items-center justify-center py-2 px-4 rounded-lg border-2 transition-all font-bold",
+                      gender === "male" 
+                        ? "border-blue-500 bg-blue-500/10 text-blue-500" 
+                        : "border-border bg-card text-muted-foreground hover:border-blue-200"
+                    )}
+                  >
+                    ♂ O'g'il bola
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGender("female")}
+                    className={cn(
+                      "flex items-center justify-center py-2 px-4 rounded-lg border-2 transition-all font-bold",
+                      gender === "female" 
+                        ? "border-pink-500 bg-pink-500/10 text-pink-500" 
+                        : "border-border bg-card text-muted-foreground hover:border-pink-200"
+                    )}
+                  >
+                    ♀ Qiz bola
+                  </button>
+                </div>
               </div>
             )}
             <div className="space-y-2">

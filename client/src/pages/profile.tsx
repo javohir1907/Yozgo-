@@ -16,23 +16,32 @@ import { Trophy, Target, Timer, BarChart3, History, Key } from "lucide-react";
 import { format } from "date-fns";
 import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
+import { useRoute } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import SEO from "@/components/SEO";
+import { cn } from "@/lib/utils";
 
 interface ProfileData {
   user: {
     id: string;
     username: string;
     avatarUrl?: string;
+    gender?: string;
+    role?: string;
   };
   stats: {
     totalTests: number;
     avgWpm: number;
     bestWpm: number;
     avgAccuracy: number;
+  };
+  detailedStats: {
+    uz: Record<string, number>;
+    ru: Record<string, number>;
+    en: Record<string, number>;
   };
   recentResults: {
     id: string;
@@ -45,17 +54,21 @@ interface ProfileData {
 }
 
 export default function Profile() {
+  const [, params] = useRoute("/profile/:userId");
   const { user: authUser } = useAuth();
   const { t } = useI18n();
   const { toast } = useToast();
+
+  const currentUserId = params?.userId || authUser?.id;
+  const isOwnProfile = !params?.userId || params.userId === authUser?.id;
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const { data, isLoading } = useQuery<ProfileData>({
-    queryKey: ["/api/profile", authUser?.id],
-    enabled: !!authUser?.id,
+    queryKey: [currentUserId ? `/api/profile/${currentUserId}` : "/api/profile/me"], // Changed to actual endpoint
+    enabled: !!currentUserId,
   });
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -132,6 +145,7 @@ export default function Profile() {
         title={`${user.username} | Profil`} 
         description={`${user.username}ning YOZGO platformasidagi natijalari va statistikasi.`}
       />
+      
       <div className="flex items-center gap-6 mb-8">
         <Avatar className="h-24 w-24 border-2 border-primary/20">
           <AvatarImage src={user.avatarUrl} />
@@ -140,75 +154,72 @@ export default function Profile() {
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1
-            className="text-4xl font-bold tracking-tight text-foreground"
-            data-testid="text-username"
-          >
+          <h1 className="text-4xl font-bold tracking-tight text-foreground" data-testid="text-username">
             {user.username}
           </h1>
-          <p className="text-muted-foreground mt-1 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            {t.profile.typingEnthusiast}
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-muted-foreground flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              {t.profile.typingEnthusiast}
+            </p>
+            {user.gender && (
+              <span className={cn(
+                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
+                user.gender === 'male' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-pink-500/10 text-pink-500 border-pink-500/20"
+              )}>
+                {user.gender === 'male' ? "O'g'il bola" : "Qiz bola"}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              {t.profile.totalTests}
-            </CardTitle>
-            <Timer className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-mono font-bold" data-testid="status-total-tests">
-              {stats.totalTests}
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          { label: t.profile.totalTests, val: stats.totalTests, icon: Timer, color: "text-primary", testId: "status-total-tests" },
+          { label: t.profile.bestWpm, val: stats.bestWpm, icon: Trophy, color: "text-yellow-500", testId: "status-best-wpm" },
+          { label: t.profile.avgWpm, val: stats.avgWpm, icon: BarChart3, color: "text-blue-500", testId: "status-avg-wpm" },
+          { label: t.profile.avgAccuracy, val: `${stats.avgAccuracy}%`, icon: Target, color: "text-green-500", testId: "status-avg-accuracy" },
+        ].map((item, idx) => (
+          <Card key={idx} className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
+            <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                {item.label}
+              </CardTitle>
+              <item.icon className={cn("h-4 w-4", item.color)} />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-mono font-bold" data-testid={item.testId}>
+                {item.val}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-        <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              {t.profile.bestWpm}
-            </CardTitle>
-            <Trophy className="h-4 w-4 text-yellow-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-mono font-bold" data-testid="status-best-wpm">
-              {stats.bestWpm}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              {t.profile.avgWpm}
-            </CardTitle>
-            <BarChart3 className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-mono font-bold" data-testid="status-avg-wpm">
-              {stats.avgWpm}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
-          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              {t.profile.avgAccuracy}
-            </CardTitle>
-            <Target className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-mono font-bold" data-testid="status-avg-accuracy">
-              {stats.avgAccuracy}%
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {['uz', 'ru', 'en'].map((lang) => (
+          <Card key={lang} className="overflow-hidden border-border bg-card/50">
+            <CardHeader className="bg-secondary/20 py-3">
+              <CardTitle className="text-sm font-bold uppercase tracking-widest text-center flex items-center justify-center gap-2">
+                <Trophy className={cn("w-4 h-4", lang === 'uz' ? "text-blue-500" : lang === 'ru' ? "text-red-500" : "text-green-500")} />
+                {lang === 'uz' ? "O'zbek" : lang === 'ru' ? "Rus" : "Ingliz"} tili rekordlari
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="grid grid-cols-3 divide-x divide-border">
+                {[15, 30, 60].map((mode) => (
+                  <div key={mode} className="p-4 text-center">
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">{mode} soniya</div>
+                    <div className="text-2xl font-mono font-bold text-primary">
+                      {data.detailedStats?.[lang as 'uz'|'ru'|'en']?.[mode.toString()] || 0}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card className="bg-card border border-border shadow-sm">
@@ -225,43 +236,45 @@ export default function Profile() {
         </CardContent>
       </Card>
 
-      <Card className="bg-card border border-border shadow-sm">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="w-5 h-5 text-primary" />
-            Parolni o'zgartirish
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Yangi parol</label>
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Yangi parol (kamida 6 ta belgi)"
-                required
-                minLength={6}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Parolni tasdiqlang</label>
-              <Input
-                type="password"
-                value={currentPassword} // using currentPassword state as confirmPassword to minimize changes
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Yangi parolni qayta kiriting"
-                required
-                minLength={6}
-              />
-            </div>
-            <Button type="submit" disabled={isChangingPassword} className="w-full font-bold">
-              {isChangingPassword ? "Saqlanmoqda..." : "Parolni Yangilash"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      {isOwnProfile && (
+        <Card className="bg-card border border-border shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-primary" />
+              Parolni o'zgartirish
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Yangi parol</label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Yangi parol (kamida 6 ta belgi)"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Parolni tasdiqlang</label>
+                <Input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Yangi parolni qayta kiriting"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Button type="submit" disabled={isChangingPassword} className="w-full font-bold">
+                {isChangingPassword ? "Saqlanmoqda..." : "Parolni Yangilash"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="bg-card border border-border shadow-sm">
         <CardHeader>

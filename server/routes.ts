@@ -38,6 +38,7 @@ import {
   insertCompetitionSchema,
   insertAdvertisementSchema,
   systemSettings,
+  competitionCreationCodes,
 } from "@shared/schema";
 
 let leaderboardCache = { data: null as any, lastFetched: 0 };
@@ -52,8 +53,19 @@ const HTTP_STATUS = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
+  PAYMENT_REQUIRED: 402,
   INTERNAL_ERROR: 500,
 };
+
+// ============ UTILS ============
+function generateRoomCode(length: number = 5): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No O, I, 0, 1 for clarity
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 const ERROR_MESSAGES = {
   INTERNAL: "Internal server error",
@@ -197,9 +209,28 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           id: userRecord.id,
           username: userRecord.firstName || userRecord.email?.split("@")[0] || "Anonymous",
           avatarUrl: userRecord.profileImageUrl,
+          gender: userRecord.gender, // Yangi qo'shilgan maydon
+          role: userRecord.role,
         },
         stats: userStats,
-        recentResults: recentAttempts,
+        detailedStats: {
+          uz: {
+            15: recentAttempts.filter(r => r.language === 'uz' && r.mode === '15').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+            30: recentAttempts.filter(r => r.language === 'uz' && r.mode === '30').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+            60: recentAttempts.filter(r => r.language === 'uz' && r.mode === '60').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+          },
+          ru: {
+            15: recentAttempts.filter(r => r.language === 'ru' && r.mode === '15').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+            30: recentAttempts.filter(r => r.language === 'ru' && r.mode === '30').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+            60: recentAttempts.filter(r => r.language === 'ru' && r.mode === '60').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+          },
+          en: {
+            15: recentAttempts.filter(r => r.language === 'en' && r.mode === '15').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+            30: recentAttempts.filter(r => r.language === 'en' && r.mode === '30').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+            60: recentAttempts.filter(r => r.language === 'en' && r.mode === '60').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+          }
+        },
+        recentResults: recentAttempts.slice(0, 20), // Oxirgi 20 ta natija chart uchun
       });
     } catch (error) {
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: "Failed to fetch profile" });
@@ -219,32 +250,94 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const userId = req.session.userId;
       if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
-      const validatedBattle = insertBattleSchema.parse(req.body);
+      
+      const { 
+        language, mode, maxParticipants, genderRestriction, 
+        accessCode, duration, competitionLength, role 
+      } = req.body;
 
-      const createdBattle = await storage.createBattle({
-        ...validatedBattle,
-        creatorId: userId,
-      });
-
+      // 1. Foydalanuvchini olish
       const [userRecord] = await db.select().from(users).where(eq(users.id, userId));
+      const isAdminEmail = userRecord.email === "xolmatovjavohir911@gmail.com" || 
+                         userRecord.email === "xolmatovjavohir812@gmail.com";
+
+      let finalMaxParticipants = parseInt(maxParticipants || "10");
+      let isOfficial = isAdminEmail;
+      let roomPrice = 0;
+
+      // 2. Narx va limitlarni tekshirish (Admin bo'lmasa)
+      if (!isAdminEmail) {
+        // Agar xona yaratish kodi kiritilgan bo'lsa:
+        if (accessCode) {
+          const [validCode] = await db.select().from(competitionCreationCodes)
+            .where(and(eq(competitionCreationCodes.code, accessCode), eq(competitionCreationCodes.isUsed, false)));
+            
+          if (!validCode) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Noto'g'ri yoki allaqachon ishlatilgan kirish kodi." });
+          }
+          
+          finalMaxParticipants = validCode.maxParticipants;
+          // Kodni ishlatilgan deb belgilash
+          await db.update(competitionCreationCodes).set({ 
+            isUsed: true, 
+            usedByUserId: userId,
+            usedAt: new Date()
+          }).where(eq(competitionCreationCodes.id, validCode.id));
+        } else {
+          // Oddiy bepul/pullik limitlar
+          if (finalMaxParticipants > 100) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+              message: "100+ kishilik xona ochish uchun @uergo ga yozib kod oling!" 
+            });
+          }
+          
+          if (finalMaxParticipants > 10) {
+            if (finalMaxParticipants <= 20) roomPrice = 29000;
+            else if (finalMaxParticipants <= 50) roomPrice = 59000;
+            else roomPrice = 110000;
+            
+            // Kod kiritilmagan bo'lsa pullik xona ochib bo'lmaydi
+            return res.status((HTTP_STATUS as any).PAYMENT_REQUIRED).json({ 
+              message: `Ushbu xona narxi: ${roomPrice.toLocaleString()} so'm. Kod olish uchun @uergo ga yozing!`,
+              price: roomPrice
+            });
+          }
+        }
+      }
+
+      // 3. Jins tekshiruvi (Agar xonada cheklov bo'lsa, yaratuvchi o'sha jinsda bo'lishi kerak yoki admin bo'lishi kerak)
+      if (!isAdminEmail && genderRestriction !== 'all' && userRecord.gender !== genderRestriction) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Siz ushbu jins uchun mo'ljallangan xonani ocholmaysiz." });
+      }
+
+      // 4. Xonani yaratish
+      const createdBattle = await storage.createBattle({
+        code: generateRoomCode(),
+        language,
+        mode,
+        creatorId: userId,
+        status: 'waiting',
+        maxParticipants: finalMaxParticipants,
+        genderRestriction: genderRestriction || 'all',
+        isOfficial: isOfficial,
+        roomPrice: roomPrice,
+        accessCode: accessCode || null,
+        duration: parseInt(duration || "60"),
+        competitionLength: parseInt(competitionLength || "10"),
+        role: role || 'participant'
+      });
       
-      const adminMsg = `⚡️ <b>JANG XONASIGA KIRISH OCHILDI!</b>\n\n` +
-                       `🚀 Asl Xona Kodi: <code>${createdBattle.code}</code>\n\n` +
-                       `👆 <i>Xona kodining ustiga bossangiz avtomatik nusxa olinadi. Nuxsalangan kodni tegishli @yozgo_bot ga yuborib, o'z individual bir martalik kodingizni oling.</i>`;
+      const adminMsg = `⚡️ <b>YANGI JANG XONASI!</b>\n\n` +
+                       `👤 Creator: ${userRecord.firstName}\n` +
+                       `👥 Limit: ${finalMaxParticipants} ta\n` +
+                       `💰 Narx: ${roomPrice} so'm\n` +
+                       `🚀 Kod: <code>${createdBattle.code}</code>`;
                        
-      const markup = {
-        inline_keyboard: [[
-          { text: "📢 @yozgo_uz kanaliga jo'natish", callback_data: `forward_battle_${createdBattle.code}` }
-        ]]
-      };
-      
-      sendAdminNotification(adminMsg, markup).catch(console.error);
+      sendAdminNotification(adminMsg).catch(console.error);
 
       res.status(HTTP_STATUS.CREATED).json(createdBattle);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Invalid battle data" });
-      }
+      console.error("[API] Battle Creation Error:", error);
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
     }
   });
@@ -624,6 +717,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json(activeComps);
     } catch (error) {
       res.status(500).json({ error: "Musobaqalarni olishda xatolik" });
+    }
+  });
+
+  // 4. XONA YARATISH KODLARINI GENERATSIYA QILISH (Admin bot uchun)
+  app.post("/api/admin/creation-codes", adminAuth, async (req, res) => {
+    try {
+      const { code, maxParticipants, createdBy } = req.body;
+      const [newCode] = await db.insert(competitionCreationCodes).values({
+        code,
+        maxParticipants: parseInt(maxParticipants),
+        createdBy: String(createdBy),
+        isUsed: false
+      }).returning();
+      
+      res.json(newCode);
+    } catch (error) {
+      console.error("Code Generation Error:", error);
+      res.status(500).json({ error: "Kod yaratishda xatolik" });
     }
   });
 

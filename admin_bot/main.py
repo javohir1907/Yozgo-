@@ -8,6 +8,7 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
+from filters import SuperAdminFilter
 from handlers import common, stats, ads, comps, users, settings
 
 # 1. Logging
@@ -27,6 +28,11 @@ async def main():
     # Redis o'rniga kompyuterning oddiy xotirasini ishlatamiz!
     dp = Dispatcher(storage=MemoryStorage())
     
+    # GLOBAL FILTER: Faqat ADMIN_IDS dagi odamlarga javob beradi
+    dp.message.filter(SuperAdminFilter())
+    dp.callback_query.filter(SuperAdminFilter())
+    
+    # Routerlarni ulash
     dp.include_router(common.router)
     dp.include_router(stats.router)
     dp.include_router(ads.router)

@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useI18n } from "@/lib/i18n";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { Link } from "wouter";
 
 import type { LeaderboardEntry } from "@/pages/leaderboard";
 
@@ -63,21 +64,22 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
                   {needsProgress ? "-" : entry.rank}
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        {entry.avatarUrl && (
-                          <AvatarImage src={entry.avatarUrl} alt={entry.username} />
-                        )}
-                        <AvatarFallback>
-                          {entry.username.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium" data-testid={`text-username-${entry.username}`}>
-                        {entry.username}
-                      </span>
-                    </div>
-                    {needsProgress && (
+                  <Link href={`/profile/${entry.userId}`}>
+                    <div className="flex flex-col gap-1.5 cursor-pointer group">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8 group-hover:ring-2 group-hover:ring-primary/50 transition-all">
+                          {entry.avatarUrl && (
+                            <AvatarImage src={entry.avatarUrl} alt={entry.username} />
+                          )}
+                          <AvatarFallback>
+                            {entry.username.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium group-hover:text-primary transition-colors" data-testid={`text-username-${entry.username}`}>
+                          {entry.username}
+                        </span>
+                      </div>
+                      {needsProgress && (
                       <div className="flex flex-col gap-1 text-xs text-muted-foreground w-full max-w-[200px]">
                         <div className="flex justify-between">
                           <span>Reytingga kirish</span>
@@ -89,7 +91,8 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
                       </div>
                     )}
                   </div>
-                </TableCell>
+                </Link>
+              </TableCell>
                 <TableCell className="text-right font-mono text-muted-foreground">
                   {entry.avgWpm}
                 </TableCell>

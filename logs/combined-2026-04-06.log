@@ -1,0 +1,14 @@
+{"level":"info","message":"Initializing database schema and migrations...","source":"startup","timestamp":"2026-04-06 23:36:59"}
+{"address":"0.0.0.0","code":"EADDRINUSE","errno":-48,"level":"error","message":"[CRITICAL] Uncaught Exception: listen EADDRINUSE: address already in use 0.0.0.0:5000","port":5000,"stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:5000\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","syscall":"listen","timestamp":"2026-04-06 23:36:59"}
+{"code":"ECONNREFUSED","level":"warn","message":"[WARNING] Startup DB synchronization skipped or failed:","stack":"AggregateError [ECONNREFUSED]: \n    at file:///Users/a1234/Desktop/YOZGO/dist/index.js:39546:15\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///Users/a1234/Desktop/YOZGO/dist/index.js:95568:7","timestamp":"2026-04-06 23:36:59"}
+{"level":"info","message":"Integrations (Telegram Bots) are active.","source":"startup","timestamp":"2026-04-06 23:36:59"}
+{"level":"error","message":"[CRITICAL] Unhandled Rejection at:","promise":{},"reason":{},"timestamp":"2026-04-06 23:36:59"}
+{"level":"info","message":"[SYSTEM] Qabul qilindi SIGTERM. Tizim xavfsiz o'chirilmoqda...","source":"shutdown","timestamp":"2026-04-06 23:37:01"}
+{"level":"info","message":"Initializing database schema and migrations...","source":"startup","timestamp":"2026-04-06 23:37:12"}
+{"level":"info","message":"🚀 [SYSTEM] SERVER BOUND TO PORT: 5001","timestamp":"2026-04-06 23:37:12"}
+{"level":"info","message":"🚀 [SYSTEM] STATUS: ONLINE (MODE: PRODUCTION)","timestamp":"2026-04-06 23:37:12"}
+{"level":"info","message":"[SUCCESS] Port 5001 is open and ready for Render health checks.","timestamp":"2026-04-06 23:37:12"}
+{"code":"ECONNREFUSED","level":"warn","message":"[WARNING] Startup DB synchronization skipped or failed:","stack":"AggregateError [ECONNREFUSED]: \n    at file:///Users/a1234/Desktop/YOZGO/dist/index.js:39546:15\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///Users/a1234/Desktop/YOZGO/dist/index.js:95568:7","timestamp":"2026-04-06 23:37:12"}
+{"level":"info","message":"Integrations (Telegram Bots) are active.","source":"startup","timestamp":"2026-04-06 23:37:12"}
+{"level":"error","message":"[CRITICAL] Unhandled Rejection at:","promise":{},"reason":{},"timestamp":"2026-04-06 23:37:12"}
+{"level":"info","message":"[SYSTEM] Qabul qilindi SIGTERM. Tizim xavfsiz o'chirilmoqda...","source":"shutdown","timestamp":"2026-04-06 23:37:15"}

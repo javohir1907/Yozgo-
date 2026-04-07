@@ -119,11 +119,15 @@ export function setupAuth(app: Express): void {
    */
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     try {
-      const { email, password, firstName, lastName, otp } = req.body;
+      const { email, password, firstName, lastName, otp, gender } = req.body;
 
       // 1. Asosiy validatsiya
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email va parol majburiy" });
+      if (!email || !password || !gender) {
+        return res.status(400).json({ message: "Email, parol va jins majburiy" });
+      }
+
+      if (gender !== "male" && gender !== "female") {
+        return res.status(400).json({ message: "Jins noto'g'ri ko'rsatilgan (male yoki female bo'lishi shart)" });
       }
 
       if (password.length < MIN_PASSWORD_LENGTH) {
@@ -165,6 +169,7 @@ export function setupAuth(app: Express): void {
           password: hashedPassword,
           firstName: firstName.trim(),
           lastName: lastName || null,
+          gender: gender,
         })
         .returning();
 
@@ -361,8 +366,12 @@ export function setupAuth(app: Express): void {
 
   app.post("/api/auth/google-verify", async (req: Request, res: Response) => {
     try {
-      const { email, otp } = req.body;
-      if (!email || !otp) return res.status(400).json({ message: "Ma'lumotlar to'liq emas" });
+      const { email, otp, gender } = req.body;
+      if (!email || !otp || !gender) return res.status(400).json({ message: "Ma'lumotlar to'liq emas (jins majburiy)" });
+
+      if (gender !== "male" && gender !== "female") {
+        return res.status(400).json({ message: "Jins noto'g'ri (male yoki female bo'lishi shart)" });
+      }
 
       const stored = otpStore.get("google:" + email.toLowerCase());
       if (!stored || stored.code !== otp || Date.now() > stored.expiresAt) {
@@ -376,6 +385,7 @@ export function setupAuth(app: Express): void {
         password: await bcrypt.hash(dummyPassword, 10),
         firstName: (profileData.given_name || profileData.name || "user").toLowerCase().replace(/[^a-z0-9_]/g, "") + "_" + crypto.randomBytes(2).toString("hex"),
         lastName: profileData.family_name || null,
+        gender: gender,
         profileImageUrl: profileData.picture || null,
       }).returning();
       
