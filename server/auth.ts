@@ -235,7 +235,7 @@ export function setupAuth(app: Express): void {
       res.status(200).json(safeProfile);
     } catch (error) {
       console.error("[AUTH] Login error:", error);
-      res.status(500).json({ message: "Tizimga kirishda xatolik" });
+      res.status(500).json({ message: `Tizimga kirishda xatolik: ${String(error)}` });
     }
   });
 
