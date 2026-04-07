@@ -140,7 +140,7 @@ export default function AuthPage() {
         const res = await fetch(normalizeUrl(`/api/auth/google-verify`), {
            method: "POST",
            headers: { "Content-Type": "application/json" },
-           body: JSON.stringify({ email: googleOtpEmail, otp: otpCode })
+           body: JSON.stringify({ email: googleOtpEmail, otp: otpCode, gender })
         });
         if (!res.ok) {
            const data = await res.json().catch(()=>({}));
