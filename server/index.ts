@@ -15,6 +15,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { createServer, type Server } from "http";
 import helmet from "helmet";
+import compression from "compression";
 
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -53,6 +54,7 @@ declare module "http" {
 
 // ============ INITIALIZATION ============
 const app = express();
+app.use(compression());
 const httpServer: Server = createServer(app);
 const PORT = parseInt(process.env.PORT || "5000", 10);
 

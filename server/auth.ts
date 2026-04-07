@@ -67,10 +67,11 @@ export function setupAuth(app: Express): void {
       store: sessionStore,
       resave: false,
       saveUninitialized: false,
+      proxy: true, // Render kabi proksilar uchun muhim
       cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        secure: true, // Render HTTPS ishlatadi, shuning uchun true qilamiz
+        sameSite: "none", // Cross-domain (yozgo.uz -> onrender.com) uchun shart
         maxAge: SESSION_EXPIRY,
       },
   });

@@ -46,6 +46,7 @@ export function useAuth() {
       firstName?: string;
       lastName?: string;
       otp?: string;
+      gender?: string;
     }) => {
       const res = await apiRequest("POST", "/api/auth/register", data);
       return res.json();

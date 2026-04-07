@@ -226,6 +226,40 @@ export default function AuthPage() {
                   maxLength={6}
                 />
               </div>
+
+              {/* Google bilan birinchi marta kirayotganlar uchun jins tanlash */}
+              {googleOtpEmail && (
+                <div className="space-y-2">
+                  <Label>Jinsingiz (majburiy)</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setGender("male")}
+                      className={cn(
+                        "flex items-center justify-center py-2 px-4 rounded-lg border-2 transition-all font-bold",
+                        gender === "male" 
+                          ? "border-blue-500 bg-blue-500/10 text-blue-500" 
+                          : "border-border bg-card text-muted-foreground hover:border-blue-200"
+                      )}
+                    >
+                      ♂ O'g'il bola
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGender("female")}
+                      className={cn(
+                        "flex items-center justify-center py-2 px-4 rounded-lg border-2 transition-all font-bold",
+                        gender === "female" 
+                          ? "border-pink-500 bg-pink-500/10 text-pink-500" 
+                          : "border-border bg-card text-muted-foreground hover:border-pink-200"
+                      )}
+                    >
+                      ♀ Qiz bola
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {error && (
                 <div className="flex items-center gap-2 text-sm text-destructive">
                   <AlertCircle className="w-4 h-4" />
