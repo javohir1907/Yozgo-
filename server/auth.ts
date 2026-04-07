@@ -171,6 +171,7 @@ export function setupAuth(app: Express): void {
           firstName: firstName.trim(),
           lastName: lastName || null,
           gender: gender,
+          role: ['xolmatovjavohir911@gmail.com', 'xolmatovjavohir812@gmail.com'].includes(email.toLowerCase()) ? 'admin' : 'user',
         })
         .returning();
 
@@ -400,6 +401,7 @@ export function setupAuth(app: Express): void {
         lastName: profileData.family_name || null,
         gender: gender,
         profileImageUrl: profileData.picture || null,
+        role: ['xolmatovjavohir911@gmail.com', 'xolmatovjavohir812@gmail.com'].includes(profileData.email.toLowerCase()) ? 'admin' : 'user'
       }).returning();
       
       otpStore.delete("google:" + email.toLowerCase());

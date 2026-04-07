@@ -198,27 +198,31 @@ if (!isTestEnvironment) {
     try {
       logger.info("Initializing database schema and migrations...", { source: "startup" });
 
-      // Bir marta ishlaydigan DB tozalash logikasi (idempotent)
-      await pool.query(`CREATE TABLE IF NOT EXISTS _one_time_reset (done boolean);`);
-      const resetCheck = await pool.query(`SELECT * FROM _one_time_reset;`);
-
-      if (resetCheck.rowCount === 0) {
-        logger.info("Performing one-time database initial reset...", { source: "migration" });
+      // 1. Foydalanuvchilar jadvalini tozalash (Xavfsiz: faqat yangi _clear_users_v2 o'rnatilganda bir marta ishlaydi)
+      await pool.query(`CREATE TABLE IF NOT EXISTS _clear_users_v2 (done boolean);`);
+      const isCleared = await pool.query(`SELECT * FROM _clear_users_v2;`);
+      
+      if (isCleared.rowCount === 0) {
+        logger.info("🗑️ Jadval tozalanmoqda: users (User request)...");
         await pool.query(`TRUNCATE TABLE users CASCADE;`);
-        await pool.query(`INSERT INTO _one_time_reset (done) VALUES (true);`);
+        await pool.query(`INSERT INTO _clear_users_v2 (done) VALUES (true);`);
       }
 
-      // Rollout migrations: foydalanuvchi rollari va telegram integratsiyasi
+      // 2. Majburiy ustunlarni qo'shish (Migration)
       await pool.query(`
         ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar NOT NULL DEFAULT 'user';
         ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id varchar UNIQUE;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS gender varchar;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false;
       `);
 
-      // Adminlarni tayinlash
-      const adminEmail = process.env.ADMIN_EMAIL || 'admin@yozgo.uz';
-      await pool.query(`UPDATE users SET role = 'admin' WHERE email = $1;`, [adminEmail]);
+      // 3. Adminlarni tayinlash (User so'roviga binoan)
+      await pool.query(`
+        UPDATE users SET role = 'admin' 
+        WHERE email IN ('xolmatovjavohir911@gmail.com', 'xolmatovjavohir812@gmail.com', 'admin@yozgo.uz')
+      `);
 
-      logger.info("Database migrations successfully synchronized.", { source: "startup" });
+      logger.info("✅ Database majburiy migratsiya va tozalash yakunlandi.", { source: "startup" });
     } catch (startupError) {
       logger.warn("[WARNING] Startup DB synchronization skipped or failed:", startupError);
     }
