@@ -213,7 +213,7 @@ export default function BattlePage() {
     setAttemptTimer(null);
     if (wpm > 0) {
       submitResult(wpm, accuracy, 100);
-      toast({ title: "Yakunlandi!", description: `${wpm} WPM natijangiz saqlandi.` });
+      toast({ title: t.battle.readyStatus, description: `${wpm} WPM ${t.battle.resultSaved}` });
     }
   };
 
@@ -315,7 +315,7 @@ export default function BattlePage() {
       });
       setShowTerms(true);
     } catch (err: any) {
-      toast({ title: "Xona xatosi", description: err.message, variant: "destructive" });
+      toast({ title: t.battle.error, description: err.message, variant: "destructive" });
     } finally {
       setIsJoining(false);
     }
@@ -336,7 +336,7 @@ export default function BattlePage() {
       setBattleCode(data.roomCode);
       setShowTerms(false);
     } catch (err: any) {
-      toast({ title: "Ulanishda xatolik", description: err.message, variant: "destructive" });
+      toast({ title: t.battle.error, description: err.message, variant: "destructive" });
     } finally {
       setIsJoining(false);
     }
@@ -348,8 +348,8 @@ export default function BattlePage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Users className="w-16 h-16 text-muted-foreground" />
-        <h2 className="text-2xl font-bold">Xonaga kirish uchun avval tizimga kiring</h2>
-        <Button onClick={() => setLocation("/auth")}>Kirish</Button>
+        <h2 className="text-2xl font-bold">{t.battle.loginToJoin}</h2>
+        <Button onClick={() => setLocation("/auth")}>{t.auth.login}</Button>
       </div>
     );
   }
@@ -358,40 +358,40 @@ export default function BattlePage() {
   if (!battleCode) {
     return (
       <div className="container max-w-2xl mx-auto py-12 px-4">
-        <SEO title="Arena | YOZGO" description="Haqiqiy tezlik jangi! YOZGO Arena-da do'stlaringiz bilan bellashing." />
+        <SEO title={`${t.battle.arena} | YOZGO`} description={t.battle.arenaSubtitle} />
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center mb-12">
           <h1 className="text-6xl font-black mb-2 tracking-tighter bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent transform -skew-x-6">
-            ARENA
+            {t.battle.arena}
           </h1>
-          <p className="text-muted-foreground">O'zbekistondagi eng tezkor jangchilar maydoni</p>
+          <p className="text-muted-foreground">{t.battle.arenaSubtitle}</p>
         </motion.div>
 
         <div className="grid gap-6">
           {/* Create Room */}
           <Card className="border-2 hover:border-primary/40 transition-all bg-card/60 backdrop-blur-md">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Play className="text-primary" /> Yangi Jang</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Play className="text-primary" /> {t.battle.newBattle}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label>Roli</Label>
+                  <Label>{t.battle.role}</Label>
                   <select value={adminParticipates ? "true" : "false"} onChange={e => setAdminParticipates(e.target.value === "true")} className="w-full bg-background border p-2 rounded-md">
-                    <option value="true">👑 Ishtirokchi</option>
-                    <option value="false">👁️ Kuzatuvchi</option>
+                    <option value="true">{t.battle.participant}</option>
+                    <option value="false">{t.battle.spectator}</option>
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <Label>Til</Label>
+                  <Label>{t.battle.language}</Label>
                   <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-background border p-2 rounded-md">
-                    <option value="uz">O'zbekcha</option>
-                    <option value="en">English</option>
-                    <option value="ru">Русский</option>
+                    <option value="uz">{t.languages.uzbek}</option>
+                    <option value="en">{t.languages.english}</option>
+                    <option value="ru">{t.languages.russian}</option>
                   </select>
                 </div>
               </div>
               <div className="space-y-1">
                 <Label className="flex justify-between">
-                  <span>Aktivatsiya kodi (ixtiyoriy)</span>
-                  <span className="text-[10px] text-primary">@uergo dan olingan</span>
+                  <span>{t.battle.activationCode}</span>
+                  <span className="text-[10px] text-primary">{t.battle.fromAdmin}</span>
                 </Label>
                 <Input 
                   placeholder="Y-XXXXXX" 
@@ -401,17 +401,17 @@ export default function BattlePage() {
                 />
               </div>
               <Button onClick={handleCreateBattle} disabled={isCreating} className="w-full font-bold h-12">
-                {isCreating ? <Loader2 className="animate-spin" /> : "XONA OCHISH"}
+                {isCreating ? <Loader2 className="animate-spin" /> : t.battle.openRoom}
               </Button>
             </CardContent>
           </Card>
 
           {/* Join Room */}
           <Card className="border-2 hover:border-primary/40 transition-all bg-card/60 backdrop-blur-md">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Users className="text-primary" /> Qo'shilish</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Users className="text-primary" /> {t.battle.joinBattle}</CardTitle></CardHeader>
             <CardContent className="flex gap-2">
-              <Input placeholder="Kod" value={inputCode} onChange={e => setInputCode(e.target.value)} className="text-center font-mono uppercase" />
-              <Button onClick={handleJoinBattle} disabled={isJoining} className="font-bold">KIRISH</Button>
+              <Input placeholder={t.battle.enterCode} value={inputCode} onChange={e => setInputCode(e.target.value)} className="text-center font-mono uppercase" />
+              <Button onClick={handleJoinBattle} disabled={isJoining} className="font-bold">{t.battle.joinBtn}</Button>
             </CardContent>
           </Card>
         </div>
@@ -419,19 +419,19 @@ export default function BattlePage() {
         {/* Terms Dialog */}
         <Dialog open={showTerms} onOpenChange={setShowTerms}>
           <DialogContent>
-            <DialogHeader><DialogTitle>Musobaqa Qoidalari</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t.battle.rulesTitle}</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <ul className="text-sm space-y-2 list-disc list-inside text-muted-foreground">
                 {TERMS_LIST.map((term, i) => <li key={i}>{term}</li>)}
               </ul>
               <div className="flex items-center space-x-2 pt-4 border-t">
                 <Checkbox id="accept" checked={isAgreed} onCheckedChange={(c) => setIsAgreed(c as boolean)} />
-                <Label htmlFor="accept">Shartlarga roziman</Label>
+                <Label htmlFor="accept">{t.battle.acceptRules}</Label>
               </div>
             </div>
             <DialogFooter>
               <Button onClick={handleConfirmJoin} disabled={!isAgreed || isJoining}>
-                {isJoining ? <Loader2 className="animate-spin mr-2" /> : null} ROZIMAN - JANGGA!
+                {isJoining ? <Loader2 className="animate-spin mr-2" /> : null} {t.battle.confirmBattle}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -452,8 +452,8 @@ export default function BattlePage() {
           {isAdmin && <Badge variant="secondary" className="gap-1 animate-pulse"><Crown className="w-3" /> Admin</Badge>}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(battleCode || ""); toast({ title: "Nusxalandi!" }); }}><Copy className="w-4" /></Button>
-          <Button variant="ghost" className="text-red-500 hover:bg-red-500/10" onClick={() => setLocation("/")}>Chiqish</Button>
+          <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(battleCode || ""); toast({ title: t.battle.copied }); }}><Copy className="w-4" /></Button>
+          <Button variant="ghost" className="text-red-500 hover:bg-red-500/10" onClick={() => setLocation("/")}>{t.battle.leaveRoom}</Button>
         </div>
       </div>
 
@@ -464,37 +464,37 @@ export default function BattlePage() {
             {battleEnd ? (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center py-20 bg-card/60 rounded-3xl border-2 border-primary shadow-2xl">
                 <Trophy className="w-24 h-24 text-yellow-500 mb-6 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
-                <h2 className="text-4xl font-black uppercase mb-4 text-center">Jang Yakunlandi!</h2>
+                <h2 className="text-4xl font-black uppercase mb-4 text-center">{t.battle.battleOver}</h2>
                 <div className="text-center mb-8">
-                  <p className="text-muted-foreground text-lg">G'olib ishtirokchi aniqlandi.</p>
+                  <p className="text-muted-foreground text-lg">{t.battle.winnerDetermined}</p>
                   <p className="font-bold text-2xl text-primary mt-2">
-                    {battleEnd.winnerId ? battleEnd.results.find((r: any) => r.id === battleEnd.winnerId)?.username || "Noma'lum" : "Hech kim g'olib bo'lmadi"}
+                    {battleEnd.winnerId ? battleEnd.results.find((r: any) => r.id === battleEnd.winnerId)?.username || t.battle.unknown : t.battle.defeat}
                   </p>
                 </div>
                 <Button onClick={() => setLocation("/")} size="lg" className="px-10 rounded-full font-bold">
-                  Bosh Sahifaga Qaytish
+                  {t.battle.backToHome}
                 </Button>
               </motion.div>
             ) : !battleStart ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center py-20 bg-card/60 rounded-3xl border-2 border-dashed border-primary/20">
                 <Users className="w-20 h-20 text-primary/20 mb-6" />
-                <h2 className="text-3xl font-black uppercase mb-2">Lobbyda kutilmoqda</h2>
-                <p className="text-muted-foreground mb-8">Hozirda {room?.players.length || 0} ishtirokchi yig'ildi</p>
+                <h2 className="text-3xl font-black uppercase mb-2">{t.battle.waiting}</h2>
+                <p className="text-muted-foreground mb-8">{t.battle.playersCount} {room?.players.length || 0}</p>
                 {isAdmin && (
                   <div className="flex flex-col items-center gap-6 w-full max-w-md mb-8 bg-secondary/50 p-6 rounded-2xl border border-border shadow-sm">
                     <div className="w-full space-y-3">
-                      <Label className="flex justify-between text-muted-foreground">Test urinish vaqti (soniya): <span className="font-black text-foreground">{testDuration}s</span></Label>
+                      <Label className="flex justify-between text-muted-foreground">{t.battle.testTime} (soniya): <span className="font-black text-foreground">{testDuration}s</span></Label>
                       <Slider value={[testDuration]} max={120} min={15} step={15} onValueChange={(v) => setTestDuration(v[0])} />
                     </div>
                     <div className="w-full space-y-3">
-                      <Label className="flex justify-between text-muted-foreground">Jang umumiy davomiyligi (daqiqa): <span className="font-black text-foreground">{totalTime}m</span></Label>
+                      <Label className="flex justify-between text-muted-foreground">{t.battle.totalDuration} (daqiqa): <span className="font-black text-foreground">{totalTime}m</span></Label>
                       <Slider value={[totalTime]} max={30} min={1} step={1} onValueChange={(v) => setTotalTime(v[0])} />
                     </div>
                   </div>
                 )}
                 {isAdmin && (
                   <Button onClick={() => startBattle({ testDuration, totalTime, maxAttempts: 5, language, adminParticipates })} size="lg" className="px-16 font-black h-14 text-xl rounded-full shadow-lg hover:scale-105 transition-transform">
-                    JANGNI BOSHLASH <Play className="ml-2 fill-current" />
+                    {t.battle.startBattleBtn} <Play className="ml-2 fill-current" />
                   </Button>
                 )}
               </motion.div>
@@ -503,13 +503,13 @@ export default function BattlePage() {
                 {/* Visual Stats */}
                 <div className="grid grid-cols-2 gap-6">
                   <div className="bg-primary/5 p-6 rounded-3xl border-2 border-primary/10 text-center">
-                    <span className="text-sm font-bold opacity-50 block mb-1">QOLGAN VAQT</span>
+                    <span className="text-sm font-bold opacity-50 block mb-1">{t.battle.timeLeft}</span>
                     <span className="text-4xl font-black font-mono flex justify-center items-center gap-2">
                        <Timer className="text-primary" /> {totalTimer !== null ? `${Math.floor(totalTimer/60)}:${(totalTimer%60).toString().padStart(2, '0')}` : "--:--"}
                     </span>
                   </div>
                   <div className={`p-6 rounded-3xl border transition-all text-center shadow-sm ${isAttemptActive ? "bg-primary/10 border-primary/30" : "bg-secondary/50 border-dashed"}`}>
-                    <span className="text-sm font-bold opacity-50 block mb-1">TEST VAQTI</span>
+                    <span className="text-sm font-bold opacity-50 block mb-1">{t.battle.testTime}</span>
                     <span className="text-4xl font-black font-mono text-primary">{attemptTimer}s</span>
                   </div>
                 </div>
@@ -519,7 +519,7 @@ export default function BattlePage() {
                   {!isAttemptActive && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-[6px] rounded-3xl border-2 border-dashed">
                       <Button onClick={startAttempt} size="lg" className="font-black text-2xl h-16 px-12 rounded-full shadow-2xl skew-x-[-4deg]">
-                        Keyingi Urinish <Flame className="ml-2" />
+                        {t.battle.nextAttempt} <Flame className="ml-2" />
                       </Button>
                     </div>
                   )}
@@ -555,8 +555,8 @@ export default function BattlePage() {
         <div className="lg:col-span-4">
           <Card className="rounded-3xl border-2">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl flex items-center gap-2"><Trophy className="text-yellow-500" /> LIVE</CardTitle>
-              <Badge variant="outline">{room?.players.length || 0} ishtirokchi</Badge>
+              <CardTitle className="text-xl flex items-center gap-2"><Trophy className="text-yellow-500" /> {t.battle.live}</CardTitle>
+              <Badge variant="outline">{room?.players.length || 0} {t.battle.players.toLowerCase()}</Badge>
             </CardHeader>
             <CardContent className="space-y-4">
               {room?.players.map((p: any, i: number) => (
@@ -570,11 +570,11 @@ export default function BattlePage() {
                       {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
                       <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10" />
                     </div>
-                    <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? "(Chiqib ketgan)" : ""}</span>
+                    <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
                   </div>
                   <div className="relative z-10 text-right">
                     <div className="font-black text-primary">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} urinish (Eng yaxshi: {p.bestWpm})</div>
+                    <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
                   </div>
                 </div>
               ))}

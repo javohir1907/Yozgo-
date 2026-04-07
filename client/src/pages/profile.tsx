@@ -72,7 +72,7 @@ export default function Profile() {
 
   const handleUpdateNickname = async () => {
     if (!newNickname || newNickname.length < 4) {
-      return toast({ variant: "destructive", title: "Nickname juda qisqa" });
+      return toast({ variant: "destructive", title: t.profile.nickTooShort });
     }
     
     setIsUpdatingNick(true);
@@ -81,13 +81,13 @@ export default function Profile() {
       const data = await res.json();
       
       if (res.ok) {
-        toast({ title: "Muvaffaqiyatli", description: data.message });
+        toast({ title: t.profile.success, description: data.message });
         window.location.reload(); 
       } else {
-        toast({ variant: "destructive", title: "Xatolik", description: data.message });
+        toast({ variant: "destructive", title: t.profile.error, description: data.message });
       }
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Xatolik", description: err.message });
+      toast({ variant: "destructive", title: t.profile.error, description: err.message });
     } finally {
       setIsUpdatingNick(false);
     }
@@ -102,16 +102,16 @@ export default function Profile() {
     e.preventDefault();
     if (newPassword !== currentPassword) {
       toast({
-        title: "Xatolik",
-        description: "Kiritilgan parollar bir-biriga mos kelmadi",
+        title: t.profile.error,
+        description: t.profile.passwordsNotMatch,
         variant: "destructive",
       });
       return;
     }
     if (newPassword.length < 6) {
       toast({
-        title: "Xatolik",
-        description: "Yangi parol kamida 6ta belgidan iborat bo'lishi kerak",
+        title: t.profile.error,
+        description: t.profile.passTooShort,
         variant: "destructive",
       });
       return;
@@ -122,15 +122,15 @@ export default function Profile() {
         newPassword,
       });
       toast({
-        title: "Muvaffaqiyatli",
-        description: "Parolingiz o'zgartirildi",
+        title: t.profile.success,
+        description: t.profile.passChanged,
       });
       setCurrentPassword("");
       setNewPassword("");
     } catch (err: any) {
       toast({
-        title: "Xatolik",
-        description: err.message || "Parolni o'zgartirish amalga oshmadi",
+        title: t.profile.error,
+        description: err.message || t.profile.passChangeFail,
         variant: "destructive",
       });
     } finally {
