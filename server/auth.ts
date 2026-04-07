@@ -70,8 +70,8 @@ export function setupAuth(app: Express): void {
       proxy: true, // Render kabi proksilar uchun muhim
       cookie: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax", // Single domain (yozgo.uz) uchun
+        secure: true, // Render HTTPS ishlatadi, shuning uchun true qilamiz
+        sameSite: "none", // Cross-domain (yozgo.uz -> onrender.com) uchun shart
         maxAge: SESSION_EXPIRY,
       },
   });
@@ -335,6 +335,8 @@ export function setupAuth(app: Express): void {
 
       let [existingUser] = await db.select().from(users).where(eq(users.email, profileData.email.toLowerCase()));
 
+      let frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
+
       if (!existingUser) {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         // save their google profile in otpStore
@@ -350,15 +352,16 @@ export function setupAuth(app: Express): void {
            `Sizning YOZGO tasdiqlash kodingiz: ${otp}\nUshbu kod 5 daqiqa davomida amal qiladi.`
         );
 
-        return res.redirect(`/auth?googleOtpEmail=${encodeURIComponent(profileData.email.toLowerCase())}`);
+        return res.redirect(`${frontendUrl}/auth?googleOtpEmail=${encodeURIComponent(profileData.email.toLowerCase())}`);
       }
 
       (req.session as any).userId = existingUser.id;
       
-      res.redirect("/");
+      res.redirect(frontendUrl);
     } catch (error) {
       console.error("[AUTH] Google Callback Error:", error);
-      res.redirect(`/auth?error=ServerError`);
+      const frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
+      res.redirect(`${frontendUrl}/auth?error=ServerError`);
     }
   });
 

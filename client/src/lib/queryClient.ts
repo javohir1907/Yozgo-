@@ -1,6 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-export const BASE_URL = "";
+export const BASE_URL = import.meta.env.VITE_API_URL || "";
 
 export function normalizeUrl(url: string) {
   return url.startsWith("http") ? url : `${BASE_URL}${url}`;
