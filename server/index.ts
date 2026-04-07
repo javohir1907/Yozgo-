@@ -257,12 +257,13 @@ if (!isTestEnvironment) {
       const errorMessage = err.message || "Noma'lum xatolik";
       const errorStack = err.stack ? err.stack.substring(0, 500) : "";
       
+      // FIRE AND FORGET: Server javobini Telegram kutib o'tirmasligi kerak (Mantiqiy yechim!)
       sendAdminNotification(
         `❌ <b>TIZIMDA XATOLIK YUZ BERDI!</b>\n\n` +
         `📍 <b>Manzil:</b> ${req.method} ${req.originalUrl}\n` +
         `⚠️ <b>Xato:</b> ${errorMessage}\n` +
         `<pre>${errorStack}</pre>`
-      ).catch(console.error);
+      ).catch(e => logger.error("Fatal error notification failed:", e));
     }
 
     res.status(500).json({ 

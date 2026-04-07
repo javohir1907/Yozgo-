@@ -23,6 +23,16 @@ export function startUserBot() {
   userBot = new TelegramBot(token, { polling: true });
   console.log("Foydalanuvchi Boti (User Bot) muvaffaqiyatli ishga tushdi!");
 
+  // Polling xatolarini ushlash (Server qotib qolmasligi uchun eng muhim qism)
+  userBot.on("polling_error", (error: any) => {
+    if (error.code === "ETELEGRAM" && error.message.includes("401")) {
+      console.error("❌ [TELEGRAM ERROR] Bot Tokeni NOTO'G'RI! Polling to'xtatildi.");
+      userBot?.stopPolling(); // Xato tokun bilan serverni qiynamaslik uchun to'xtatamiz
+    } else {
+      console.warn("⚠️ [TELEGRAM WARNING] Polling xatoligi:", error.message);
+    }
+  });
+
   try {
     fetch(`https://api.telegram.org/bot${token}/setChatMenuButton`, {
       method: "POST",
