@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProgressChart } from "@/components/progress-chart";
 import {
@@ -12,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Target, Timer, BarChart3, History, Key } from "lucide-react";
+import { Trophy, Target, Timer, BarChart3, History, Key, AlertCircle, User as UserIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
@@ -65,6 +66,32 @@ export default function Profile() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const [newNickname, setNewNickname] = useState(authUser?.firstName || "");
+  const [isUpdatingNick, setIsUpdatingNick] = useState(false);
+
+  const handleUpdateNickname = async () => {
+    if (!newNickname || newNickname.length < 4) {
+      return toast({ variant: "destructive", title: "Nickname juda qisqa" });
+    }
+    
+    setIsUpdatingNick(true);
+    try {
+      const res = await apiRequest("POST", "/api/auth/update-nickname", { newNickname });
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast({ title: "Muvaffaqiyatli", description: data.message });
+        window.location.reload(); 
+      } else {
+        toast({ variant: "destructive", title: "Xatolik", description: data.message });
+      }
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Xatolik", description: err.message });
+    } finally {
+      setIsUpdatingNick(false);
+    }
+  };
 
   const { data, isLoading } = useQuery<ProfileData>({
     queryKey: [currentUserId ? `/api/profile/${currentUserId}` : "/api/profile/me"], // Changed to actual endpoint
@@ -237,39 +264,74 @@ export default function Profile() {
       </Card>
 
       {isOwnProfile && (
-        <Card className="bg-card border border-border shadow-sm">
+        <Card className="bg-card border border-border shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Key className="w-5 h-5 text-primary" />
-              Parolni o'zgartirish
+              <UserIcon className="w-5 h-5 text-primary" />
+              Profil Sozlamalari
             </CardTitle>
+            <CardDescription>Nickname va parolni boshqarish</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-8">
+            {/* Nickname Section */}
+            <div className="space-y-4 max-w-md pb-8 border-b border-border/50">
+              <div className="space-y-2">
+                <Label>Nickname (Foydalanuvchi nomi)</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    value={newNickname}
+                    onChange={(e) => setNewNickname(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+                    placeholder="Yangi nickname..."
+                    className="flex-1 font-mono"
+                    maxLength={20}
+                  />
+                  <Button 
+                    onClick={handleUpdateNickname} 
+                    disabled={isUpdatingNick || newNickname === authUser?.firstName}
+                    className="btn-3d font-bold"
+                  >
+                    {isUpdatingNick ? "..." : "Saqlash"}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 italic">
+                  <AlertCircle className="w-3 h-3" />
+                  Nicknameni har 90 kunda bir marta o'zgartirish mumkin.
+                </p>
+              </div>
+            </div>
+
+            {/* Password Section */}
             <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Yangi parol</label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Yangi parol (kamida 6 ta belgi)"
-                  required
-                  minLength={6}
-                />
+              <div className="flex items-center gap-2 mb-2">
+                <Key className="w-4 h-4 text-muted-foreground" />
+                <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Parolni Yangilash</span>
               </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Parolni tasdiqlang</label>
-                <Input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Yangi parolni qayta kiriting"
-                  required
-                  minLength={6}
-                />
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label>Yangi parol</Label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Kamida 6 ta belgi"
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Parolni tasdiqlang</Label>
+                  <Input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Qayta kiriting"
+                    required
+                    minLength={6}
+                  />
+                </div>
               </div>
-              <Button type="submit" disabled={isChangingPassword} className="w-full font-bold">
-                {isChangingPassword ? "Saqlanmoqda..." : "Parolni Yangilash"}
+              <Button type="submit" disabled={isChangingPassword} className="w-full font-extrabold uppercase tracking-tight">
+                {isChangingPassword ? "Yangilanmoqda..." : "Parolni Tasdiqlash"}
               </Button>
             </form>
           </CardContent>

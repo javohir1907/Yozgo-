@@ -12,11 +12,6 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "@/lib/theme";
 import { useI18n, type UILanguage } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import { apiRequest } from "@/lib/queryClient";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, User as UserIcon } from "lucide-react";
 
 type UserSettings = {
   fontFamily: string;
@@ -38,33 +33,6 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { t, uiLang, setUILang } = useI18n();
   const { toast } = useToast();
-  const { user } = useAuth();
-  
-  const [newNickname, setNewNickname] = useState(user?.firstName || "");
-  const [isUpdatingNick, setIsUpdatingNick] = useState(false);
-
-  const handleUpdateNickname = async () => {
-    if (!newNickname || newNickname.length < 4) {
-      return toast({ variant: "destructive", title: "Nickname juda qisqa" });
-    }
-    
-    setIsUpdatingNick(true);
-    try {
-      const res = await apiRequest("POST", "/api/auth/update-nickname", { newNickname });
-      const data = await res.json();
-      
-      if (res.ok) {
-        toast({ title: "Muvaffaqiyatli", description: data.message });
-        window.location.reload(); // Refresh to get updated user data
-      } else {
-        toast({ variant: "destructive", title: "Xatolik", description: data.message });
-      }
-    } catch (err: any) {
-      toast({ variant: "destructive", title: "Xatolik", description: err.message });
-    } finally {
-      setIsUpdatingNick(false);
-    }
-  };
 
   const [settings, setSettings] = useState<UserSettings>(() => {
     const saved = localStorage.getItem("yozgo-user-settings");
@@ -108,65 +76,10 @@ export default function SettingsPage() {
   return (
     <div className="container max-w-2xl py-12 px-4 pb-24">
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-        <UserIcon className="w-8 h-8 text-primary" />
         {t.settings.title}
       </h1>
 
       <div className="space-y-6">
-        {/* Profile Card */}
-        <Card className="border-primary/20 shadow-lg shadow-primary/5">
-          <CardHeader>
-            <CardTitle>Profil Ma'lumotlari</CardTitle>
-            <CardDescription>Shaxsiy profilingizni boshqarish va xavfsizlik sozlamalari.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Nickname Change */}
-            <div className="space-y-3">
-              <Label>Nickname (Foydalanuvchi nomi)</Label>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Input 
-                  value={newNickname}
-                  onChange={(e) => setNewNickname(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
-                  placeholder="Yangi nickname..."
-                  className="flex-1 font-mono"
-                  maxLength={20}
-                />
-                <Button 
-                  onClick={handleUpdateNickname} 
-                  disabled={isUpdatingNick || newNickname === user?.firstName}
-                  className="btn-3d font-bold whitespace-nowrap"
-                >
-                  {isUpdatingNick ? "Yangilanmoqda..." : "Saqlash"}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5" />
-                Nicknameni har 90 kunda faqat bir marta o'zgartirish mumkin.
-              </p>
-            </div>
-
-            {/* Gender Display (Non-editable) */}
-            <div className="pt-4 border-t space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Jinsingiz</Label>
-                  <p className="text-sm font-medium text-foreground uppercase tracking-wider">
-                    {user?.gender === "male" ? "♂ O'g'il bola" : user?.gender === "female" ? "♀ Qiz bola" : "Tanlanmagan"}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">Xatolik bormi?</p>
-                  <a href="https://t.me/yozgo_support_bot" target="_blank" rel="noreferrer" className="text-xs text-primary font-bold hover:underline bg-primary/5 px-2 py-1 rounded">
-                    Support bilan bog'lanish
-                  </a>
-                </div>
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-snug italic">
-                * Jinsni o'zgartirish majburiy talablar sababidan faqat Support orqali amalga oshiriladi.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
         <Card>
           <CardHeader>
             <CardTitle>{t.settings.appearance}</CardTitle>
