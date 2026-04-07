@@ -194,7 +194,7 @@ export default function Profile() {
                 "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
                 user.gender === 'male' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-pink-500/10 text-pink-500 border-pink-500/20"
               )}>
-                {user.gender === 'male' ? "O'g'il bola" : "Qiz bola"}
+                {user.gender === 'male' ? t.profile.boy : t.profile.girl}
               </span>
             )}
           </div>
@@ -230,14 +230,14 @@ export default function Profile() {
             <CardHeader className="bg-secondary/20 py-3">
               <CardTitle className="text-sm font-bold uppercase tracking-widest text-center flex items-center justify-center gap-2">
                 <Trophy className={cn("w-4 h-4", lang === 'uz' ? "text-blue-500" : lang === 'ru' ? "text-red-500" : "text-green-500")} />
-                {lang === 'uz' ? "O'zbek" : lang === 'ru' ? "Rus" : "Ingliz"} tili rekordlari
+                {lang === 'uz' ? "O'zbek" : lang === 'ru' ? "Rus" : "Ingliz"} {t.leaderboard.title}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="grid grid-cols-3 divide-x divide-border">
                 {[15, 30, 60].map((mode) => (
                   <div key={mode} className="p-4 text-center">
-                    <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">{mode} soniya</div>
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">{mode} {t.typing.time.toLowerCase()}</div>
                     <div className="text-2xl font-mono font-bold text-primary">
                       {data.detailedStats?.[lang as 'uz'|'ru'|'en']?.[mode.toString()] || 0}
                     </div>
@@ -268,20 +268,20 @@ export default function Profile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserIcon className="w-5 h-5 text-primary" />
-              Profil Sozlamalari
+              {t.profile.profileSettings}
             </CardTitle>
-            <CardDescription>Nickname va parolni boshqarish</CardDescription>
+            <CardDescription>{t.profile.manageProfile}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
             {/* Nickname Section */}
             <div className="space-y-4 max-w-md pb-8 border-b border-border/50">
               <div className="space-y-2">
-                <Label>Nickname (Foydalanuvchi nomi)</Label>
+                <Label>{t.profile.nickname}</Label>
                 <div className="flex gap-2">
                   <Input 
                     value={newNickname}
                     onChange={(e) => setNewNickname(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
-                    placeholder="Yangi nickname..."
+                    placeholder={`${t.profile.nickname}...`}
                     className="flex-1 font-mono"
                     maxLength={20}
                   />
@@ -290,12 +290,12 @@ export default function Profile() {
                     disabled={isUpdatingNick || newNickname === authUser?.firstName}
                     className="btn-3d font-bold"
                   >
-                    {isUpdatingNick ? "..." : "Saqlash"}
+                    {isUpdatingNick ? "..." : t.profile.save}
                   </Button>
                 </div>
                 <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 italic">
                   <AlertCircle className="w-3 h-3" />
-                  Nicknameni har 90 kunda bir marta o'zgartirish mumkin.
+                  {t.profile.wait90Days}
                 </p>
               </div>
             </div>
@@ -304,34 +304,34 @@ export default function Profile() {
             <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
               <div className="flex items-center gap-2 mb-2">
                 <Key className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Parolni Yangilash</span>
+                <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{t.profile.passwordUpdate}</span>
               </div>
               <div className="grid gap-4">
                 <div className="space-y-2">
-                  <Label>Yangi parol</Label>
+                  <Label>{t.profile.newPassword}</Label>
                   <Input
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Kamida 6 ta belgi"
+                    placeholder={t.profile.passwordMin}
                     required
                     minLength={6}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Parolni tasdiqlang</Label>
+                  <Label>{t.profile.confirmPassword}</Label>
                   <Input
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Qayta kiriting"
+                    placeholder={t.profile.confirmPlaceholder}
                     required
                     minLength={6}
                   />
                 </div>
               </div>
               <Button type="submit" disabled={isChangingPassword} className="w-full font-extrabold uppercase tracking-tight">
-                {isChangingPassword ? "Yangilanmoqda..." : "Parolni Tasdiqlash"}
+                {isChangingPassword ? "..." : t.profile.updatePasswordBtn}
               </Button>
             </form>
           </CardContent>

@@ -264,20 +264,20 @@ export default function LandingPage() {
         <div className="container px-4 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex flex-col gap-2">
             <span className="font-bold text-3xl tracking-tighter">YOZGO</span>
-            <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} YOZGO. Barcha huquqlar himoyalangan.</p>
+            <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} YOZGO. {t.footer.rights}</p>
           </div>
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
             <div className="flex flex-col gap-2">
-              <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">Hamjamiyat</span>
+              <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">{t.footer.community}</span>
               <a href="https://t.me/yozgo_uz" target="_blank" rel="noreferrer" className="text-primary font-bold hover:underline">@yozgo_uz</a>
             </div>
             <div className="flex flex-col gap-2">
-              <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">Yordam (Support)</span>
+              <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">{t.footer.support}</span>
               <a href="https://t.me/yozgo_support_bot" target="_blank" rel="noreferrer" className="text-primary font-bold hover:underline">@yozgo_support_bot</a>
             </div>
             <div className="flex flex-col gap-2">
-              <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">Platforma</span>
-              <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">Reyting</Link>
+              <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">{t.footer.platform}</span>
+              <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">{t.footer.rankings}</Link>
             </div>
           </div>
         </div>
