@@ -214,6 +214,7 @@ if (!isTestEnvironment) {
         ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id varchar UNIQUE;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS gender varchar;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS last_nickname_change_at timestamp;
       `);
 
       // 3. Adminlarni tayinlash (User so'roviga binoan)

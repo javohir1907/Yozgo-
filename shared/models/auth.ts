@@ -24,6 +24,7 @@ export const users = pgTable("users", {
   role: varchar("role").default("user").notNull(), // added role for admin checks
   gender: varchar("gender"), // male, female (mandatory starting from today)
   isBanned: boolean("is_banned").default(false).notNull(),
+  lastNicknameChangeAt: timestamp("last_nickname_change_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => {

@@ -283,7 +283,7 @@ export function setupAuth(app: Express): void {
           firstName: tgUserRaw.first_name,
           lastName: tgUserRaw.last_name || null,
           telegramId: String(tgUserRaw.id),
-          profileImageUrl: tgUserRaw.photo_url || null,
+          // profileImageUrl: tgUserRaw.photo_url || null, // O'chirildi
         }).returning();
         linkedUser = identity;
       }
@@ -400,7 +400,7 @@ export function setupAuth(app: Express): void {
         firstName: (profileData.given_name || profileData.name || "user").toLowerCase().replace(/[^a-z0-9_]/g, "") + "_" + crypto.randomBytes(2).toString("hex"),
         lastName: profileData.family_name || null,
         gender: gender,
-        profileImageUrl: profileData.picture || null,
+        // profileImageUrl: profileData.picture || null, // Rasm saqlash o'chirildi
         role: ['xolmatovjavohir911@gmail.com', 'xolmatovjavohir812@gmail.com'].includes(profileData.email.toLowerCase()) ? 'admin' : 'user'
       }).returning();
       
@@ -545,6 +545,54 @@ export function setupAuth(app: Express): void {
       res.json(userSummary);
     } catch (error) {
       res.status(500).json({ message: "Internal error" });
+    }
+  });
+
+  /**
+   * Foydalanuvchi nicknamini o'zgartirish (har 90 kunda bir marta)
+   */
+  app.post("/api/auth/update-nickname", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = (req.session as any).userId;
+      const { newNickname } = req.body;
+
+      if (!newNickname || newNickname.length < 4 || newNickname.length > 20) {
+        return res.status(400).json({ message: "Nickname 4 tadan 20 tagacha belgidan iborat bo'lishi kerak" });
+      }
+
+      const formattedNickname = newNickname.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+      if (formattedNickname !== newNickname.trim()) {
+        return res.status(400).json({ message: "Nickname faqat kichik harflar, raqamlar va pastki chiziqdan iborat bo'lishi mumkin" });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user) return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+
+      // 90 kunlik cheklovni tekshirish
+      if (user.lastNicknameChangeAt) {
+        const ninetyDaysInMs = 90 * 24 * 60 * 60 * 1000;
+        const timePassed = Date.now() - new Date(user.lastNicknameChangeAt).getTime();
+        if (timePassed < ninetyDaysInMs) {
+          const daysLeft = Math.ceil((ninetyDaysInMs - timePassed) / (1000 * 60 * 60 * 24));
+          return res.status(403).json({ message: `Nicknameni o'zgartirish uchun yana ${daysLeft} kun kutishingiz kerak` });
+        }
+      }
+
+      // Nickname bandligini tekshirish
+      const [existing] = await db.select().from(users).where(eq(users.firstName, formattedNickname));
+      if (existing && existing.id !== userId) {
+        return res.status(409).json({ message: "Bu nickname allaqachon band, boshqasini tanlang" });
+      }
+
+      await db.update(users).set({ 
+        firstName: formattedNickname,
+        lastNicknameChangeAt: new Date()
+      }).where(eq(users.id, userId));
+
+      res.json({ message: "Nickname muvaffaqiyatli o'zgartirildi" });
+    } catch (error) {
+      console.error("[AUTH] Nickname update error:", error);
+      res.status(500).json({ message: "Xatolik yuz berdi" });
     }
   });
 
