@@ -49,9 +49,8 @@ export default function AuthPage() {
     setIsCheckingUsername(true);
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const baseUrl = import.meta.env.VITE_API_URL || "";
         const res = await fetch(
-          `${baseUrl}/api/auth/check-username?username=${encodeURIComponent(firstName.trim())}`
+          `/api/auth/check-username?username=${encodeURIComponent(firstName.trim())}`
         );
         if (res.ok) {
           const data = await res.json();
@@ -104,8 +103,7 @@ export default function AuthPage() {
         
         // Send OTP first
         setIsCheckingUsername(true);
-        const baseUrl = import.meta.env.VITE_API_URL || "";
-        const res = await fetch(`${baseUrl}/api/auth/send-register-otp`, {
+        const res = await fetch(`/api/auth/send-register-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, firstName })
@@ -138,8 +136,7 @@ export default function AuthPage() {
     setError("");
     try {
       if (googleOtpEmail) {
-        const baseUrl = import.meta.env.VITE_API_URL || "";
-        const res = await fetch(`${baseUrl}/api/auth/google-verify`, {
+        const res = await fetch(`/api/auth/google-verify`, {
            method: "POST",
            headers: { "Content-Type": "application/json" },
            body: JSON.stringify({ email: googleOtpEmail, otp: otpCode })
@@ -178,8 +175,7 @@ export default function AuthPage() {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${baseUrl}/api/auth/forgot-password`, {
+      const res = await fetch(`/api/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: forgotEmail.trim() })
@@ -533,8 +529,7 @@ export default function AuthPage() {
               variant="outline"
               className="w-full bg-white hover:bg-gray-50 text-gray-900 border-gray-200"
               onClick={() => {
-                const baseUrl = import.meta.env.VITE_API_URL || "";
-                window.location.href = `${baseUrl}/api/auth/google`;
+                window.location.href = `/api/auth/google`;
               }}
             >
               <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
