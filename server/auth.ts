@@ -32,6 +32,17 @@ const NICKNAME_REGEX = /^[a-z0-9_]{4,20}$/;
 const otpStore = new Map<string, { code: string; expiresAt: number; data?: any }>();
 const OTP_EXPIRY = 5 * 60 * 1000;
 
+// ============ MEMORY CLEANUP ============
+// Har 10 daqiqada eskirgan OTP kodlarni xotiradan tozalaymiz
+setInterval(() => {
+  const now = Date.now();
+  for (const [email, otpData] of otpStore.entries()) {
+    if (now > otpData.expiresAt) {
+      otpStore.delete(email);
+    }
+  }
+}, 10 * 60 * 1000);
+
 // ============ TYPES ============
 interface SessionRequest extends Request {
   session: any;
@@ -92,6 +103,12 @@ export function setupAuth(app: Express): void {
     windowMs: 15 * 60 * 1000, // 15 daqiqa
     max: 10, // 15 daqiqada 10 marta urinish mumkin
     message: "Juda ko'p urinishlar qilindi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring."
+  });
+
+  const forgotPasswordLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 soat
+    max: 3, // 1 soatda faqat 3 marta parol tiklash so'rovi yuborish mumkin
+    message: "Juda ko'p so'rov yuborildi. Iltimos 1 soatdan keyin urinib ko'ring."
   });
 
   // ============ REGISTER & LOGIN ROUTES ============
@@ -184,7 +201,7 @@ export function setupAuth(app: Express): void {
           firstName: firstName.trim(),
           lastName: lastName || null,
           gender: gender,
-          role: (process.env.ADMIN_EMAILS || 'xolmatovjavohir911@gmail.com,xolmatovjavohir812@gmail.com').split(',').map(e => e.trim().toLowerCase()).includes(email.toLowerCase()) ? 'admin' : 'user',
+          role: (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).includes(email.toLowerCase()) ? 'admin' : 'user',
         })
         .returning();
 
@@ -414,7 +431,7 @@ export function setupAuth(app: Express): void {
         lastName: profileData.family_name || null,
         gender: gender,
         // profileImageUrl: profileData.picture || null, // Rasm saqlash o'chirildi
-        role: (process.env.ADMIN_EMAILS || 'xolmatovjavohir911@gmail.com,xolmatovjavohir812@gmail.com').split(',').map(e => e.trim().toLowerCase()).includes(profileData.email.toLowerCase()) ? 'admin' : 'user'
+        role: (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase()).includes(profileData.email.toLowerCase()) ? 'admin' : 'user'
       }).returning();
       
       otpStore.delete("google:" + email.toLowerCase());
@@ -432,7 +449,7 @@ export function setupAuth(app: Express): void {
 
   // ============ PASSWORD RESET ============
 
-  app.post("/api/auth/forgot-password", async (req: Request, res: Response) => {
+  app.post("/api/auth/forgot-password", forgotPasswordLimiter, async (req: Request, res: Response) => {
     try {
       const { email } = req.body;
       if (!email) return res.status(400).json({ message: "Email talab qilinadi" });

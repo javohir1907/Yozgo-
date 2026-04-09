@@ -109,10 +109,12 @@ export class BattleManager {
   private cleanupInactiveRooms(): void {
     const now = Date.now();
     for (const [code, room] of Array.from(this.rooms.entries())) {
-      // Agar xona "waiting" bo'lsa va 1 soatdan beri tursa yoki "finished" bo'lib qolib ketgan bo'lsa
-      if (room.status === "finished" || (room.status === "waiting" && room.startTime && (now - room.startTime > 60 * 60 * 1000))) {
+      const isWaitingTooLong = room.status === "waiting" && room.startTime && (now - room.startTime > 60 * 60 * 1000);
+      const isPlayingStuck = room.status === "playing" && room.endTime && (now > room.endTime + 5 * 60 * 1000); // Tugash vaqtidan 5 daqiqa o'tib ketsa ham yopilmagan bo'lsa
+
+      if (room.status === "finished" || isWaitingTooLong || isPlayingStuck) {
         this.rooms.delete(code);
-        console.log(`[BATTLE] Inactive room ${code} cleaned up from memory.`);
+        console.log(`🧹 [BATTLE] Inactive or stuck room ${code} cleaned up from memory.`);
       }
     }
   }
@@ -307,10 +309,14 @@ export class BattleManager {
     const room = this.rooms.get(code);
     if (!room || room.status !== "playing") return;
 
+    // ANTI-CHEAT TEKSHIRUVI
+    const safeWpm = wpm > 250 ? 0 : wpm; // 250 dan yuqori tezlikni nolga tenglaymiz (yoki cheater deb belgilaymiz)
+    const safeProgress = progress > 100 ? 100 : progress;
+
     const player = room.players.get(userId);
     if (player) {
-      player.progress = progress;
-      player.wpm = wpm;
+      player.progress = safeProgress;
+      player.wpm = safeWpm;
 
       this.io.to(code).emit("leaderboard-update", {
         players: this.getFormattedPlayers(room),
@@ -329,6 +335,12 @@ export class BattleManager {
   ): Promise<void> {
     const room = this.rooms.get(code);
     if (!room || room.status !== "playing") return;
+
+    // ANTI-CHEAT TEKSHIRUVI
+    if (data.wpm > 250 || data.accuracy > 100 || data.accuracy < 0) {
+      console.warn(`🚨 [ANTI-CHEAT] Foydalanuvchi ${userId} shubhali natija yubordi: ${data.wpm} WPM`);
+      data.wpm = 0; // Natijani bekor qilish
+    }
 
     const player = room.players.get(userId);
     if (player) {
