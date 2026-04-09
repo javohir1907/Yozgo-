@@ -22,6 +22,7 @@ import { users } from "@shared/models/auth";
 // (bot import removed)
 import { sendEmail } from "./mailer";
 import { sendAdminNotification } from "./utils/notifier";
+import rateLimit from "express-rate-limit";
 
 // ============ CONSTANTS ============
 const SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 kun
@@ -81,9 +82,21 @@ export function setupAuth(app: Express): void {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  const otpLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000, // 5 daqiqa
+    max: 3, // Bitta IP dan 5 daqiqada faqat 3 marta OTP so'rash mumkin
+    message: "Juda ko'p so'rov yuborildi. Iltimos keyinroq urinib ko'ring."
+  });
+
+  const authAttemptLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 daqiqa
+    max: 10, // 15 daqiqada 10 marta urinish mumkin
+    message: "Juda ko'p urinishlar qilindi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring."
+  });
+
   // ============ REGISTER & LOGIN ROUTES ============
 
-  app.post("/api/auth/send-register-otp", async (req: Request, res: Response) => {
+  app.post("/api/auth/send-register-otp", otpLimiter, async (req: Request, res: Response) => {
     try {
       const { email, firstName } = req.body;
       if (!email || !firstName) return res.status(400).json({ message: "Email va Nickname kiritilmadi" });
@@ -95,7 +108,7 @@ export function setupAuth(app: Express): void {
       const [existingUserByNick] = await db.select().from(users).where(ilike(users.firstName, firstName.trim()));
       if (existingUserByNick) return res.status(409).json({ message: "Ushbu nickname band, boshqasini tanlang" });
 
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp = crypto.randomInt(100000, 999999).toString();
       otpStore.set(emailStr, { code: otp, expiresAt: Date.now() + OTP_EXPIRY });
 
       await sendEmail(
@@ -118,7 +131,7 @@ export function setupAuth(app: Express): void {
    *     tags: [Auth]
    *     summary: Yangi foydalanuvchini ro'yxatdan o'tkazish
    */
-  app.post("/api/auth/register", async (req: Request, res: Response) => {
+  app.post("/api/auth/register", authAttemptLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password, firstName, lastName, otp, gender } = req.body;
 
@@ -171,7 +184,7 @@ export function setupAuth(app: Express): void {
           firstName: firstName.trim(),
           lastName: lastName || null,
           gender: gender,
-          role: ['xolmatovjavohir911@gmail.com', 'xolmatovjavohir812@gmail.com'].includes(email.toLowerCase()) ? 'admin' : 'user',
+          role: (process.env.ADMIN_EMAILS || 'xolmatovjavohir911@gmail.com,xolmatovjavohir812@gmail.com').split(',').map(e => e.trim().toLowerCase()).includes(email.toLowerCase()) ? 'admin' : 'user',
         })
         .returning();
 
@@ -204,7 +217,7 @@ export function setupAuth(app: Express): void {
    *     tags: [Auth]
    *     summary: Tizimga kirish
    */
-  app.post("/api/auth/login", async (req: Request, res: Response) => {
+  app.post("/api/auth/login", authAttemptLimiter, async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
 
@@ -351,7 +364,7 @@ export function setupAuth(app: Express): void {
       let [existingUser] = await db.select().from(users).where(eq(users.email, emailStr));
 
       if (!existingUser) {
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otp = crypto.randomInt(100000, 999999).toString();
         // save their google profile in otpStore
         otpStore.set("google:" + emailStr, {
           code: otp,
@@ -378,7 +391,7 @@ export function setupAuth(app: Express): void {
     }
   });
 
-  app.post("/api/auth/google-verify", async (req: Request, res: Response) => {
+  app.post("/api/auth/google-verify", authAttemptLimiter, async (req: Request, res: Response) => {
     try {
       const { email, otp, gender } = req.body;
       if (!email || !otp || !gender) return res.status(400).json({ message: "Ma'lumotlar to'liq emas (jins majburiy)" });
@@ -401,7 +414,7 @@ export function setupAuth(app: Express): void {
         lastName: profileData.family_name || null,
         gender: gender,
         // profileImageUrl: profileData.picture || null, // Rasm saqlash o'chirildi
-        role: ['xolmatovjavohir911@gmail.com', 'xolmatovjavohir812@gmail.com'].includes(profileData.email.toLowerCase()) ? 'admin' : 'user'
+        role: (process.env.ADMIN_EMAILS || 'xolmatovjavohir911@gmail.com,xolmatovjavohir812@gmail.com').split(',').map(e => e.trim().toLowerCase()).includes(profileData.email.toLowerCase()) ? 'admin' : 'user'
       }).returning();
       
       otpStore.delete("google:" + email.toLowerCase());
@@ -430,24 +443,25 @@ export function setupAuth(app: Express): void {
          return res.json({ message: "Email ga ko'rsatma yuborildi" });
       }
 
-      // Eski talab: Yangi parol avtomatik shakllantiriladi va yuboriladi
-      const newPassword = crypto.randomBytes(4).toString("hex"); // 8 belgi (masalan: a1b2c3d4)
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      // Parolni darhol atmashtirmasdan, reset token yaratamiz
+      const expiry = Date.now() + 15 * 60 * 1000; // 15 mins
+      const signature = crypto.createHmac("sha256", process.env.SESSION_SECRET + userMatch.password).update(`${userMatch.id}:${expiry}`).digest("hex");
+      const resetToken = encodeURIComponent(`${userMatch.id}:${expiry}:${signature}`);
       
-      await db.update(users).set({ password: hashedPassword }).where(eq(users.id, userMatch.id));
+      const frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
+      const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
       
       // Gmailga yuborish
       await sendEmail(
         userMatch.email, 
-        "YOZGO: Yangi Parol", 
-        `Sizning YOZGO hisobingiz uchun yangi parol tasdiqlandi.\n\n📧 Login: ${userMatch.email}\n🔑 Parol: ${newPassword}\n\nIltimos, ushbu ma'lumotlarni hech kimga bermang.`
+        "YOZGO: Parolni Tiklash", 
+        `Sizning YOZGO hisobingiz uchun parolni tiklash so'rovi tushdi.\n\n📧 Login: ${userMatch.email}\n🔗 Tiklash uchun havola: ${resetLink}\n\nIltimos, ushbu havolani hech kimga bermang. Havola muddati 15 daqiqa.`
       );
 
       // Adminga xabar yuborish
       sendAdminNotification(
-        `🔐 <b>Parol tiklandi:</b>\n` +
-        `👤 User: ${userMatch.email}\n` +
-        `🔑 Yangi parol: <code>${newPassword}</code>`
+        `🔐 <b>Parol tiklash so'rovi:</b>\n` +
+        `👤 User: ${userMatch.email}`
       ).catch(() => {});
 
       res.json({ message: "Yangi parol pochtangizga yuborildi" });

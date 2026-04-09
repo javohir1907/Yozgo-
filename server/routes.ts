@@ -22,6 +22,8 @@ import { sendAdminNotification } from "./utils/notifier";
 import { LeaderboardService } from "./services/leaderboard.service";
 
 // Shared Schemas & Models
+import crypto from "crypto";
+
 import {
   testResults,
   users,
@@ -62,7 +64,7 @@ function generateRoomCode(length: number = 5): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No O, I, 0, 1 for clarity
   let result = "";
   for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    result += chars.charAt(crypto.randomInt(0, chars.length));
   }
   return result;
 }
@@ -258,8 +260,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // 1. Foydalanuvchini olish
       const [userRecord] = await db.select().from(users).where(eq(users.id, userId));
-      const isAdminEmail = userRecord.email === "xolmatovjavohir911@gmail.com" || 
-                         userRecord.email === "xolmatovjavohir812@gmail.com";
+      const adminEmailsStr = process.env.ADMIN_EMAILS || "xolmatovjavohir911@gmail.com,xolmatovjavohir812@gmail.com";
+      const adminEmails = adminEmailsStr.split(",").map(e => e.trim().toLowerCase());
+      const isAdminEmail = userRecord.email ? adminEmails.includes(userRecord.email.toLowerCase()) : false;
 
       let finalMaxParticipants = parseInt(maxParticipants || "10");
       let isOfficial = isAdminEmail;
@@ -339,18 +342,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     } catch (error) {
       console.error("[API] Battle Creation Error:", error);
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
-    }
-  });
-
-  app.get("/api/test-telegram", async (req: Request, res: Response) => {
-    try {
-      const result = await sendAdminNotification(
-        "🛠 DIAGNOSTIC BATTLE MESSAGE TEST. If this works, the notification module works.", 
-        { inline_keyboard: [[{ text: "Test", callback_data: "test" }]] }
-      );
-      res.json({ success: true, result });
-    } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message, stack: err.stack });
     }
   });
 
@@ -770,7 +761,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         // Sanani chiroyli formatlash
         const date = user.createdAt ? new Date(user.createdAt).toLocaleString('ru-RU') : '-';
         
-        csv += `${user.id},${user.telegramId},${name},${username},${role},${date}\n`;
+        csv += `${user.id},"${user.telegramId}","${name}","${username}","${role}","${date}"\n`;
       });
 
       // 4. Brauzer yoki Bot buni oddiy JSON emas, fayl deb qabul qilishi uchun Headerlarni sozlaymiz
