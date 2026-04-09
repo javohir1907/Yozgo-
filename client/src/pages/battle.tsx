@@ -93,10 +93,72 @@ export default function BattlePage() {
   const [totalTime, setTotalTime] = useState<number>(GAME_DEFAULTS.TOTAL_TIME);
   const [language, setLanguage] = useState<string>(GAME_DEFAULTS.LANGUAGE);
   const [adminParticipates, setAdminParticipates] = useState<boolean>(true);
-  const [winMode, setWinMode] = useState<"overall" | "per_round">("overall"); // Usul saqlanadigan state
-  const [maxParticipants, setMaxParticipants] = useState<number>(10); // Ishtirokchilar soni uchun yangi state
+  const [winMode, setWinMode] = useState<"overall" | "per_round">("overall");
+  
+  // YANGI QO'SHILGANLAR:
+  const [participantTier, setParticipantTier] = useState<number>(10); // 10, 20, 50, 100, 999
+  const [genderRestriction, setGenderRestriction] = useState<"all" | "male" | "female">("all");
   const [showTerms, setShowTerms] = useState<boolean>(false);
   const [isAgreed, setIsAgreed] = useState<boolean>(false);
+
+  // LOKAL TARJIMALAR (3 tilda)
+  const uiTexts = {
+    uz: {
+      genderLabel: "Auditoriya jinsi",
+      genderAll: "🚻 Aralash (Barchasi)",
+      genderMale: "🙋♂️ Faqat o'g'il bolalar",
+      genderFemale: "🙋♀️ Faqat qiz bolalar",
+      participantsLabel: "Ishtirokchilar soni (Narxlar)",
+      free: "Bepul",
+      negotiable: "Kelishiladi",
+      tier10: "10 tagacha",
+      tier20: "11-20 ta",
+      tier50: "21-50 ta",
+      tier100: "51-100 ta",
+      tierVIP: "101+ (VIP)",
+      winModeLabel: "Musobaqa usuli",
+      winModeOverall: "🏆 Umumiy davr (1 ta g'olib)",
+      winModePerRound: "🎯 Har bir davr (Alohida g'oliblar)"
+    },
+    ru: {
+      genderLabel: "Пол аудитории",
+      genderAll: "🚻 Смешанный (Все)",
+      genderMale: "🙋♂️ Только парни",
+      genderFemale: "🙋♀️ Только девушки",
+      participantsLabel: "Кол-во участников (Цены)",
+      free: "Бесплатно",
+      negotiable: "Договорная",
+      tier10: "До 10",
+      tier20: "11-20 чел",
+      tier50: "21-50 чел",
+      tier100: "51-100 чел",
+      tierVIP: "101+ (VIP)",
+      winModeLabel: "Формат турнира",
+      winModeOverall: "🏆 Общее время (1 победитель)",
+      winModePerRound: "🎯 По раундам (Победитель в каждом)"
+    },
+    en: {
+      genderLabel: "Audience Gender",
+      genderAll: "🚻 Mixed (Everyone)",
+      genderMale: "🙋♂️ Boys only",
+      genderFemale: "🙋♀️ Girls only",
+      participantsLabel: "Participants limit (Pricing)",
+      free: "Free",
+      negotiable: "Negotiable",
+      tier10: "Up to 10",
+      tier20: "11-20 users",
+      tier50: "21-50 users",
+      tier100: "51-100 users",
+      tierVIP: "101+ (VIP)",
+      winModeLabel: "Tournament Mode",
+      winModeOverall: "🏆 Overall duration (1 winner)",
+      winModePerRound: "🎯 Per round (Individual winners)"
+    }
+  };
+
+  // Tizimdagi hozirgi tilni aniqlash (Default: 'uz')
+  const currentLang = localStorage.getItem('yozgo_lang') || 'uz';
+  const loc = (uiTexts as any)[currentLang] || uiTexts.uz;
 
   // --- WEBSOCKET HOOK ---
   const {
@@ -296,7 +358,8 @@ export default function BattlePage() {
         status: "waiting",
         language,
         mode: testDuration.toString(),
-        maxParticipants: maxParticipants, // Ishtirokchilar soni backendga ketadi
+        maxParticipants: participantTier,
+        genderRestriction: genderRestriction,
       });
       setBattleCode(code);
     } catch (err: any) {
@@ -373,50 +436,104 @@ export default function BattlePage() {
           {/* Create Room */}
           <Card className="border-2 hover:border-primary/40 transition-all bg-card/60 backdrop-blur-md">
             <CardHeader><CardTitle className="flex items-center gap-2"><Play className="text-primary" /> {t.battle.newBattle}</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* 1. Rol va Til (Yonma-yon) */}
                 <div className="space-y-1">
                   <Label>{t.battle.role}</Label>
-                  <select value={adminParticipates ? "true" : "false"} onChange={e => setAdminParticipates(e.target.value === "true")} className="w-full bg-background border p-2 rounded-md">
+                  <select value={adminParticipates ? "true" : "false"} onChange={e => setAdminParticipates(e.target.value === "true")} className="w-full bg-background border p-3 rounded-xl focus:ring-2 focus:ring-primary/50 transition-all outline-none">
                     <option value="true">{t.battle.participant}</option>
                     <option value="false">{t.battle.spectator}</option>
                   </select>
                 </div>
                 <div className="space-y-1">
                   <Label>{t.battle.language}</Label>
-                  <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-background border p-2 rounded-md">
+                  <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-background border p-3 rounded-xl focus:ring-2 focus:ring-primary/50 transition-all outline-none">
                     <option value="uz">{t.languages.uzbek}</option>
                     <option value="en">{t.languages.english}</option>
                     <option value="ru">{t.languages.russian}</option>
                   </select>
                 </div>
-                {/* YANGI QO'SHILGANLAR */}
-                <div className="space-y-1">
-                  <Label>Ishtirokchilar soni</Label>
-                  <Input 
-                    type="number" 
-                    min="2" 
-                    max="100" 
-                    value={maxParticipants} 
-                    onChange={e => setMaxParticipants(parseInt(e.target.value) || 2)} 
-                    className="w-full bg-background border"
-                  />
+
+                {/* 2. Jins Cheklovi */}
+                <div className="space-y-1 md:col-span-2">
+                  <Label>{loc.genderLabel}</Label>
+                  <select 
+                    value={genderRestriction} 
+                    onChange={e => setGenderRestriction(e.target.value as any)} 
+                    className="w-full bg-background border p-3 rounded-xl font-medium focus:ring-2 focus:ring-primary/50 transition-all outline-none"
+                  >
+                    <option value="all">{loc.genderAll}</option>
+                    <option value="male">{loc.genderMale}</option>
+                    <option value="female">{loc.genderFemale}</option>
+                  </select>
                 </div>
-                <div className="space-y-1">
-                  <Label>Musobaqa usuli</Label>
+
+                {/* 3. Musobaqa Usuli */}
+                <div className="space-y-1 md:col-span-2">
+                  <Label>{loc.winModeLabel}</Label>
                   <select 
                     value={winMode} 
                     onChange={e => setWinMode(e.target.value as "overall" | "per_round")} 
-                    className="w-full bg-background border p-2 rounded-md"
+                    className="w-full bg-background border p-3 rounded-xl font-medium focus:ring-2 focus:ring-primary/50 transition-all outline-none"
                   >
-                    <option value="overall">Umumiy davr bo'yicha</option>
-                    <option value="per_round">Har bir davr bo'yicha</option>
+                    <option value="overall">{loc.winModeOverall}</option>
+                    <option value="per_round">{loc.winModePerRound}</option>
                   </select>
                 </div>
+
+                {/* 4. Ishtirokchilar soni (Chiroyli Tugmalar) */}
+                <div className="space-y-2 md:col-span-2 mt-2">
+                  <Label className="flex items-center gap-2">
+                    {loc.participantsLabel}
+                  </Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {[
+                      { val: 10, label: loc.tier10, price: loc.free, icon: "🚀", color: "text-green-500" },
+                      { val: 20, label: loc.tier20, price: "29 000 so'm", icon: "🔥", color: "text-orange-500" },
+                      { val: 50, label: loc.tier50, price: "59 000 so'm", icon: "⚡", color: "text-yellow-500" },
+                      { val: 100, label: loc.tier100, price: "109 000 so'm", icon: "👑", color: "text-purple-500" },
+                      { val: 999, label: loc.tierVIP, price: loc.negotiable, icon: "💎", color: "text-blue-500" },
+                    ].map(tier => (
+                      <button
+                        key={tier.val}
+                        onClick={() => setParticipantTier(tier.val)}
+                        type="button"
+                        className={`relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-300 ${
+                          participantTier === tier.val 
+                            ? 'border-primary bg-primary/10 scale-[1.02] shadow-md' 
+                            : 'border-border bg-card/50 hover:border-primary/50 hover:bg-primary/5'
+                        }`}
+                      >
+                        <span className={`text-2xl mb-1 drop-shadow-md ${tier.color}`}>{tier.icon}</span>
+                        <span className="font-bold text-sm text-center">{tier.label}</span>
+                        <span className="text-xs font-semibold text-muted-foreground mt-0.5 px-2 py-0.5 rounded-full bg-background border">
+                          {tier.price}
+                        </span>
+                        
+                        {/* Active Indicator Checkmark */}
+                        {participantTier === tier.val && (
+                          <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full p-0.5 shadow-sm">
+                            <Check className="w-4 h-4" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
               </div>
               
-              <Button onClick={handleCreateBattle} disabled={isCreating} className="w-full font-bold h-12 mt-2">
-                {isCreating ? <Loader2 className="animate-spin" /> : t.battle.openRoom}
+              {/* CREATE BUTTON */}
+              <Button 
+                onClick={handleCreateBattle} 
+                disabled={isCreating} 
+                size="lg"
+                className="w-full font-black h-14 text-lg rounded-xl shadow-lg mt-4"
+              >
+                {isCreating ? <Loader2 className="animate-spin mr-2" /> : <Play className="mr-2 fill-current w-5 h-5" />} 
+                {t.battle.openRoom}
               </Button>
             </CardContent>
           </Card>
