@@ -1,0 +1,14 @@
+services:
+  # 1. Asosiy Veb-sayt va User Bot (Node.js)
+  - type: web
+    name: yozgo-web-service
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node dist/index.cjs
+
+  # 2. Admin Bot (Python Background Worker)
+  - type: worker
+    name: yozgo-admin-bot
+    env: python
+    buildCommand: pip install -r admin_bot/requirements.txt
+    startCommand: python admin_bot/main.py
