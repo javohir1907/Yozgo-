@@ -72,7 +72,6 @@ export default function BattlePage() {
   const [inputCode, setInputCode] = useState<string>("");
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [isJoining, setIsJoining] = useState<boolean>(false);
-  const [activationCode, setActivationCode] = useState<string>("");
   
   // --- STATE: Gameplay ---
   const [userInput, setUserInput] = useState<string>("");
@@ -94,7 +93,8 @@ export default function BattlePage() {
   const [totalTime, setTotalTime] = useState<number>(GAME_DEFAULTS.TOTAL_TIME);
   const [language, setLanguage] = useState<string>(GAME_DEFAULTS.LANGUAGE);
   const [adminParticipates, setAdminParticipates] = useState<boolean>(true);
-  const [winMode, setWinMode] = useState<"overall" | "per_round">("overall"); // <-- YANGI QO'SHILDI
+  const [winMode, setWinMode] = useState<"overall" | "per_round">("overall"); // Usul saqlanadigan state
+  const [maxParticipants, setMaxParticipants] = useState<number>(10); // Ishtirokchilar soni uchun yangi state
   const [showTerms, setShowTerms] = useState<boolean>(false);
   const [isAgreed, setIsAgreed] = useState<boolean>(false);
 
@@ -290,15 +290,17 @@ export default function BattlePage() {
       const array = new Uint8Array(3);
       window.crypto.getRandomValues(array);
       const code = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
+      
       await apiRequest("POST", "/api/battles", {
         code,
         status: "waiting",
         language,
         mode: testDuration.toString(),
+        maxParticipants: maxParticipants, // Ishtirokchilar soni backendga ketadi
       });
       setBattleCode(code);
-    } catch (err) {
-      toast({ title: t.battle.error, description: t.battle.failedCreate, variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: t.battle.error, description: err.message || t.battle.failedCreate, variant: "destructive" });
     } finally {
       setIsCreating(false);
     }
@@ -388,20 +390,32 @@ export default function BattlePage() {
                     <option value="ru">{t.languages.russian}</option>
                   </select>
                 </div>
+                {/* YANGI QO'SHILGANLAR */}
+                <div className="space-y-1">
+                  <Label>Ishtirokchilar soni</Label>
+                  <Input 
+                    type="number" 
+                    min="2" 
+                    max="100" 
+                    value={maxParticipants} 
+                    onChange={e => setMaxParticipants(parseInt(e.target.value) || 2)} 
+                    className="w-full bg-background border"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Musobaqa usuli</Label>
+                  <select 
+                    value={winMode} 
+                    onChange={e => setWinMode(e.target.value as "overall" | "per_round")} 
+                    className="w-full bg-background border p-2 rounded-md"
+                  >
+                    <option value="overall">Umumiy davr bo'yicha</option>
+                    <option value="per_round">Har bir davr bo'yicha</option>
+                  </select>
+                </div>
               </div>
-              <div className="space-y-1">
-                <Label className="flex justify-between">
-                  <span>{t.battle.activationCode}</span>
-                  <span className="text-[10px] text-primary">{t.battle.fromAdmin}</span>
-                </Label>
-                <Input 
-                  placeholder="Y-XXXXXX" 
-                  value={activationCode} 
-                  onChange={e => setActivationCode(e.target.value)} 
-                  className="font-mono text-center uppercase"
-                />
-              </div>
-              <Button onClick={handleCreateBattle} disabled={isCreating} className="w-full font-bold h-12">
+              
+              <Button onClick={handleCreateBattle} disabled={isCreating} className="w-full font-bold h-12 mt-2">
                 {isCreating ? <Loader2 className="animate-spin" /> : t.battle.openRoom}
               </Button>
             </CardContent>
@@ -516,17 +530,6 @@ export default function BattlePage() {
                     <div className="w-full space-y-3">
                       <Label className="flex justify-between text-muted-foreground">{t.battle.totalDuration} (daqiqa): <span className="font-black text-foreground">{totalTime}m</span></Label>
                       <Slider value={[totalTime]} max={30} min={1} step={1} onValueChange={(v) => setTotalTime(v[0])} />
-                    </div>
-                    <div className="w-full space-y-3 pt-4 border-t border-border/50">
-                      <Label className="flex justify-between text-muted-foreground">Musobaqa turi:</Label>
-                      <select 
-                        value={winMode} 
-                        onChange={e => setWinMode(e.target.value as "overall" | "per_round")} 
-                        className="w-full bg-background border border-primary/20 p-3 rounded-xl font-bold"
-                      >
-                        <option value="overall">UMUMIY DAVR BO'YICHA (Bitta g'olib)</option>
-                        <option value="per_round">HAR BIR DAVR BO'YICHA (Raundma-raund g'oliblar)</option>
-                      </select>
                     </div>
                   </div>
                 )}
