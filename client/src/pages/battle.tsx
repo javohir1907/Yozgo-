@@ -94,6 +94,7 @@ export default function BattlePage() {
   const [totalTime, setTotalTime] = useState<number>(GAME_DEFAULTS.TOTAL_TIME);
   const [language, setLanguage] = useState<string>(GAME_DEFAULTS.LANGUAGE);
   const [adminParticipates, setAdminParticipates] = useState<boolean>(true);
+  const [winMode, setWinMode] = useState<"overall" | "per_round">("overall"); // <-- YANGI QO'SHILDI
   const [showTerms, setShowTerms] = useState<boolean>(false);
   const [isAgreed, setIsAgreed] = useState<boolean>(false);
 
@@ -465,12 +466,38 @@ export default function BattlePage() {
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center py-20 bg-card/60 rounded-3xl border-2 border-primary shadow-2xl">
                 <Trophy className="w-24 h-24 text-yellow-500 mb-6 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
                 <h2 className="text-4xl font-black uppercase mb-4 text-center">{t.battle.battleOver}</h2>
-                <div className="text-center mb-8">
-                  <p className="text-muted-foreground text-lg">{t.battle.winnerDetermined}</p>
-                  <p className="font-bold text-2xl text-primary mt-2">
-                    {battleEnd.winnerId ? battleEnd.results.find((r: any) => r.id === battleEnd.winnerId)?.username || t.battle.unknown : t.battle.defeat}
-                  </p>
-                </div>
+                
+                {/* Agar UMUMIY DAVR usuli bo'lsa */}
+                {battleEnd.mode === "overall" && (
+                  <div className="text-center mb-8">
+                    <p className="text-muted-foreground text-lg">{t.battle.winnerDetermined}</p>
+                    <p className="font-bold text-3xl text-primary mt-2 flex items-center justify-center gap-2">
+                      <Crown className="text-yellow-500 w-8 h-8"/> 
+                      {battleEnd.winnerId ? battleEnd.overall.find((r: any) => r.id === battleEnd.winnerId)?.username || t.battle.unknown : t.battle.defeat}
+                    </p>
+                  </div>
+                )}
+
+                {/* Agar HAR BIR DAVR (Per Round) usuli bo'lsa */}
+                {battleEnd.mode === "per_round" && (
+                  <div className="w-full max-w-md mb-8">
+                    <p className="text-muted-foreground text-center mb-4">Har bir davr g'oliblarlari:</p>
+                    <div className="space-y-2">
+                      {battleEnd.roundWinners.map((w: any) => (
+                        <div key={w.round} className="flex justify-between items-center bg-background/50 p-3 rounded-lg border border-primary/20">
+                          <span className="font-bold text-muted-foreground">{w.round}-Davr:</span>
+                          <span className="font-black text-lg flex items-center gap-2">
+                            {w.username} <Badge variant="secondary">{w.wpm} WPM</Badge>
+                          </span>
+                        </div>
+                      ))}
+                      {battleEnd.roundWinners.length === 0 && (
+                        <p className="text-center text-sm text-red-500">Hech kim raundni to'liq yakunlamadi.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <Button onClick={() => setLocation("/")} size="lg" className="px-10 rounded-full font-bold">
                   {t.battle.backToHome}
                 </Button>
@@ -490,10 +517,21 @@ export default function BattlePage() {
                       <Label className="flex justify-between text-muted-foreground">{t.battle.totalDuration} (daqiqa): <span className="font-black text-foreground">{totalTime}m</span></Label>
                       <Slider value={[totalTime]} max={30} min={1} step={1} onValueChange={(v) => setTotalTime(v[0])} />
                     </div>
+                    <div className="w-full space-y-3 pt-4 border-t border-border/50">
+                      <Label className="flex justify-between text-muted-foreground">Musobaqa turi:</Label>
+                      <select 
+                        value={winMode} 
+                        onChange={e => setWinMode(e.target.value as "overall" | "per_round")} 
+                        className="w-full bg-background border border-primary/20 p-3 rounded-xl font-bold"
+                      >
+                        <option value="overall">UMUMIY DAVR BO'YICHA (Bitta g'olib)</option>
+                        <option value="per_round">HAR BIR DAVR BO'YICHA (Raundma-raund g'oliblar)</option>
+                      </select>
+                    </div>
                   </div>
                 )}
                 {isAdmin && (
-                  <Button onClick={() => startBattle({ testDuration, totalTime, maxAttempts: 5, language, adminParticipates })} size="lg" className="px-16 font-black h-14 text-xl rounded-full shadow-lg hover:scale-105 transition-transform">
+                  <Button onClick={() => startBattle({ testDuration, totalTime, maxAttempts: 5, language, adminParticipates, winMode })} size="lg" className="px-16 font-black h-14 text-xl rounded-full shadow-lg hover:scale-105 transition-transform">
                     {t.battle.startBattleBtn} <Play className="ml-2 fill-current" />
                   </Button>
                 )}

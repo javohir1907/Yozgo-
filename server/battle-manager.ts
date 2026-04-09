@@ -33,6 +33,7 @@ interface Player {
   bestWpm: number;
   bestAccuracy: number;
   attempts: number;
+  attemptHistory: { wpm: number; accuracy: number }[]; // <-- YANGI QO'SHILDI
   isReady: boolean;
   isFinished: boolean;
   isDisconnected?: boolean;
@@ -47,6 +48,7 @@ interface RoomSettings {
   maxAttempts: number;
   language?: string;
   adminParticipates?: boolean;
+  winMode: "overall" | "per_round"; // <-- YANGI QO'SHILDI: Musobaqa turi
 }
 
 /**
@@ -263,6 +265,7 @@ export class BattleManager {
       bestWpm: existingPlayer ? existingPlayer.bestWpm : 0,
       bestAccuracy: existingPlayer ? existingPlayer.bestAccuracy : 100,
       attempts: existingPlayer ? existingPlayer.attempts : 0,
+      attemptHistory: existingPlayer ? existingPlayer.attemptHistory : [], // <-- SHU QATORNI QO'SHING
       isReady: existingPlayer ? existingPlayer.isReady : false,
       isFinished: existingPlayer ? existingPlayer.isFinished : false,
       isDisconnected: false,
@@ -345,6 +348,10 @@ export class BattleManager {
     const player = room.players.get(userId);
     if (player) {
       player.attempts++;
+      
+      // Har bir raund natijasini saqlab borish
+      player.attemptHistory.push({ wpm: data.wpm, accuracy: data.accuracy });
+
       if (data.wpm >= player.bestWpm) {
         player.bestWpm = data.wpm;
         player.bestAccuracy = data.accuracy;
@@ -377,37 +384,74 @@ export class BattleManager {
     room.status = "finished";
     await storage.updateBattleStatus(room.id, "finished");
 
-    const winnerId = this.calculateLeader(room);
-    if (winnerId) {
-      const participants = await storage.getBattleParticipants(room.id);
-      const winnerParticipant = participants.find((p) => p.userId === winnerId);
-      if (winnerParticipant) {
-        await storage.updateBattleParticipant(winnerParticipant.id, { isWinner: true });
+    const playersArray = Array.from(room.players.values());
+    let finalResults: any = { mode: room.settings.winMode };
+
+    if (room.settings.winMode === "per_round") {
+      // 2-USUL: HAR BIR DAVR BO'YICHA G'OLIBLAR (Siz aytgan mantiq)
+      let roundWinners = [];
+      let excludedPlayerIds = new Set<string>();
+      
+      // Eng ko'p nechta raund o'ynalganini aniqlaymiz
+      let maxRounds = 0;
+      playersArray.forEach(p => { if (p.attemptHistory.length > maxRounds) maxRounds = p.attemptHistory.length; });
+
+      for (let r = 0; r < maxRounds; r++) {
+        let roundWinner: Player | null = null;
+        let highestWpm = -1;
+
+        for (const player of playersArray) {
+          // Agar oldingi raundda yutgan bo'lsa, bu raundda qatnashmaydi!
+          if (excludedPlayerIds.has(player.user.id)) continue; 
+
+          const roundScore = player.attemptHistory[r];
+          if (roundScore && roundScore.wpm > highestWpm) {
+            highestWpm = roundScore.wpm;
+            roundWinner = player;
+          }
+        }
+
+        if (roundWinner) {
+          roundWinners.push({
+            round: r + 1,
+            userId: roundWinner.user.id,
+            username: roundWinner.user.firstName || roundWinner.user.email?.split('@')[0],
+            wpm: highestWpm,
+            accuracy: roundWinner.attemptHistory[r].accuracy
+          });
+          excludedPlayerIds.add(roundWinner.user.id); // Keyingi raundlardan chetlatish
+        }
       }
+      finalResults.roundWinners = roundWinners;
+      finalResults.overall = this.getFormattedPlayers(room);
+
+    } else {
+      // 1-USUL: UMUMIY DAVR BO'YICHA (Oldingi mantiq)
+      const winnerId = this.calculateLeader(room);
+      finalResults.winnerId = winnerId;
+      finalResults.overall = this.getFormattedPlayers(room);
     }
 
-    const formattedResults = this.getFormattedPlayers(room);
-
-    this.io.to(code).emit("battle-end", {
-      winnerId,
-      results: formattedResults,
-    });
+    this.io.to(code).emit("battle-end", finalResults);
 
     // Telegram Adminga natijalarni yuborish
     try {
-      let leaderText = `🏁 <b>Jang yakunlandi!</b>\n\n`;
+      let leaderText = `⚔️ <b>Jang yakunlandi! (${room.settings.winMode === 'per_round' ? 'Har bir davr' : 'Umumiy'})</b>\n\n`;
       leaderText += `Xona kodi: <code>${code}</code>\n`;
-      leaderText += `Ishtirokchilar: ${formattedResults.length} ta\n\n`;
+      leaderText += `Ishtirokchilar: ${playersArray.length} ta\n\n`;
       
-      formattedResults.forEach((p, index) => {
-         const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🔸";
-         leaderText += `${medal} <b>${p.username}</b> - ${p.bestWpm} WPM (${p.bestAccuracy}% aniqlik)\n`;
-      });
-      
+      if (room.settings.winMode === "per_round") {
+        finalResults.roundWinners.forEach((w: any) => {
+          leaderText += `🟢 ${w.round}-raund: <b>${w.username}</b> - ${w.wpm} WPM\n`;
+        });
+      } else {
+        finalResults.overall.slice(0, 3).forEach((p: any, index: number) => {
+           const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉";
+           leaderText += `${medal} <b>${p.username}</b> - ${p.bestWpm} WPM\n`;
+        });
+      }
       sendAdminNotification(leaderText);
-    } catch (e) {
-      console.error("[BATTLE] Admin botga natijani yuborishda xatolik:", e);
-    }
+    } catch (e) {}
   }
 
   // ============ HELPERS ============
