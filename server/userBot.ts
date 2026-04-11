@@ -27,7 +27,12 @@ export function startUserBot() {
       params: { timeout: 10 }
     } 
   });
-  console.log("Foydalanuvchi Boti (User Bot) muvaffaqiyatli ishga tushdi!");
+  
+  // Xavfsizlik va yashirin xatolar oldini olish uchun:
+  // Eski webhooklarni majburiy o'chiramiz. Shunda polling anik va uzilishsiz ishlashni boshlaydi!
+  userBot.deleteWebHook().catch(() => {});
+
+  console.log("Foydalanuvchi Boti (User Bot) muvaffaqiyatli ishga tushdi va Webhooklar tozalandi!");
 
   // Polling xatolarini ushlash (Server qotib qolmasligi uchun eng muhim qism)
   userBot.on("polling_error", (error: any) => {
