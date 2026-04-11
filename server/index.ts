@@ -19,7 +19,8 @@ import compression from "compression";
 
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
-import { pool } from "./db";
+import { pool, db } from "./db";
+import { sql } from "drizzle-orm";
 import { setupSwagger } from "./swagger";
 import debugRouter from "./debug-auth";
 import { logger } from "./utils/logger";
@@ -289,8 +290,39 @@ if (!isTestEnvironment) {
 
   // ============ CLIENT SERVING ============
 
-  log(`[SYSTEM] Frontend va Backend muvaffaqiyatli bog'landi va Server ishga tushirildi!`);
+  logger.info(`[SYSTEM] Frontend va Backend muvaffaqiyatli bog'landi va Server ishga tushirildi!`);
   
+  // Majburiy Bazani Yangilash Skripti (drizzle-kit push Renderda xato bergan holatlar uchun)
+  try {
+    logger.info(`[DB] Bazani tekshirish va yangilash (Auto-Migration) boshlandi...`);
+    await db.execute(sql`ALTER TABLE battles ADD COLUMN IF NOT EXISTS max_participants INTEGER DEFAULT 10;`);
+    await db.execute(sql`ALTER TABLE battles ADD COLUMN IF NOT EXISTS gender_restriction TEXT DEFAULT 'all';`);
+    await db.execute(sql`ALTER TABLE battles ADD COLUMN IF NOT EXISTS is_official BOOLEAN DEFAULT false;`);
+    await db.execute(sql`ALTER TABLE battles ADD COLUMN IF NOT EXISTS room_price INTEGER DEFAULT 0;`);
+    await db.execute(sql`ALTER TABLE battles ADD COLUMN IF NOT EXISTS access_code TEXT;`);
+    await db.execute(sql`ALTER TABLE battles ADD COLUMN IF NOT EXISTS duration INTEGER DEFAULT 60;`);
+    await db.execute(sql`ALTER TABLE battles ADD COLUMN IF NOT EXISTS competition_length INTEGER DEFAULT 10;`);
+    await db.execute(sql`ALTER TABLE battles ADD COLUMN IF NOT EXISTS creator_role TEXT DEFAULT 'participant';`);
+    
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS competition_creation_codes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        code VARCHAR NOT NULL UNIQUE,
+        max_participants INTEGER NOT NULL,
+        is_used BOOLEAN DEFAULT false NOT NULL,
+        created_by TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+        expires_at TIMESTAMP,
+        active_battle_id UUID REFERENCES battles(id),
+        used_by_user_id VARCHAR REFERENCES users(id),
+        used_at TIMESTAMP
+      );
+    `);
+    logger.info(`[DB] Bazaga barcha yangi ustunlar muvaffaqiyatli qo'shildi / tekshirildi!`);
+  } catch (err: any) {
+    logger.info(`[DB ERROR] Bazani avtomatik yangilashda xato: ` + err.message);
+  }
+
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
