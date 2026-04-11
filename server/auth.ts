@@ -83,7 +83,7 @@ export function setupAuth(app: Express): void {
       cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // Localda muammo qilmasligi uchun lax, serverda kross-domen uchratsa none
+        sameSite: "lax", // Safari ITP "none" uchinchi tomon (third-party) cookie deb o'ylab bloklamasligi uchun LAX ishlatiladi
         maxAge: SESSION_EXPIRY,
       },
   });
