@@ -179,7 +179,6 @@ export function startUserBot() {
   });
 }
 
-// Check subscription wrapper
 async function checkSubscription(chatId: number, tgUserId: number) {
   try {
     const chatMember = await userBot?.getChatMember("@yozgo_uz", tgUserId);
@@ -187,8 +186,10 @@ async function checkSubscription(chatId: number, tgUserId: number) {
       return false;
     }
     return true;
-  } catch (e) {
+  } catch (e: any) {
     // Cannot access or user not found => not subscribed
+    console.error("Subscription Check Error:", e.response?.body || e.message);
+    userBot?.sendMessage(chatId, `⚠️ Kanalni tekshirish tizimda xatolik bor (Bot admin emas bo'lishi mumkin): ${e.message}`);
     return false;
   }
 }
@@ -237,7 +238,7 @@ export async function generateAndSendRoomCode(
   const dummyUserId = firstUser?.id;
 
   if (!dummyUserId) {
-    userBot?.sendMessage(chatId, "Tizimda xatolik yuz berdi.");
+    userBot?.sendMessage(chatId, "Tizimda xatolik yuz berdi: Bog'lanadigan asosiy foydalanuvchi profil topilmadi.");
     return;
   }
 

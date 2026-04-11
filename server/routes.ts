@@ -343,8 +343,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const adminMsg = `⚡️ <b>JANG XONASIGA KIRISH OCHILDI!</b>\n\n` +
                        `🚀 Asl Xona Kodi: <code>${createdBattle.code}</code>\n\n` +
                        `👆 Xona kodining ustiga bossangiz avtomatik nusxa olinadi. Nuxsalangan kodni tegishli @yozgo_bot ga yuborib, o'z individual bir martalik kodingizni oling.`;
+      
+      const adminKeyboard = {
+        inline_keyboard: [
+          [
+            { text: "↗️ Kanalga ruxsat uzatish (Forward)", url: `https://t.me/share/url?text=${encodeURIComponent("⚡️ JANG XONASIGA KIRISH OCHILDI!\n\n🚀 Asl Xona Kodi: " + createdBattle.code + "\n\n👆 Xona kodining ustiga bossangiz avtomatik nusxa olinadi. Nuxsalangan kodni tegishli @yozgo_bot ga yuborib, o'z individual bir martalik kodingizni oling.")}` }
+          ],
+          [
+            { text: "📢 Kanalga o'tish (@yozgo_uz)", url: "https://t.me/yozgo_uz" }
+          ]
+        ]
+      };
                        
-      sendAdminNotification(adminMsg).catch(console.error);
+      sendAdminNotification(adminMsg, adminKeyboard).catch(console.error);
 
       res.status(HTTP_STATUS.CREATED).json(createdBattle);
     } catch (error: any) {
