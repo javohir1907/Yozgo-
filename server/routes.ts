@@ -941,14 +941,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/admin/users/search/:query", adminAuth, async (req, res) => {
     try {
       const q = `%${req.params.query}%`;
-      const isNumber = !isNaN(Number(req.params.query));
       
       const foundUsers = await db.select().from(users).where(
-        sql`${users.id}::text = ${req.params.query} OR ${users.firstName} ILIKE ${q} OR ${users.email} ILIKE ${q}`
-      ).limit(5);
+        sql`${users.id}::text = ${req.params.query} 
+            OR ${users.firstName} ILIKE ${q} 
+            OR ${users.lastName} ILIKE ${q} 
+            OR ${users.email} ILIKE ${q} 
+            OR ${users.telegramId}::text = ${req.params.query}`
+      ).limit(10);
       
       res.json(foundUsers);
     } catch (error) {
+      console.error("Search Error:", error);
       res.status(500).json({ error: "Qidirishda xatolik" });
     }
   });

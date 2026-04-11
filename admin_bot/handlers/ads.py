@@ -115,14 +115,13 @@ async def change_ads_page(call: CallbackQuery):
 @router.callback_query(F.data.startswith("del_ad_"))
 async def delete_ad_callback(call: CallbackQuery):
     ad_id = call.data.split("_")[2]
-    headers = {"X-Admin-Token": ADMIN_API_TOKEN}
-    async with aiohttp.ClientSession() as session:
-        async with session.delete(f"{API_URL}/ads/{ad_id}", headers=headers) as resp:
-            if resp.status == 200:
-                await call.answer("✅ Reklama o'chirildi!", show_alert=True)
-                await render_ads_page(call, 0) # O'chgandan keyin 1-sahifani yangilaymiz
-            else:
-                await call.answer("❌ Xatolik yuz berdi!", show_alert=True)
+    
+    response = await api_request("DELETE", f"/ads/{ad_id}")
+    if response:
+        await call.answer("✅ Reklama o'chirildi!", show_alert=True)
+        await render_ads_page(call, 0)
+    else:
+        await call.answer("❌ Xatolik yuz berdi!", show_alert=True)
 
 @router.callback_query(F.data == "ignore")
 async def ignore_callback(call: CallbackQuery):

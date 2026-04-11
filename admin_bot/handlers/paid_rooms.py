@@ -37,7 +37,7 @@ async def create_code(message: Message, state: FSMContext):
         "createdBy": str(message.from_user.id)
     }
     
-    result = await api_request("POST", "/api/admin/creation-codes", payload)
+    result = await api_request("POST", "/creation-codes", payload)
     
     if result:
         await state.clear()
@@ -59,9 +59,9 @@ async def start_code_status(message: Message, state: FSMContext):
 
 @router.message(PaidRoomState.code_status, F.text != "❌ Bekor qilish")
 async def check_code_status(message: Message, state: FSMContext):
-    code = message.text.strip().toUpperCase() if hasattr(message.text.strip(), 'toUpperCase') else message.text.strip().upper()
+    code = message.text.strip().upper()
     
-    result = await api_request("GET", f"/api/admin/creation-codes/status/{code}")
+    result = await api_request("GET", f"/creation-codes/status/{code}")
     
     if result:
         await state.clear()
@@ -84,16 +84,16 @@ async def check_code_status(message: Message, state: FSMContext):
 @router.message(F.text == "🚫 Kodni o'chirish")
 async def start_code_deactivate(message: Message, state: FSMContext):
     await state.set_state(PaidRoomState.deactivate_code)
-    await message.answer("O'chirmoqchi bo'lgan kodni kiriting:", reply_markup=cancel_kb())
+    await message.answer("O'chirmoqchi bo'lgan (revoke) kodni kiriting:", reply_markup=cancel_kb())
 
 @router.message(PaidRoomState.deactivate_code, F.text != "❌ Bekor qilish")
 async def deactivate_code(message: Message, state: FSMContext):
     code = message.text.strip().upper()
     
-    result = await api_request("POST", "/api/admin/creation-codes/deactivate", {"code": code})
+    result = await api_request("POST", "/creation-codes/deactivate", {"code": code})
     
     if result and result.get('success'):
         await state.clear()
-        await message.answer(f"✅ Kod <code>{code}</code> muvaffaqiyatli o'chirildi (muddati tugatildi).", reply_markup=paid_rooms_menu_kb())
+        await message.answer(f"✅ Kod <code>{code}</code> muvaffaqiyatli o'chirildi (bekor qilindi).", reply_markup=paid_rooms_menu_kb())
     else:
         await message.answer("❌ Kodni o'chirishda xatolik yuz berdi.", reply_markup=paid_rooms_menu_kb())

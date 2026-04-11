@@ -9,7 +9,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN
 from filters import SuperAdminFilter
-from handlers import common, stats, ads, comps, users, settings
+from handlers import common, stats, ads, comps, users, settings, paid_rooms
 
 # 1. Logging
 logging.basicConfig(
@@ -39,6 +39,7 @@ async def main():
     dp.include_router(comps.router)
     dp.include_router(users.router)
     dp.include_router(settings.router)
+    dp.include_router(paid_rooms.router)
 
     print("🤖 YOZGO Admin Bot (MemoryStorage bilan) ishga tushmoqda...")
     

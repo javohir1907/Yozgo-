@@ -106,11 +106,10 @@ async def change_comps_page(call: CallbackQuery):
 @router.callback_query(F.data.startswith("del_comp_"))
 async def delete_comp_callback(call: CallbackQuery):
     comp_id = call.data.split("_")[2]
-    headers = {"X-Admin-Token": ADMIN_API_TOKEN}
-    async with aiohttp.ClientSession() as session:
-        async with session.delete(f"{API_URL}/competitions/{comp_id}", headers=headers) as resp:
-            if resp.status == 200:
-                await call.answer("✅ Musobaqa o'chirildi!", show_alert=True)
-                await render_comps_page(call, 0)
-            else:
-                await call.answer("❌ Xatolik yuz berdi!", show_alert=True)
+    
+    response = await api_request("DELETE", f"/competitions/{comp_id}")
+    if response:
+        await call.answer("✅ Musobaqa o'chirildi!", show_alert=True)
+        await render_comps_page(call, 0)
+    else:
+        await call.answer("❌ Xatolik yuz berdi!", show_alert=True)
