@@ -31,25 +31,24 @@ export default function LeaderboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <SEO title="Reyting | YOZGO" description="Eng tez yozuvchilar peshqadamlar jadvali. O'z o'rningizni toping va natijangizni yaxshilang." />
+      <SEO title={`${t.leaderboard.title} | YOZGO`} description={t.leaderboard.subtitle} />
       <div className="flex flex-col gap-8">
         <header className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
             <h1 className="text-4xl font-bold tracking-tight" data-testid="text-leaderboard-title">
-              Reyting
+              {t.leaderboard.title}
             </h1>
           </div>
           <p className="text-muted-foreground">
-            Eng tez yozuvchilar qatorida o'z o'rningizni toping. Reytingga to'liq kirish uchun jami
-            30 daqiqa yozish tajribasiga ega bo'lishingiz kerak.
+            {t.leaderboard.subtitle}
           </p>
         </header>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-secondary/50 p-4 rounded-xl border border-border shadow-sm">
           <Tabs value={language} onValueChange={setLanguage} className="w-full md:w-auto">
             <TabsList data-testid="tabs-leaderboard-language">
-              <TabsTrigger value="all">Hammasi</TabsTrigger>
+              <TabsTrigger value="all">{t.leaderboard.all}</TabsTrigger>
               <TabsTrigger value="uz">UZ</TabsTrigger>
               <TabsTrigger value="ru">RU</TabsTrigger>
               <TabsTrigger value="en">EN</TabsTrigger>
@@ -91,8 +90,8 @@ export default function LeaderboardPage() {
                     return (
                       <div className="flex flex-col items-center justify-center py-24 px-4 text-center border-2 border-dashed border-border rounded-xl bg-secondary/20 shadow-sm">
                         <Trophy className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                        <p className="text-xl text-muted-foreground font-medium">Hali hech kim reytingga kirish uchun yetarli vaqt to'plamagan.</p>
-                        <p className="text-muted-foreground/70 mt-2">Sizda reytingga kiradigan birinchi foydalanuvchi bo'lish imkoni bor (30 daqiqa yozing)!</p>
+                        <p className="text-xl text-muted-foreground font-medium">{t.leaderboard.noRecords}</p>
+                        <p className="text-muted-foreground/70 mt-2">{t.leaderboard.beFirst}</p>
                       </div>
                     );
                   }

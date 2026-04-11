@@ -89,8 +89,8 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <SEO
-        title="YOZGO | O'zbekiston tez yozish platformasi"
-        description="YOZGO - O'zbekistondagi eng yirik tez yozish va musobaqalar platformasi. Musobaqalarda qatnashing va mahoratingizni oshiring."
+        title={`YOZGO | ${t.nav.platformTitle}`}
+        description={t.landing.readySubtitle}
       />
 
       {/* Hero Section - Edge-to-Edge Full Spread Style (Mobile Responsive Setup) */}
@@ -168,16 +168,51 @@ export default function LandingPage() {
         </section>
       )}
 
-      {/* About Us */}
-      <section className="py-24 bg-background">
+      {/* About Section - Competitive Branding */}
+      <section className="py-32 relative overflow-hidden bg-background">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
+        
         <div className="container px-4">
-          <div className="max-w-4xl mx-auto border border-border bg-card shadow-sm p-8 md:p-12 rounded-2xl text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-6">Biz Haqimizda</h2>
-            <p className="text-muted-foreground md:text-lg leading-relaxed mb-4">
-              YOZGO — bu yozish tezligini oshirishni xohlovchilar uchun maxsus platforma.
-            </p>
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-20 p-8 md:p-16 rounded-[2.5rem] bg-card border border-border shadow-2xl relative">
+            
+            {/* Background Accent */}
+            <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 blur-3xl rounded-full"></div>
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/10 blur-3xl rounded-full"></div>
+
+            <div className="flex-1 text-center md:text-left z-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-black uppercase tracking-widest mb-6 border border-primary/20">
+                <Users className="w-3.5 h-3.5" /> {t.landing.aboutUsTitle}
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black mb-8 leading-tight">
+                {t.nav.platformTitle}
+              </h2>
+              <p className="text-foreground md:text-xl font-medium leading-relaxed mb-6 italic border-l-4 border-primary pl-6">
+                "{t.landing.aboutUsP1}"
+              </p>
+              <p className="text-muted-foreground md:text-lg leading-relaxed">
+                {t.landing.aboutUsP2}
+              </p>
+              
+              <div className="mt-10 flex items-center justify-center md:justify-start gap-4">
+                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary border border-border">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-sm font-bold uppercase tracking-tight">{t.landing.aboutUsSystem}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full md:w-[30%] flex justify-center z-10">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-primary/20 blur-3xl group-hover:bg-primary/30 transition-all rounded-full scale-110"></div>
+                <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-primary to-orange-400 flex items-center justify-center shadow-2xl border-4 border-background overflow-hidden">
+                   <Trophy className="w-16 h-16 md:w-24 md:h-24 text-white drop-shadow-lg" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
       </section>
 
       {/* Features Grid */}
@@ -205,9 +240,9 @@ export default function LandingPage() {
               >
                 <Trophy className="w-5 h-5" /> Faol Turnirlar
               </motion.div>
-              <h2 className="text-4xl md:text-5xl font-black mb-4">Katta Musobaqalar</h2>
+              <h2 className="text-4xl md:text-5xl font-black mb-4">{t.landing.upcomingComps}</h2>
               <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                Yangi musobaqalarda ishtirok eting va o'z mahoratingizni ko'rsatib, qimmatbaho sovrinlarni yutib oling.
+                {t.landing.readySubtitle}
               </p>
             </div>
 

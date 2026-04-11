@@ -169,8 +169,8 @@ export default function Profile() {
   return (
     <div className="container mx-auto p-8 space-y-8 animate-in fade-in duration-500">
       <SEO 
-        title={`${user.username} | Profil`} 
-        description={`${user.username}ning YOZGO platformasidagi natijalari va statistikasi.`}
+        title={`${user.username} | ${t.nav.profile}`} 
+        description={`${user.username}нинг YOZGO platformasidagi natijalari va statistikasi.`}
       />
       
       <div className="flex items-center gap-6 mb-8">
@@ -230,7 +230,7 @@ export default function Profile() {
             <CardHeader className="bg-secondary/20 py-3">
               <CardTitle className="text-sm font-bold uppercase tracking-widest text-center flex items-center justify-center gap-2">
                 <Trophy className={cn("w-4 h-4", lang === 'uz' ? "text-blue-500" : lang === 'ru' ? "text-red-500" : "text-green-500")} />
-                {lang === 'uz' ? "O'zbek" : lang === 'ru' ? "Rus" : "Ingliz"} {t.leaderboard.title}
+                {lang === 'uz' ? t.leaderboard.uzbekRanking : lang === 'ru' ? t.leaderboard.russianRanking : t.leaderboard.englishRanking}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">

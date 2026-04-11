@@ -9,8 +9,8 @@ interface SEOProps {
 }
 
 export const SEO = ({
-  title = "YOZGO | O'zbekiston tez yozish va musobaqalar platformasi",
-  description = "YOZGO - O'zbekistondagi eng yirik tez yozish platformasi. Musobaqalarda qatnashing va mahoratingizni oshiring.",
+  title = "YOZGO | Typing Competition Platform",
+  description = "Join the ultimate typing arena. Compete in real-time battles, climb the rankings, and prove your speed on YOZGO.",
   image = "https://yozgo.uz/og-image.png",
   url = "https://yozgo.uz",
   type = "website",

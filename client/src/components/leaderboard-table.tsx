@@ -19,15 +19,15 @@ interface LeaderboardTableProps {
   currentUserId?: string;
 }
 
-function formatTime(seconds: number) {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h} soat ${m} daq`;
-  return `${m} daq`;
-}
-
 export function LeaderboardTable({ entries, currentUserId }: LeaderboardTableProps) {
   const { t } = useI18n();
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h} ${t.leaderboard.hour} ${m} ${t.leaderboard.min}`;
+    return `${m} ${t.leaderboard.min}`;
+  };
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full" data-testid="leaderboard-table">
@@ -36,12 +36,12 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
         <TableHeader className="bg-secondary/40">
           <TableRow>
             <TableHead className="w-[80px] text-center">#</TableHead>
-            <TableHead>Foydalanuvchi</TableHead>
-            <TableHead className="text-right">Avg WPM</TableHead>
-            <TableHead className="text-right">Best WPM</TableHead>
-            <TableHead className="text-right">Accuracy</TableHead>
-            <TableHead className="text-right">Testlar soni</TableHead>
-            <TableHead className="text-right">Jami vaqt</TableHead>
+            <TableHead>{t.leaderboard.user}</TableHead>
+            <TableHead className="text-right">{t.leaderboard.avgWpm}</TableHead>
+            <TableHead className="text-right">{t.leaderboard.bestWpm}</TableHead>
+            <TableHead className="text-right">{t.leaderboard.accuracy}</TableHead>
+            <TableHead className="text-right">{t.leaderboard.testCount}</TableHead>
+            <TableHead className="text-right">{t.leaderboard.totalTime}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -82,9 +82,9 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
                       {needsProgress && (
                       <div className="flex flex-col gap-1 text-xs text-muted-foreground w-full max-w-[200px]">
                         <div className="flex justify-between">
-                          <span>Reytingga kirish</span>
+                          <span>{t.leaderboard.enterRating}</span>
                           <span>
-                            {Math.round(progress)}% ({minutesLeft} daq qoldi)
+                            {Math.round(progress)}% ({minutesLeft} {t.leaderboard.minLeft})
                           </span>
                         </div>
                         <Progress value={progress} className="h-1.5" />
@@ -99,11 +99,11 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
                 <TableCell className="text-right font-mono font-bold text-primary">
                   {entry.bestWpm}
                 </TableCell>
-                <TableCell className="text-right font-mono">{entry.accuracy}%</TableCell>
+                <TableCell className="text-right font-mono text-muted-foreground">{entry.accuracy}%</TableCell>
                 <TableCell className="text-right text-muted-foreground font-mono">
                   {entry.testCount}
                 </TableCell>
-                <TableCell className="text-right text-muted-foreground">
+                <TableCell className="text-right font-mono text-muted-foreground font-medium">
                   {formatTime(entry.totalSeconds)}
                 </TableCell>
               </TableRow>

@@ -52,12 +52,8 @@ const GAME_DEFAULTS = {
   LANGUAGE: "uz",
 };
 
-const TERMS_LIST = [
-  "Texnik nosozlik yuzaga kelsa, sovrinlar berilmaydi.",
-  "Firibgarlik (Cheating) aniqlansa, natija bekor qilinadi.",
-  "Har bir foydalanuvchi faqat bir marta sovrin olishi mumkin.",
-  "VPN orqali kirish qat'iyan taqiqlanadi.",
-];
+// Rules are now moved to i18n
+
 
 // ============ MAIN COMPONENT ============
 
@@ -432,9 +428,9 @@ export default function BattlePage() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {[
                       { val: 10, label: t.battle.tier10, price: t.battle.free, icon: "🚀", color: "text-green-500" },
-                      { val: 20, label: t.battle.tier20, price: "29 000 so'm", icon: "🔥", color: "text-orange-500" },
-                      { val: 50, label: t.battle.tier50, price: "59 000 so'm", icon: "⚡", color: "text-yellow-500" },
-                      { val: 100, label: t.battle.tier100, price: "109 000 so'm", icon: "👑", color: "text-purple-500" },
+                      { val: 20, label: t.battle.tier20, price: t.battle.tier20Price, icon: "🔥", color: "text-orange-500" },
+                      { val: 50, label: t.battle.tier50, price: t.battle.tier50Price, icon: "⚡", color: "text-yellow-500" },
+                      { val: 100, label: t.battle.tier100, price: t.battle.tier100Price, icon: "👑", color: "text-purple-500" },
                       { val: 999, label: t.battle.tierVIP, price: t.battle.negotiable, icon: "💎", color: "text-blue-500" },
                     ].map(tier => (
                       <button
@@ -517,7 +513,7 @@ export default function BattlePage() {
             <DialogHeader><DialogTitle>{t.battle.rulesTitle}</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
               <ul className="text-sm space-y-2 list-disc list-inside text-muted-foreground">
-                {TERMS_LIST.map((term, i) => <li key={i}>{term}</li>)}
+                {t.battle.rules.map((term, i) => <li key={i}>{term}</li>)}
               </ul>
               <div className="flex items-center space-x-2 pt-4 border-t">
                 <Checkbox id="accept" checked={isAgreed} onCheckedChange={(c) => setIsAgreed(c as boolean)} />
@@ -538,7 +534,7 @@ export default function BattlePage() {
   // Active Battle Lobby/Arena
   return (
     <div className="container max-w-6xl mx-auto py-8 px-4">
-      <SEO title={`Jang: ${battleCode} | YOZGO`} />
+      <SEO title={`${t.nav.battle}: ${battleCode} | YOZGO`} />
       
       {/* Top Bar */}
       <div className="flex justify-between items-center mb-10 bg-secondary/50 p-4 rounded-2xl border border-border shadow-sm">
