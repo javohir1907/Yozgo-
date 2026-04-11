@@ -340,7 +340,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         role: role || 'participant'
       });
       
+      const genderText = genderRestriction === 'male' ? "🧍‍♂️ Faqat Yigitlar uchun" : 
+                         genderRestriction === 'female' ? "🧍‍♀️ Faqat Qizlar uchun" : 
+                         "👫 Barcha (Aralash)";
+
       const adminMsg = `⚡️ <b>JANG XONASIGA KIRISH OCHILDI!</b>\n\n` +
+                       `🎯 Jins cheklovi: <b>${genderText}</b>\n` +
                        `🚀 Asl Xona Kodi: <code>${createdBattle.code}</code>\n\n` +
                        `👆 Xona kodining ustiga bossangiz avtomatik nusxa olinadi. Nuxsalangan kodni tegishli @yozgo_bot ga yuborib, o'z individual bir martalik kodingizni oling.`;
       
@@ -517,6 +522,29 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!matchedBattle) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Xona topilmadi" });
       }
+
+      // 🚨 QAT'IY JINS TEKSHIRUVI (ANTI-HACK)
+      if (matchedBattle.genderRestriction !== 'all') {
+        const [userRecord] = await db.select().from(users).where(eq(users.id, userId));
+        
+        if (!userRecord) {
+          return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+        }
+        
+        if (!userRecord.gender) {
+          return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+            message: "Profilingizda jinsingiz ko'rsatilmagan. Xonaga kirish uchun avval profildan jinsingizni belgilang!" 
+          });
+        }
+
+        if (userRecord.gender !== matchedBattle.genderRestriction) {
+          const requiredGender = matchedBattle.genderRestriction === 'male' ? "Yigitlar 🧍‍♂️" : "Qizlar 🧍‍♀️";
+          return res.status(HTTP_STATUS.FORBIDDEN).json({ 
+            message: `🚫 Kechirasiz, qoidaga muvofiq ushbu xona faqat ${requiredGender} uchun mo'ljallangan!` 
+          });
+        }
+      }
+      // ====================================================
 
       const isAccessCode = !!accessCodeEntry || !!creationCodeEntry;
       if (!isAccessCode && matchedBattle.code === battleCode) {

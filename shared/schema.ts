@@ -154,10 +154,7 @@ export const roomAccessCodes = pgTable(
     isUsed: boolean("is_used").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     usedAt: timestamp("used_at"),
-  },
-  (t) => ({
-    unqRoomUser: unique("room_user_unique").on(t.roomId, t.userId),
-  })
+  }
 );
 
 export const adminMessages = pgTable("admin_messages", {
