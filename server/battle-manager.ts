@@ -14,6 +14,7 @@ import { type Server } from "http";
 import { Server as SocketServer, Socket } from "socket.io";
 
 import { storage } from "./storage";
+import { pool } from "./db";
 import { words } from "../shared/words";
 import { type User } from "@shared/schema";
 import { sendAdminNotification } from "./utils/notifier";
@@ -101,13 +102,11 @@ export class BattleManager {
     // XAVFSIZLIK: WebSockets orqali avtorizatsiyani ta'minlash
     if (sessionMiddleware) {
       const wrap = (middleware: any) => (socket: Socket, next: any) => {
-        // Fallback for Safari/iOS ITP where cookies are blocked and extraHeaders fail over pure Websocket
         const req = socket.request as any;
         if (!req.cookies?.["connect.sid"]) {
           const token = socket.handshake.auth?.token;
           if (token) {
             req.headers.authorization = `Bearer ${token}`;
-            // Also explicitly set the cookie header for express-session just in case
             if (!req.headers.cookie) {
               req.headers.cookie = `connect.sid=${token}`;
             } else if (!req.headers.cookie.includes("connect.sid=")) {
@@ -115,7 +114,24 @@ export class BattleManager {
             }
           }
         }
-        middleware(req, {}, next);
+        middleware(req, {}, async () => {
+           // Database yordamida raw token'ni tekshirish (Safari/IOS uchun cookie parchalanishi o'xshamasa)
+           if (!(req.session as any)?.userId) {
+              const token = socket.handshake.auth?.token || req.headers.authorization?.split(" ")[1];
+              if (token && token.length > 5) {
+                 try {
+                    const result = await pool.query("SELECT sess FROM sessions WHERE sid = $1", [token]);
+                    if (result.rows.length > 0 && result.rows[0].sess?.userId) {
+                       if (!req.session) req.session = {};
+                       (req.session as any).userId = result.rows[0].sess.userId;
+                    }
+                 } catch (e) {
+                    console.error("[WS AUTH FALLBACK] Error:", e);
+                 }
+              }
+           }
+           next();
+        });
       };
       this.io.use(wrap(sessionMiddleware));
     }
