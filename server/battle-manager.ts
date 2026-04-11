@@ -106,9 +106,13 @@ export class BattleManager {
         if (!req.cookies?.["connect.sid"]) {
           const token = socket.handshake.auth?.token;
           if (token) {
-            if (!req.cookies) req.cookies = {};
-            req.cookies["connect.sid"] = token;
             req.headers.authorization = `Bearer ${token}`;
+            // Also explicitly set the cookie header for express-session just in case
+            if (!req.headers.cookie) {
+              req.headers.cookie = `connect.sid=${token}`;
+            } else if (!req.headers.cookie.includes("connect.sid=")) {
+              req.headers.cookie += `; connect.sid=${token}`;
+            }
           }
         }
         middleware(req, {}, next);
