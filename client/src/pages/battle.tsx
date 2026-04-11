@@ -685,10 +685,11 @@ export default function BattlePage() {
                 </CardHeader>
                 <CardContent className="space-y-4 pt-2">
                   {room.players.filter((p: any) => p.gender === "male").map((p: any, i: number) => (
-                  {/* Live Progress Bar Background */}
-                  <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
-                  
-                  <div className="relative z-10 flex items-center gap-3">
+                    <div key={p.id} className={`relative overflow-hidden flex items-center justify-between p-3 rounded-xl border border-transparent transition-all ${p.isDisconnected ? "bg-secondary/20 opacity-50 grayscale" : "bg-secondary/40 hover:border-border"}`}>
+                      {/* Live Progress Bar Background */}
+                      <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
+                      
+                      <div className="relative z-10 flex items-center gap-3">
                     <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
                     <div className="relative">
                       {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
