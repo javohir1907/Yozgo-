@@ -85,6 +85,7 @@ export function setupAuth(app: Express): void {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax", // Safari ITP "none" uchinchi tomon (third-party) cookie deb o'ylab bloklamasligi uchun LAX ishlatiladi
         maxAge: SESSION_EXPIRY,
+        path: "/", // Barcha routerlarda cookie topilishi uchun
       },
   });
 
