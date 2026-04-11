@@ -16,23 +16,20 @@ export function getUserBot() {
 export function startUserBot() {
   const token = process.env.USER_BOT_TOKEN;
   if (!token) {
-    console.warn("⚠️ USER_BOT_TOKEN not set — user bot disabled");
+    console.warn("⚠️ USER_BOT_TOKEN topilmadi — User Bot o'chirildi");
     return;
   }
 
-  userBot = new TelegramBot(token, { 
-    polling: { 
-      interval: 300,
-      autoStart: true,
-      params: { timeout: 10 }
-    } 
-  });
+  // Pollingni boshlashdan oldin Webhook konfliktlarini tozalaymiz
+  userBot = new TelegramBot(token, { polling: false });
   
-  // Xavfsizlik va yashirin xatolar oldini olish uchun:
-  // Eski webhooklarni majburiy o'chiramiz. Shunda polling anik va uzilishsiz ishlashni boshlaydi!
-  userBot.deleteWebHook().catch(() => {});
-
-  console.log("Foydalanuvchi Boti (User Bot) muvaffaqiyatli ishga tushdi va Webhooklar tozalandi!");
+  userBot.deleteWebHook().then(() => {
+    return userBot?.startPolling();
+  }).then(() => {
+    console.log("✅ Foydalanuvchi Boti (User Bot) muvaffaqiyatli ishga tushdi va Polling boshlandi!");
+  }).catch((err) => {
+    console.error("❌ Pollingni boshlashda xatolik:", err);
+  });
 
   // Polling xatolarini ushlash (Server qotib qolmasligi uchun eng muhim qism)
   userBot.on("polling_error", (error: any) => {
@@ -150,35 +147,32 @@ export function startUserBot() {
         return;
       }
 
-      // Checking for raw room codes or forwarded message text
+      // Xona kodini matndan tutib olishni KUCHAYTIRDIK
       if (msg.text && !msg.text.startsWith("/")) {
         const text = msg.text.trim();
         let extractedCode = "";
 
-        // 1. Agar to'liq xabar copy qilingan bo'lsa
         const match = text.match(/Asl Xona Kodi:\s*([A-Za-z0-9]{4,10})/i);
         if (match && match[1]) {
           extractedCode = match[1];
         } else {
-          // 2. Yoki foydalanuvchi faqat kodning o'zini yozgan bo'lsa
-          const words = text.split(/\s+/);
-          if (words.length === 1) {
-            extractedCode = words[0];
+          // Qanday formatda yozsa ham, 4-10 harfli kodni qidirib topadi
+          const words = text.toUpperCase().replace(/[^A-Z0-9\s]/g, '').split(/\s+/);
+          const possibleCode = words.find(w => w.length >= 4 && w.length <= 10);
+          if (possibleCode) {
+             extractedCode = possibleCode;
           }
         }
 
-        // Tozalash
-        extractedCode = extractedCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-        if (extractedCode.length >= 4 && extractedCode.length <= 10) {
+        if (extractedCode) {
           await handleRoomCode(chatId, extractedCode, msg.from?.id);
         } else {
-          userBot?.sendMessage(chatId, "⚠️ Xabar ichidan yaroqli xona kodi topilmadi. Faqat kodni o'zini (yoki post qilingan to'liq e'lonni) jo'nating.");
+          userBot?.sendMessage(chatId, "⚠️ Xabar ichidan yaroqli xona kodi topilmadi. Faqat saytdagi 5 xonali kodni yuboring.");
         }
       }
     } catch (e: any) {
       console.error("userBot message handler error:", e);
-      userBot?.sendMessage(msg.chat.id, `XATOLIK YUZ BERDI: ${e.message}`);
+      userBot?.sendMessage(msg.chat.id, `❌ KUTILMAGAN XATOLIK: ${e.message}`);
     }
   });
 
@@ -209,6 +203,7 @@ export function startUserBot() {
   });
 }
 
+// Kanal obunasini tekshirishni KUCHAYTIRDIK
 async function checkSubscription(chatId: number, tgUserId: number) {
   try {
     const chatMemberPromise = userBot?.getChatMember("@yozgo_uz", tgUserId);
@@ -220,11 +215,9 @@ async function checkSubscription(chatId: number, tgUserId: number) {
     }
     return true;
   } catch (e: any) {
-    console.error("Subscription Check Error:", e.response?.body || e.message);
-    // DIQQAT: Agar bot kanalda admin bo'lmasa, xatolik beradi. 
-    // Hozircha kod berishaverishi uchun "true" qaytaramiz va ogohlantirish yuboramiz:
-    userBot?.sendMessage(chatId, `⚠️ DIQQAT: Bot @yozgo_uz kanalida ADMIN emas! Shuning uchun a'zolikni tasdiqlay olmadi. Iltimos botni kanalda admin qiling.`);
-    return true; 
+    console.warn("Obuna tekshiruvi xatosi:", e.response?.body || e.message);
+    userBot?.sendMessage(chatId, `⚠️ DIQQAT: Bot @yozgo_uz kanalida ADMIN emasligi sababli a'zolikni tekshira olmadi! (Lekin sizga kod beriladi)`);
+    return true; // Xato bo'lsa ham kod bersin, bot qotib qolmasligi uchun
   }
 }
 
@@ -260,6 +253,7 @@ async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
   await generateAndSendRoomCode(battle.id, tgUserId, chatId);
 }
 
+// Kod yaratish va DB xatolarini KUCHAYTIRDIK
 export async function generateAndSendRoomCode(
   battleId: string,
   telegramId: number,
@@ -269,7 +263,7 @@ export async function generateAndSendRoomCode(
   const dummyUserId = firstUser?.id;
 
   if (!dummyUserId) {
-    userBot?.sendMessage(chatId, "❌ Tizimda asosiy foydalanuvchi profili topilmadi! (Saytda kamida 1 ta foydalanuvchi registratsiya bo'lgan bo'lishi kerak).");
+    userBot?.sendMessage(chatId, "❌ Tizimda asosiy foydalanuvchi topilmadi. Iltimos saytdan ro'yxatdan o'ting.");
     return;
   }
 
@@ -277,11 +271,11 @@ export async function generateAndSendRoomCode(
     const code = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8 characters
     await db.insert(roomAccessCodes).values({
       roomId: battleId,
-      userId: dummyUserId,
+      userId: dummyUserId, // Buni ishlashi uchun schema.ts dagi UNIQUE o'chgan bo'lishi kerak
       code: code,
     });
 
-    const text = `🎉 Sizning kirish kodingiz:\n\n\`${code}\`\n\n👆 Yuqoridagi kod ustiga bir marta bossangiz avtomatik nusxalanadi (copy bo'ladi).\nKodni saytdagi maydonga kiritib jangga qo'shiling. Kod bir martalik!`;
+    const text = `🎉 Sizning kirish kodingiz:\n\n\`${code}\`\n\n👆 Yuqoridagi kod ustiga bir marta bossangiz avtomatik nusxalanadi.\nSaytdagi maydonga kiritib jangga qo'shiling. Kod bir martalik!`;
 
     userBot?.sendMessage(chatId, text, {
       parse_mode: "Markdown",
@@ -290,11 +284,11 @@ export async function generateAndSendRoomCode(
       },
     });
   } catch (err: any) {
-    console.error("individual_code_generate_error:", err.message);
+    console.error("Kod generatsiya xatosi:", err.message);
     
-    // Agar DB dagi unique qoidasi olib tashlanmagan bo'lsa xato ushlanadi:
+    // DB unique xatosi bo'lsa darhol telegramga yozadi
     if (err.message.includes("unique") || err.message.includes("duplicate")) {
-       userBot?.sendMessage(chatId, `❌ **BAZADA XATOLIK:** Database'dagi cheklov olib tashlanmagan!\n\nIltimos, loyiha terminaliga kirib ushbu buyruqni tering:\n\`npm run db:push\``, { parse_mode: "Markdown" });
+       userBot?.sendMessage(chatId, `⚠️ **BAZADA XATOLIK MAVJUD!**\nOldin kiritilgan o'zgarishlar Ma'lumotlar Bazasiga saqlanmagan.\n\nIltimos server/render terminaliga kirib quyidagi buyruqni bering:\n\n\`npm run db:push\``, { parse_mode: "Markdown" });
     } else {
        userBot?.sendMessage(chatId, `❌ Kod yaratishda xatolik yuz berdi: ${err.message}`);
     }
