@@ -184,17 +184,9 @@ export function startUserBot() {
       const battleId = query.data.replace("check_subs_", "");
       try {
         const uId = query.from.id;
-        const isSubscribed = await checkSubscription(chatId, uId);
-
-        if (!isSubscribed) {
-          userBot?.answerCallbackQuery(query.id, {
-            text: "Yolg'on! Hali kanalga a'zo bo'lmadingiz! ❌",
-            show_alert: true,
-          });
-          return;
-        }
-
-        userBot?.answerCallbackQuery(query.id, { text: "A'zoligingiz tasdiqlandi! ✅" });
+        
+        // Kanal ulanishidan holi tizim -> Endi to'g'ridan-to'g'ri kod yaratadi
+        userBot?.answerCallbackQuery(query.id, { text: "So'rov qayta ishlanyapti... ✅" });
         await generateAndSendRoomCode(battleId, uId, chatId);
       } catch (err: any) {
         userBot?.sendMessage(chatId, "Xatolik: " + err.message);
@@ -203,30 +195,12 @@ export function startUserBot() {
   });
 }
 
-// Kanal obunasini tekshirishni KUCHAYTIRDIK
-async function checkSubscription(chatId: number, tgUserId: number) {
-  try {
-    const chatMemberPromise = userBot?.getChatMember("@yozgo_uz", tgUserId);
-    const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Telegram API timeout")), 3000));
-    const chatMember = await Promise.race([chatMemberPromise, timeoutPromise]) as any;
-
-    if (!chatMember || ["left", "kicked"].includes(chatMember.status)) {
-      return false;
-    }
-    return true;
-  } catch (e: any) {
-    console.warn("Obuna tekshiruvi xatosi:", e.response?.body || e.message);
-    userBot?.sendMessage(chatId, `⚠️ DIQQAT: Bot @yozgo_uz kanalida ADMIN emasligi sababli a'zolikni tekshira olmadi! (Lekin sizga kod beriladi)`);
-    return true; // Xato bo'lsa ham kod bersin, bot qotib qolmasligi uchun
-  }
-}
-
 async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
   if (!tgUserId) return;
   const [battle] = await db.select().from(battles).where(eq(battles.code, code));
   
   if (!battle) {
-    userBot?.sendMessage(chatId, `❌ Xona topilmadi yoki yopilgan!\n(Siz kiritgan kod: ${code})`);
+    userBot?.sendMessage(chatId, `❌ Xona topilmadi yoki yopilgan! (Siz kiritgan kod: ${code})`);
     return;
   }
 
@@ -235,21 +209,8 @@ async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
     return;
   }
 
-  // Subscribe check
-  const isSubscribed = await checkSubscription(chatId, tgUserId);
-  if (!isSubscribed) {
-    const text = `Avval @yozgo_uz kanaliga a'zo bo'ling! \nKeyin kodni tekshirish tugmasini bosing yoki xona kodini qaytadan yuboring.`;
-    userBot?.sendMessage(chatId, text, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: "✅ Kanalga ulanish", url: "https://t.me/yozgo_uz" }],
-          [{ text: "🔄 Tekshirish", callback_data: `check_subs_${battle.id}` }],
-        ],
-      },
-    });
-    return;
-  }
-
+  // Tizim admin xabariga bog'lanmaganligi sababli, 
+  // User Botga kelgan kod bo'yicha to'g'ridan-to'g'ri individual kodni generatsiya qilamiz.
   await generateAndSendRoomCode(battle.id, tgUserId, chatId);
 }
 
