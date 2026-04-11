@@ -20,7 +20,13 @@ export function startUserBot() {
     return;
   }
 
-  userBot = new TelegramBot(token, { polling: true });
+  userBot = new TelegramBot(token, { 
+    polling: { 
+      interval: 300,
+      autoStart: true,
+      params: { timeout: 10 }
+    } 
+  });
   console.log("Foydalanuvchi Boti (User Bot) muvaffaqiyatli ishga tushdi!");
 
   // Polling xatolarini ushlash (Server qotib qolmasligi uchun eng muhim qism)
@@ -200,7 +206,10 @@ export function startUserBot() {
 
 async function checkSubscription(chatId: number, tgUserId: number) {
   try {
-    const chatMember = await userBot?.getChatMember("@yozgo_uz", tgUserId);
+    const chatMemberPromise = userBot?.getChatMember("@yozgo_uz", tgUserId);
+    const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Telegram API timeout")), 3000));
+    const chatMember = await Promise.race([chatMemberPromise, timeoutPromise]) as any;
+
     if (!chatMember || ["left", "kicked"].includes(chatMember.status)) {
       return false;
     }
