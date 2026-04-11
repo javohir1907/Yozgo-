@@ -314,7 +314,7 @@ if (!isTestEnvironment) {
         created_at TIMESTAMP DEFAULT NOW() NOT NULL,
         expires_at TIMESTAMP,
         active_battle_id UUID REFERENCES battles(id),
-        used_by_user_id VARCHAR REFERENCES users(id),
+        used_by_user_id VARCHAR REFERENCES users(id)
       );
     `);
     
