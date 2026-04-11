@@ -387,49 +387,59 @@ export class BattleManager {
     const playersArray = Array.from(room.players.values());
     let finalResults: any = { mode: room.settings.winMode };
 
-    if (room.settings.winMode === "per_round") {
-      // 2-USUL: HAR BIR DAVR BO'YICHA G'OLIBLAR (Siz aytgan mantiq)
-      let roundWinners = [];
-      let excludedPlayerIds = new Set<string>();
-      
-      // Eng ko'p nechta raund o'ynalganini aniqlaymiz
-      let maxRounds = 0;
-      playersArray.forEach(p => { if (p.attemptHistory.length > maxRounds) maxRounds = p.attemptHistory.length; });
+    try {
+      if (room.settings.winMode === "per_round") {
+        // 2-USUL: HAR BIR DAVR BO'YICHA G'OLIBLAR
+        let roundWinners = [];
+        let excludedPlayerIds = new Set<string>();
+        
+        // Eng ko'p nechta raund o'ynalganini aniqlaymiz
+        let maxRounds = 0;
+        playersArray.forEach(p => { if (p.attemptHistory && p.attemptHistory.length > maxRounds) maxRounds = p.attemptHistory.length; });
 
-      for (let r = 0; r < maxRounds; r++) {
-        let roundWinner: Player | null = null;
-        let highestWpm = -1;
+        for (let r = 0; r < maxRounds; r++) {
+          let roundWinner: Player | null = null;
+          let highestWpm = -1;
 
-        for (const player of playersArray) {
-          // Agar oldingi raundda yutgan bo'lsa, bu raundda qatnashmaydi!
-          if (excludedPlayerIds.has(player.user.id)) continue; 
+          for (const player of playersArray) {
+            // Agar oldingi raundda yutgan bo'lsa, bu raundda qatnashmaydi!
+            if (excludedPlayerIds.has(player.user.id)) continue; 
 
-          const roundScore = player.attemptHistory[r];
-          if (roundScore && roundScore.wpm > highestWpm) {
-            highestWpm = roundScore.wpm;
-            roundWinner = player;
+            const roundScore = player.attemptHistory ? player.attemptHistory[r] : null;
+            if (roundScore && roundScore.wpm > highestWpm) {
+              highestWpm = roundScore.wpm;
+              roundWinner = player;
+            }
+          }
+
+          if (roundWinner) {
+            let pName = roundWinner.user.firstName;
+            if (!pName && roundWinner.user.email) pName = roundWinner.user.email.split('@')[0];
+            if (!pName) pName = "Ishtirokchi";
+
+            roundWinners.push({
+              round: r + 1,
+              userId: roundWinner.user.id,
+              username: pName,
+              wpm: highestWpm,
+              accuracy: roundWinner.attemptHistory[r].accuracy
+            });
+            excludedPlayerIds.add(roundWinner.user.id);
           }
         }
+        finalResults.roundWinners = roundWinners;
+        finalResults.overall = this.getFormattedPlayers(room);
 
-        if (roundWinner) {
-          roundWinners.push({
-            round: r + 1,
-            userId: roundWinner.user.id,
-            username: roundWinner.user.firstName || roundWinner.user.email?.split('@')[0],
-            wpm: highestWpm,
-            accuracy: roundWinner.attemptHistory[r].accuracy
-          });
-          excludedPlayerIds.add(roundWinner.user.id); // Keyingi raundlardan chetlatish
-        }
+      } else {
+        // 1-USUL: UMUMIY DAVR BO'YICHA
+        const winnerId = this.calculateLeader(room);
+        finalResults.winnerId = winnerId;
+        finalResults.overall = this.getFormattedPlayers(room);
       }
-      finalResults.roundWinners = roundWinners;
+    } catch (calcError: any) {
+      console.error("[BATTLE-MANAGER] G'olibni aniqlashda xatolik:", calcError);
       finalResults.overall = this.getFormattedPlayers(room);
-
-    } else {
-      // 1-USUL: UMUMIY DAVR BO'YICHA (Oldingi mantiq)
-      const winnerId = this.calculateLeader(room);
-      finalResults.winnerId = winnerId;
-      finalResults.overall = this.getFormattedPlayers(room);
+      finalResults.mode = "overall"; 
     }
 
     this.io.to(code).emit("battle-end", finalResults);
@@ -504,6 +514,7 @@ export class BattleManager {
         bestWpm: p.bestWpm,
         bestAccuracy: p.bestAccuracy,
         attempts: p.attempts,
+        attemptHistory: p.attemptHistory, // QO'SHILDI: Frontendda raundlarni ko'rsatish uchun
         isAdmin: p.user.id === room.adminId,
         isDisconnected: !!p.isDisconnected,
       }))

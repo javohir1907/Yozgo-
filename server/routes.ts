@@ -347,10 +347,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const adminKeyboard = {
         inline_keyboard: [
           [
-            { text: "↗️ Kanalga ruxsat uzatish (Forward)", url: `https://t.me/share/url?text=${encodeURIComponent("⚡️ JANG XONASIGA KIRISH OCHILDI!\n\n🚀 Asl Xona Kodi: " + createdBattle.code + "\n\n👆 Xona kodining ustiga bossangiz avtomatik nusxa olinadi. Nuxsalangan kodni tegishli @yozgo_bot ga yuborib, o'z individual bir martalik kodingizni oling.")}` }
-          ],
-          [
-            { text: "📢 Kanalga o'tish (@yozgo_uz)", url: "https://t.me/yozgo_uz" }
+            { text: "📢 Kanalga e'lon qilish (@yozgo_uz)", callback_data: `send_channel_${createdBattle.code}` }
           ]
         ]
       };
@@ -418,9 +415,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Xona yoki kirish kodi topilmadi." });
       }
 
-      // Oddiy bepul xonalar uchun to'g'ridan-to'g'ri kirishga ruxsat beramiz.
-      // Raqobat avzalligi kabi individual kodlarni cheklashlar shu yerda olib tashlandi,
-      // chunki normal o'yinchilar botga o'tmasdan ham xona kodi (A2D4F) orqali kiritishganda kirishi shart.
+      if (!isSpecificAccessCode && !creationCodeEntry) {
+         // Kiritilgan kod to'g'ridan to'g'ri asl xona kodi (Native Battle Code) bo'lsa bloklaymiz
+         if (matchedBattle.code === battleCode) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Asl xona kodi bilan to'g'ridan-to'g'ri kirish taqiqlanadi! Iltimos, ushbu kodni @yozgo_bot ga yuborib individual o'yin kodingizni oling." });
+         }
+      }
+
       res.status(HTTP_STATUS.OK).json({ success: true });
     } catch (error) {
       res.status(HTTP_STATUS.BAD_REQUEST).json({ message: error instanceof Error ? error.message : "Xatolik" });
@@ -515,6 +516,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       if (!matchedBattle) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Xona topilmadi" });
+      }
+
+      const isAccessCode = !!accessCodeEntry || !!creationCodeEntry;
+      if (!isAccessCode && matchedBattle.code === battleCode) {
+         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Xonaga asl kodi orqali to'g'ridan-to'g'ri kirib bo'lmaydi. Uni @yozgo_bot ga jo'natib individual kod oling." });
       }
 
       // Ishtirokchini bazaga qo'shish (Duplicate check storage ichida)

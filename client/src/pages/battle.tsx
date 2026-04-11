@@ -695,7 +695,17 @@ export default function BattlePage() {
                   </div>
                   <div className="relative z-10 text-right">
                     <div className="font-black text-primary">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
-                    <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
+                    {room?.settings?.winMode === "per_round" ? (
+                      <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-1 max-w-[120px]">
+                        {p.attemptHistory?.map((h: any, idx: number) => (
+                          <span key={idx} className="bg-primary/20 px-1 rounded border border-primary/30" title={`${idx+1}-davr natijasi: ${h.wpm} WPM`}>
+                            R{idx + 1}: <span className="text-primary">{h.wpm}</span>
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
+                    )}
                   </div>
                 </div>
               ))}
