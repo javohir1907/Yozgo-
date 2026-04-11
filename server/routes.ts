@@ -260,6 +260,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // 1. Foydalanuvchini olish
       const [userRecord] = await db.select().from(users).where(eq(users.id, userId));
+      if (!userRecord) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+
       const adminEmailsStr = process.env.ADMIN_EMAILS || "xolmatovjavohir911@gmail.com,xolmatovjavohir812@gmail.com";
       const adminEmails = adminEmailsStr.split(",").map(e => e.trim().toLowerCase());
       const isAdminEmail = userRecord.email ? adminEmails.includes(userRecord.email.toLowerCase()) : false;
@@ -347,9 +349,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       sendAdminNotification(adminMsg).catch(console.error);
 
       res.status(HTTP_STATUS.CREATED).json(createdBattle);
-    } catch (error) {
+    } catch (error: any) {
       console.error("[API] Battle Creation Error:", error);
-      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: error?.message || ERROR_MESSAGES.INTERNAL, stack: error?.stack });
     }
   });
 
