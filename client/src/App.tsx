@@ -87,7 +87,7 @@ function App() {
           <TooltipProvider>
             <div className="flex flex-col min-h-screen bg-background text-foreground">
               <NavHeader />
-              <main className="flex-1">
+              <main className="flex-1 pt-14 sm:pt-16">
                 <Router />
               </main>
             </div>

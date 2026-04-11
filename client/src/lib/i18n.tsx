@@ -240,6 +240,7 @@ const translations = {
       support: "Support",
       platform: "Platform",
       rankings: "Rankings",
+      founder: "Founder",
     },
     settings: {
       title: "Settings",
@@ -510,6 +511,7 @@ const translations = {
       support: "Поддержка",
       platform: "Платформа",
       rankings: "Рейтинг",
+      founder: "Основатель",
     },
     settings: {
       title: "Настройки",
@@ -780,6 +782,7 @@ const translations = {
       support: "Yordam (Support)",
       platform: "Platforma",
       rankings: "Reyting",
+      founder: "Asoschi",
     },
     settings: {
       title: "Sozlamalar",

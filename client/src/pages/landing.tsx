@@ -312,7 +312,12 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-col gap-2">
               <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">{t.footer.platform}</span>
-              <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">{t.footer.rankings}</Link>
+              <div className="flex flex-col gap-1">
+                <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">{t.footer.rankings}</Link>
+                <a href="https://javohir1907.com" target="_blank" rel="noreferrer" className="text-primary font-bold hover:underline">
+                  {t.footer.founder}: javohir1907
+                </a>
+              </div>
             </div>
           </div>
         </div>

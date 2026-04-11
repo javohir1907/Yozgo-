@@ -33,7 +33,7 @@ export function NavHeader() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b-[3px] border-primary shadow-[0_4px_10px_rgba(249,115,22,0.15)]">
+    <header className="fixed top-0 left-0 z-[100] w-full bg-background/95 backdrop-blur-md border-b-[3px] border-primary shadow-[0_4px_10px_rgba(249,115,22,0.15)] transition-all">
       <div className="container flex h-14 sm:h-16 items-center justify-between px-2 sm:px-4">
         <div className="flex items-center gap-2 sm:gap-8">
           <Link href="/" className="flex items-center group mr-1 sm:mr-6">
