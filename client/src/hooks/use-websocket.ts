@@ -15,12 +15,16 @@ export function useWebsocket(code: string | null, user: User | null) {
     if (!code || !user) return;
 
     const socketUrl = import.meta.env.VITE_API_URL || undefined;
+    const token = localStorage.getItem("yozgo_session");
+    
     const socket = io(socketUrl, {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
       transports: ["websocket", "polling"],
       withCredentials: true,
+      extraHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+      auth: { token }
     });
 
     socketRef.current = socket;

@@ -100,7 +100,19 @@ export class BattleManager {
 
     // XAVFSIZLIK: WebSockets orqali avtorizatsiyani ta'minlash
     if (sessionMiddleware) {
-      const wrap = (middleware: any) => (socket: Socket, next: any) => middleware(socket.request, {}, next);
+      const wrap = (middleware: any) => (socket: Socket, next: any) => {
+        // Fallback for Safari/iOS ITP where cookies are blocked and extraHeaders fail over pure Websocket
+        const req = socket.request as any;
+        if (!req.cookies?.["connect.sid"]) {
+          const token = socket.handshake.auth?.token;
+          if (token) {
+            if (!req.cookies) req.cookies = {};
+            req.cookies["connect.sid"] = token;
+            req.headers.authorization = `Bearer ${token}`;
+          }
+        }
+        middleware(req, {}, next);
+      };
       this.io.use(wrap(sessionMiddleware));
     }
 
