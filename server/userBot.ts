@@ -20,16 +20,18 @@ export function startUserBot() {
     return;
   }
 
-  // Pollingni boshlashdan oldin Webhook konfliktlarini tozalaymiz
-  userBot = new TelegramBot(token, { polling: false });
-  
-  userBot.deleteWebHook().then(() => {
-    return userBot?.startPolling();
-  }).then(() => {
-    console.log("✅ Foydalanuvchi Boti (User Bot) muvaffaqiyatli ishga tushdi va Polling boshlandi!");
-  }).catch((err) => {
-    console.error("❌ Pollingni boshlashda xatolik:", err);
+  // Webhookni birinchi o'chirib, keyin Polling bilan ishga tushirish xavfsizroq
+  fetch(`https://api.telegram.org/bot${token}/deleteWebhook`).catch(() => {});
+
+  userBot = new TelegramBot(token, { 
+    polling: { 
+      interval: 300,
+      autoStart: true,
+      params: { timeout: 10 }
+    } 
   });
+  
+  console.log("✅ Foydalanuvchi Boti (User Bot) muvaffaqiyatli ishga tushdi va Polling boshlandi!");
 
   // Polling xatolarini ushlash (Server qotib qolmasligi uchun eng muhim qism)
   userBot.on("polling_error", (error: any) => {
