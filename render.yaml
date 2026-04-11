@@ -4,7 +4,7 @@ services:
     name: yozgo-web-service
     env: node
     buildCommand: npm install && npm run build
-    startCommand: node dist/index.cjs
+    startCommand: npm run db:push && node dist/index.cjs
 
   # 2. Admin Bot (Python Background Worker)
   - type: worker
