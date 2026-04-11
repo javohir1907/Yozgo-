@@ -5,7 +5,14 @@ import { apiRequest, normalizeUrl } from "@/lib/queryClient";
 type SafeUser = Omit<User, "password">;
 
 async function fetchUser(): Promise<SafeUser | null> {
+  const headers: Record<string, string> = {};
+  const token = localStorage.getItem("yozgo_session");
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
   const response = await fetch(normalizeUrl("/api/auth/user"), {
+    headers,
     credentials: "include",
   });
 
@@ -35,6 +42,9 @@ export function useAuth() {
       return res.json();
     },
     onSuccess: (data) => {
+      if (data.token) {
+        localStorage.setItem("yozgo_session", data.token);
+      }
       queryClient.setQueryData(["/api/auth/user"], data);
     },
   });
@@ -52,6 +62,9 @@ export function useAuth() {
       return res.json();
     },
     onSuccess: (data) => {
+      if (data.token) {
+        localStorage.setItem("yozgo_session", data.token);
+      }
       queryClient.setQueryData(["/api/auth/user"], data);
     },
   });
@@ -61,6 +74,7 @@ export function useAuth() {
       await apiRequest("POST", "/api/auth/logout");
     },
     onSuccess: () => {
+      localStorage.removeItem("yozgo_session");
       queryClient.setQueryData(["/api/auth/user"], null);
     },
   });

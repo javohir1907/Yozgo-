@@ -91,6 +91,25 @@ export function setupAuth(app: Express): void {
 
   app.use(sessionMiddleware);
 
+  // SAFARI ITP FALLBACK: Agar brauzer uchinchi tomon cookie-larini bloklasa (SameSite=Lax bo'lsa ham),
+  // biz Authorization header orqali uzatilgan raw session ID dan foydalanib sessiyani qo'lda tiklaymiz!
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
+    if (!(req.session as any)?.userId && req.headers.authorization?.startsWith("Bearer ")) {
+      const sid = req.headers.authorization.split(" ")[1];
+      if (sid && sid.length > 5) {
+        try {
+          const result = await pool.query("SELECT sess FROM sessions WHERE sid = $1", [sid]);
+          if (result.rows.length > 0 && result.rows[0].sess?.userId) {
+            (req.session as any).userId = result.rows[0].sess.userId;
+          }
+        } catch (e) {
+          console.error("[AUTH FALLBACK] Session DB ruxsat xatosi:", e);
+        }
+      }
+    }
+    next();
+  });
+
   app.use(passport.initialize());
   app.use(passport.session());
 
@@ -211,17 +230,23 @@ export function setupAuth(app: Express): void {
       // Sessionga biriktirish
       (req.session as any).userId = newUser.id;
 
-      // Telegram ogohlantirish (Async)
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
       sendAdminNotification(
         `🔔 <b>YANGI FOYDALANUVCHI!</b>\n\n` +
-        `👤 <b>Foydalanuvchi:</b> ${firstName.trim() || 'Noma\'lum'}\n` +
-        `📧 <b>Email:</b> ${email || 'Kiritilmagan'}\n` +
+        `👤 <b>Foydalanuvchi:</b> ${newUser.firstName || 'Noma\'lum'}\n` +
+        `📧 <b>Email:</b> ${newUser.email || 'Kiritilmagan'}\n` +
         `🆔 <b>ID:</b> ${newUser.id}\n\n` +
         `<i>Loyiha o'sib bormoqda! 🚀</i>`
       ).catch(console.error);
 
       const { password: _, ...userNoHash } = newUser;
-      res.status(201).json(userNoHash);
+      res.status(201).json({ ...userNoHash, token: req.sessionID });
     } catch (error) {
       console.error("[AUTH] Registration error:", error);
       res.status(500).json({ message: "Ro'yxatdan o'tishda xatolik yuz berdi" });
@@ -263,8 +288,15 @@ export function setupAuth(app: Express): void {
       // Session saqlash
       (req.session as any).userId = userMatch.id;
       
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
       const { password: _, ...safeProfile } = userMatch;
-      res.status(200).json(safeProfile);
+      res.status(200).json({ ...safeProfile, token: req.sessionID });
     } catch (error) {
       console.error("[AUTH] Login error:", error);
       res.status(500).json({ message: `Tizimga kirishda xatolik: ${String(error)}` });
@@ -320,8 +352,15 @@ export function setupAuth(app: Express): void {
       }
 
       (req.session as any).userId = linkedUser.id;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
       const { password: _, ...authResponse } = linkedUser;
-      res.status(200).json(authResponse);
+      res.status(200).json({ ...authResponse, token: req.sessionID });
     } catch (error) {
       console.error("[AUTH] Telegram auth error:", error);
       res.status(500).json({ message: "Telegram orqali kirishda xatolik" });
@@ -440,8 +479,16 @@ export function setupAuth(app: Express): void {
       sendAdminNotification(`🔔 <b>Google orqali yangi hisob:</b> ${newUser.email}`).catch(() => {});
       
       (req.session as any).userId = newUser.id;
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
       const { password: _, ...safeProfile } = newUser;
-      res.status(200).json(safeProfile);
+      res.status(200).json({ ...safeProfile, token: req.sessionID });
     } catch (error) {
       console.error("[AUTH] Google Verify Error:", error);
       res.status(500).json({ message: "Xatolik yuz berdi" });
