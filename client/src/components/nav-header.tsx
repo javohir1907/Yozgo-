@@ -34,16 +34,16 @@ export function NavHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-md border-b-[3px] border-primary shadow-[0_4px_10px_rgba(249,115,22,0.15)]">
-      <div className="container flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center group mr-6">
-            <div className="flex items-center gap-1.5 sm:gap-2">
+      <div className="container flex h-14 sm:h-16 items-center justify-between px-2 sm:px-4">
+        <div className="flex items-center gap-2 sm:gap-8">
+          <Link href="/" className="flex items-center group mr-1 sm:mr-6">
+            <div className="flex items-center gap-1 sm:gap-2">
               {["Y", "O", "Z", "G", "O"].map((letter, i) => (
                 <div
                   key={i}
-                  className="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center cursor-pointer select-none rounded-lg border transition-all duration-75 font-sans font-black text-sm sm:text-base
-                             bg-white border-gray-200 text-gray-800 shadow-[0_4px_0_rgb(209,213,219)] hover:-translate-y-0.5 hover:shadow-[0_6px_0_rgb(209,213,219)] active:translate-y-1 active:shadow-[0_0px_0_rgb(209,213,219)]
-                             dark:bg-[#28282b] dark:border-[#111] dark:text-[#fcfcfc] dark:shadow-[0_4px_0_rgb(10,10,10)] dark:hover:-translate-y-0.5 dark:hover:shadow-[0_6px_0_rgb(10,10,10)] dark:active:translate-y-1 dark:active:shadow-[0_0px_0_rgb(10,10,10)]"
+                  className="relative w-6 h-6 sm:w-10 sm:h-10 flex items-center justify-center cursor-pointer select-none rounded-[6px] sm:rounded-lg border transition-all duration-75 font-sans font-extrabold text-[11px] sm:text-base
+                             bg-white border-gray-200 text-gray-800 shadow-[0_3px_0_rgb(209,213,219)] hover:-translate-y-0.5 hover:shadow-[0_4px_0_rgb(209,213,219)] active:translate-y-0.5 active:shadow-[0_0px_0_rgb(209,213,219)]
+                             dark:bg-[#28282b] dark:border-[#111] dark:text-[#fcfcfc] dark:shadow-[0_3px_0_rgb(10,10,10)] dark:hover:-translate-y-0.5 dark:hover:shadow-[0_4px_0_rgb(10,10,10)] dark:active:translate-y-0.5 dark:active:shadow-[0_0px_0_rgb(10,10,10)]"
                 >
                   <span>{letter}</span>
                   {/* Klaviaturalardagi F va J harflariga o'xshash orientir do'mboqchalar (O va G harflariga) */}
@@ -55,14 +55,14 @@ export function NavHeader() {
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-2">
+          <nav className="hidden md:flex items-center gap-1 lg:gap-2">
             {navItems.map((item) => {
               const isActive = location === item.href;
               return (
                 <Link key={item.href} href={item.href}>
                   <Button
                     variant="ghost"
-                    className={`relative gap-2 h-10 px-4 transition-all duration-300 font-bold ${isActive
+                    className={`relative gap-1.5 lg:gap-2 h-9 lg:h-10 px-2 lg:px-4 transition-all duration-300 font-bold ${isActive
                         ? "text-primary bg-primary/10 hover:bg-primary/20"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
@@ -72,7 +72,7 @@ export function NavHeader() {
                       <div className="absolute bottom-0 left-0 w-full h-[3px] bg-primary rounded-t-sm"></div>
                     )}
                     <item.icon className="w-4 h-4" />
-                    <span>{item.label}</span>
+                    <span className="hidden lg:inline">{item.label}</span>
                   </Button>
                 </Link>
               );
@@ -80,13 +80,13 @@ export function NavHeader() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-2 border-l-2 border-muted pl-4">
+        <div className="flex items-center gap-1 sm:gap-2 border-l border-muted pl-2 sm:pl-4">
           {/* Mobil Menyusi (Gamburger) - Faqat telefonda ko'rinadi */}
-          <div className="md:hidden flex items-center mr-1">
+          <div className="md:hidden flex items-center mr-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-                  <Menu className="w-6 h-6" />
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground h-8 w-8 sm:h-10 sm:w-10">
+                  <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 font-sans font-medium rounded-xl border border-border shadow-md">
@@ -98,18 +98,27 @@ export function NavHeader() {
                     </Link>
                   </DropdownMenuItem>
                 ))}
+                <DropdownMenuSeparator />
+                {/* Mobile-only settings visible via dropdown to save space */}
+                <DropdownMenuItem asChild className="cursor-pointer py-3 hidden sm:flex md:hidden lg:hidden">
+                   <Link href="/settings" className="flex items-center w-full gap-3">
+                    <Settings className="w-5 h-5 text-muted-foreground" />
+                    <span>{t.nav.settings}</span>
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-foreground hover:bg-muted"
+                className="text-muted-foreground hover:text-foreground hover:bg-muted h-8 w-8 sm:h-10 sm:w-10"
                 data-testid="button-ui-lang"
               >
-                <Globe className="w-5 h-5" />
+                <Globe className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
                 <span className="sr-only">Language</span>
               </Button>
             </DropdownMenuTrigger>
@@ -118,7 +127,7 @@ export function NavHeader() {
                 <DropdownMenuItem
                   key={lang.code}
                   onClick={() => setUILang(lang.code)}
-                  className={`font-semibold ${uiLang === lang.code ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                  className={`font-semibold cursor-pointer ${uiLang === lang.code ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"}`}
                   data-testid={`button-ui-lang-${lang.code}`}
                 >
                   {lang.label}
@@ -130,11 +139,11 @@ export function NavHeader() {
           <Button
             variant="ghost"
             size="icon"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted h-8 w-8 sm:h-10 sm:w-10"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             data-testid="button-theme-toggle"
           >
-            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {theme === "dark" ? <Sun className="w-[18px] h-[18px] sm:w-5 sm:h-5" /> : <Moon className="w-[18px] h-[18px] sm:w-5 sm:h-5" />}
             <span className="sr-only">Toggle theme</span>
           </Button>
 
@@ -142,10 +151,10 @@ export function NavHeader() {
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-foreground hover:bg-muted"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted h-8 w-8 sm:h-10 sm:w-10 hidden sm:flex"
               data-testid="link-settings"
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-[18px] h-[18px] sm:w-5 sm:h-5" />
               <span className="sr-only">{t.nav.settings}</span>
             </Button>
           </Link>
@@ -155,19 +164,19 @@ export function NavHeader() {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="relative h-10 w-10 rounded-xl border-2 border-transparent hover:border-primary transition-all bg-muted overflow-hidden"
+                  className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl border-2 border-transparent hover:border-primary transition-all bg-muted overflow-hidden p-0"
                   data-testid="button-user-menu"
                 >
-                  <Avatar className="h-full w-full rounded-lg">
+                  <Avatar className="h-full w-full rounded-md sm:rounded-lg">
                     <AvatarImage
                       src={user?.profileImageUrl || undefined}
                       alt={user?.firstName || user?.email || "User"}
                     />
-                    <AvatarFallback className="bg-transparent text-foreground font-bold rounded-lg">
+                    <AvatarFallback className="bg-transparent text-foreground font-bold rounded-lg text-xs sm:text-base">
                       {(user?.firstName || user?.email || "U").substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-correct border-2 border-background rounded-full"></div>
+                  <div className="absolute bottom-0 right-0 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-correct border border-background rounded-full"></div>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56 font-sans rounded-xl border-2 p-2" align="end" forceMount>
@@ -197,7 +206,7 @@ export function NavHeader() {
             </DropdownMenu>
           ) : (
             <Link href="/auth">
-              <Button size="sm" data-testid="button-login" className="font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-sm">
+              <Button size="sm" data-testid="button-login" className="font-bold text-xs sm:text-sm h-8 px-3 sm:h-9 sm:px-4 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md sm:rounded-lg shadow-sm">
                 {t.nav.signIn}
               </Button>
             </Link>
