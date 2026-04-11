@@ -206,25 +206,25 @@ async function checkSubscription(chatId: number, tgUserId: number) {
     }
     return true;
   } catch (e: any) {
-    // Cannot access or user not found => not subscribed
     console.error("Subscription Check Error:", e.response?.body || e.message);
-    userBot?.sendMessage(chatId, `⚠️ Kanalni tekshirish tizimda xatolik bor (Bot admin emas bo'lishi mumkin): ${e.message}`);
-    return false;
+    // DIQQAT: Agar bot kanalda admin bo'lmasa, xatolik beradi. 
+    // Hozircha kod berishaverishi uchun "true" qaytaramiz va ogohlantirish yuboramiz:
+    userBot?.sendMessage(chatId, `⚠️ DIQQAT: Bot @yozgo_uz kanalida ADMIN emas! Shuning uchun a'zolikni tasdiqlay olmadi. Iltimos botni kanalda admin qiling.`);
+    return true; 
   }
 }
 
 async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
   if (!tgUserId) return;
   const [battle] = await db.select().from(battles).where(eq(battles.code, code));
+  
   if (!battle) {
-    if (code.length < 8) {
-      userBot?.sendMessage(chatId, "Xona kodi topilmadi yoki yopilgan.");
-    }
+    userBot?.sendMessage(chatId, `❌ Xona topilmadi yoki yopilgan!\n(Siz kiritgan kod: ${code})`);
     return;
   }
 
   if (battle.status === "finished") {
-    userBot?.sendMessage(chatId, "Bu musobaqa allaqachon yakunlangan!");
+    userBot?.sendMessage(chatId, "❌ Bu musobaqa allaqachon yakunlangan!");
     return;
   }
 
@@ -251,13 +251,11 @@ export async function generateAndSendRoomCode(
   telegramId: number,
   chatId: number
 ) {
-  // DB relations require a valid userId, so we just attach it to any existing user
-  // Since we removed user validation for codes on the backend, it acts as a global bearer token!
   const [firstUser] = await db.select().from(users).limit(1);
   const dummyUserId = firstUser?.id;
 
   if (!dummyUserId) {
-    userBot?.sendMessage(chatId, "Tizimda xatolik yuz berdi: Bog'lanadigan asosiy foydalanuvchi profil topilmadi.");
+    userBot?.sendMessage(chatId, "❌ Tizimda asosiy foydalanuvchi profili topilmadi! (Saytda kamida 1 ta foydalanuvchi registratsiya bo'lgan bo'lishi kerak).");
     return;
   }
 
@@ -279,7 +277,13 @@ export async function generateAndSendRoomCode(
     });
   } catch (err: any) {
     console.error("individual_code_generate_error:", err.message);
-    userBot?.sendMessage(chatId, `Xatolik yuz berdi: ${err.message}`);
+    
+    // Agar DB dagi unique qoidasi olib tashlanmagan bo'lsa xato ushlanadi:
+    if (err.message.includes("unique") || err.message.includes("duplicate")) {
+       userBot?.sendMessage(chatId, `❌ **BAZADA XATOLIK:** Database'dagi cheklov olib tashlanmagan!\n\nIltimos, loyiha terminaliga kirib ushbu buyruqni tering:\n\`npm run db:push\``, { parse_mode: "Markdown" });
+    } else {
+       userBot?.sendMessage(chatId, `❌ Kod yaratishda xatolik yuz berdi: ${err.message}`);
+    }
   }
 }
 
