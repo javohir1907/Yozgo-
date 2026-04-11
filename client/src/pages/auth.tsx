@@ -23,6 +23,9 @@ export default function AuthPage() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
+  
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState("");
@@ -137,6 +140,7 @@ export default function AuthPage() {
     setError("");
     try {
       if (googleOtpEmail) {
+        setIsVerifying(true);
         const res = await fetch(normalizeUrl(`/api/auth/google-verify`), {
            method: "POST",
            headers: { "Content-Type": "application/json" },
@@ -174,6 +178,8 @@ export default function AuthPage() {
       } catch {
         setError(body);
       }
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -267,8 +273,8 @@ export default function AuthPage() {
                   <span>{error}</span>
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={isRegistering}>
-                {isRegistering ? "Tasdiqlanmoqda..." : "Tasdiqlash"}
+              <Button type="submit" className="w-full" disabled={isRegistering || isVerifying}>
+                {isRegistering || isVerifying ? "Tasdiqlanmoqda..." : "Tasdiqlash"}
               </Button>
               <button
                 type="button"
@@ -533,11 +539,16 @@ export default function AuthPage() {
               type="button"
               variant="outline"
               className="w-full bg-white hover:bg-gray-50 text-gray-900 border-gray-200"
+              disabled={isGoogleLoading}
               onClick={() => {
+                setIsGoogleLoading(true);
                 window.location.href = normalizeUrl(`/api/auth/google`);
               }}
             >
-              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+              {isGoogleLoading ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin text-gray-500" />
+              ) : (
+                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                   fill="#4285F4"
@@ -555,6 +566,7 @@ export default function AuthPage() {
                   fill="#EA4335"
                 />
               </svg>
+              )}
               Google orqali {isLogin ? "kirish" : "ro'yxatdan o'tish"}
             </Button>
           </form>
