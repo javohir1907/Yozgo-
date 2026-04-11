@@ -7,7 +7,7 @@ interface TypingAreaProps {
   userInput: string;
   onInputChange: (value: string) => void;
   onGoBack?: () => void;
-  onComplete: () => void;
+  onRestart?: () => void;
   isActive: boolean;
   currentIndex: number;
   history?: string[];
@@ -103,7 +103,7 @@ export function TypingArea({
   userInput,
   onInputChange,
   onGoBack,
-  onComplete,
+  onRestart,
   isActive,
   currentIndex,
   history = [],
@@ -201,14 +201,14 @@ export function TypingArea({
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Tab") {
         e.preventDefault();
-        onComplete();
+        if (onRestart) onRestart();
       }
       if (e.key === "Backspace" && userInput.length === 0 && onGoBack) {
         e.preventDefault();
         onGoBack();
       }
     },
-    [userInput.length, onComplete, onGoBack]
+    [userInput.length, onRestart, onGoBack]
   );
 
   const renderedWords = React.useMemo(() => {

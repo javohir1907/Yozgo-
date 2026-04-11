@@ -662,7 +662,7 @@ export default function BattlePage() {
                         userInput={userInput}
                         currentIndex={currentIndex}
                         history={history}
-                        onComplete={finalizeAttempt}
+                        onRestart={startAttempt}
                         onGoBack={handleGoBack} 
                       />
                   </div>
@@ -673,15 +673,18 @@ export default function BattlePage() {
         </div>
 
         {/* Right Column: Leaderboard */}
-        <div className="lg:col-span-4">
-          <Card className="rounded-3xl border-2">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-xl flex items-center gap-2"><Trophy className="text-yellow-500" /> {t.battle.live}</CardTitle>
-              <Badge variant="outline">{room?.players.length || 0} {t.battle.players.toLowerCase()}</Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {room?.players.map((p: any, i: number) => (
-                <div key={p.id} className={`relative overflow-hidden flex items-center justify-between p-3 rounded-xl border border-transparent transition-all ${p.isDisconnected ? "bg-secondary/20 opacity-50 grayscale" : "bg-secondary/40 hover:border-border"}`}>
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          {room?.settings?.genderRestriction === "all" ? (
+            <>
+              <Card className="rounded-3xl border-2 border-blue-500/20 shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xl flex items-center gap-2">👨 Yigitlar</CardTitle>
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    {room.players.filter((p: any) => p.gender === "male").length} ta
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-2">
+                  {room.players.filter((p: any) => p.gender === "male").map((p: any, i: number) => (
                   {/* Live Progress Bar Background */}
                   <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
                   
@@ -709,8 +712,88 @@ export default function BattlePage() {
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-2 border-pink-500/20 shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xl flex items-center gap-2">👩 Qizlar</CardTitle>
+                  <Badge variant="outline" className="bg-pink-500/10 text-pink-600 dark:text-pink-400">
+                    {room.players.filter((p: any) => p.gender === "female").length} ta
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-2">
+                  {room.players.filter((p: any) => p.gender === "female").map((p: any, i: number) => (
+                    <div key={p.id} className={`relative overflow-hidden flex items-center justify-between p-3 rounded-xl border border-transparent transition-all ${p.isDisconnected ? "bg-secondary/20 opacity-50 grayscale" : "bg-secondary/40 hover:border-border"}`}>
+                      {/* Live Progress Bar Background */}
+                      <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
+                      
+                      <div className="relative z-10 flex items-center gap-3">
+                        <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
+                        <div className="relative">
+                          {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
+                          <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10" />
+                        </div>
+                        <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
+                      </div>
+                      <div className="relative z-10 text-right">
+                        <div className="font-black text-primary">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
+                        {room?.settings?.winMode === "per_round" ? (
+                          <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-1 max-w-[120px]">
+                            {p.attemptHistory?.map((h: any, idx: number) => (
+                              <span key={idx} className="bg-primary/20 px-1 rounded border border-primary/30" title={`${idx+1}-davr natijasi: ${h.wpm} WPM`}>
+                                R{idx + 1}: <span className="text-primary">{h.wpm}</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card className="rounded-3xl border-2">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-xl flex items-center gap-2"><Trophy className="text-yellow-500" /> {t.battle.live}</CardTitle>
+                <Badge variant="outline">{room?.players.length || 0} {t.battle.players.toLowerCase()}</Badge>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-2">
+                {room?.players.map((p: any, i: number) => (
+                  <div key={p.id} className={`relative overflow-hidden flex items-center justify-between p-3 rounded-xl border border-transparent transition-all ${p.isDisconnected ? "bg-secondary/20 opacity-50 grayscale" : "bg-secondary/40 hover:border-border"}`}>
+                    {/* Live Progress Bar Background */}
+                    <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
+                    
+                    <div className="relative z-10 flex items-center gap-3">
+                      <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
+                      <div className="relative">
+                        {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
+                        <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10" />
+                      </div>
+                      <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
+                    </div>
+                    <div className="relative z-10 text-right">
+                      <div className="font-black text-primary">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
+                      {room?.settings?.winMode === "per_round" ? (
+                        <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-1 max-w-[120px]">
+                          {p.attemptHistory?.map((h: any, idx: number) => (
+                            <span key={idx} className="bg-primary/20 px-1 rounded border border-primary/30" title={`${idx+1}-davr natijasi: ${h.wpm} WPM`}>
+                              R{idx + 1}: <span className="text-primary">{h.wpm}</span>
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

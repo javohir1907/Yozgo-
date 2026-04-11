@@ -117,7 +117,7 @@ export default function TypingTestPage() {
             userInput={userInput}
             onInputChange={handleInputChange}
             onGoBack={handleGoBack}
-            onComplete={reset}
+            onRestart={reset}
             isActive={true}
             currentIndex={currentIndex}
             history={history}

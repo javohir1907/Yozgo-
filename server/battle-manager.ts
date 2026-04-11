@@ -226,6 +226,7 @@ export class BattleManager {
           testDuration: 30,
           totalTime: 5,
           maxAttempts: 10,
+          genderRestriction: battleRecord.genderRestriction || "all", // DB dan yuklash
         },
         testWords: this.generateTestWords(battleRecord.language, 3000),
       };
@@ -509,6 +510,7 @@ export class BattleManager {
         id: p.user.id,
         username: p.user.firstName || p.user.email?.split("@")[0] || "Unknown",
         avatarUrl: p.user.profileImageUrl,
+        gender: p.user.gender || "male", // UI uchun jins ni qo'shildi
         progress: p.progress,
         wpm: p.wpm,
         bestWpm: p.bestWpm,
