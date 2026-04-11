@@ -139,11 +139,30 @@ export function startUserBot() {
         return;
       }
 
-      // Checking for raw room codes (if user types ROOM2025 directly)
+      // Checking for raw room codes or forwarded message text
       if (msg.text && !msg.text.startsWith("/")) {
-        const isMaybeCode = msg.text.length >= 4 && msg.text.length <= 10;
-        if (isMaybeCode) {
-          await handleRoomCode(chatId, msg.text.toUpperCase(), msg.from?.id);
+        const text = msg.text.trim();
+        let extractedCode = "";
+
+        // 1. Agar to'liq xabar copy qilingan bo'lsa
+        const match = text.match(/Asl Xona Kodi:\s*([A-Za-z0-9]{4,10})/i);
+        if (match && match[1]) {
+          extractedCode = match[1];
+        } else {
+          // 2. Yoki foydalanuvchi faqat kodning o'zini yozgan bo'lsa
+          const words = text.split(/\s+/);
+          if (words.length === 1) {
+            extractedCode = words[0];
+          }
+        }
+
+        // Tozalash
+        extractedCode = extractedCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+        if (extractedCode.length >= 4 && extractedCode.length <= 10) {
+          await handleRoomCode(chatId, extractedCode, msg.from?.id);
+        } else {
+          userBot?.sendMessage(chatId, "⚠️ Xabar ichidan yaroqli xona kodi topilmadi. Faqat kodni o'zini (yoki post qilingan to'liq e'lonni) jo'nating.");
         }
       }
     } catch (e: any) {
