@@ -273,10 +273,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         // Agar xona yaratish kodi kiritilgan bo'lsa:
         if (accessCode) {
           const [validCode] = await db.select().from(competitionCreationCodes)
-            .where(and(eq(competitionCreationCodes.code, accessCode), eq(competitionCreationCodes.isUsed, false)));
+            .where(and(
+              eq(competitionCreationCodes.code, accessCode), 
+              eq(competitionCreationCodes.isUsed, false)
+            ));
             
           if (!validCode) {
             return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Noto'g'ri yoki allaqachon ishlatilgan kirish kodi." });
+          }
+
+          // Muddatini tekshirish
+          if (validCode.expiresAt && new Date() > validCode.expiresAt) {
+             return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Ushbu kodning amal qilish muddati tugagan (5 kun o'tib ketgan)." });
           }
           
           finalMaxParticipants = validCode.maxParticipants;
@@ -371,7 +379,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       let matchedBattle = await storage.getBattleByCode(battleCode);
       let isSpecificAccessCode = false;
 
-      // Avval individual kirish kodlarini tekshiramiz
+      // 1. Paid Room Creation code orqali tekshirish
+      const [creationCodeEntry] = await db.select().from(competitionCreationCodes).where(eq(competitionCreationCodes.code, battleCode));
+      if (creationCodeEntry) {
+         if (creationCodeEntry.expiresAt && new Date() > creationCodeEntry.expiresAt) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Ushbu kodning muddati tugagan (5 kun o'tib ketgan)." });
+         }
+         return res.status(HTTP_STATUS.OK).json({ success: true });
+      }
+
+      // 2. Individual kirish kodi orqali tekshirish
       const [accessCodeEntry] = await db
         .select()
         .from(roomAccessCodes)
@@ -390,13 +407,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Xona yoki kirish kodi topilmadi." });
       }
 
-      // Faqat bot orqali olingan individual kodlar bilan kirishga ruxsat berish
-      if (!isSpecificAccessCode) {
-        return res.status(HTTP_STATUS.FORBIDDEN).json({
-          message: "Xonaga faqat @yozgo_bot orqali olingan individual kod bilan kirish mumkin.",
-        });
-      }
-
+      // Oddiy bepul xonalar uchun to'g'ridan-to'g'ri kirishga ruxsat beramiz.
+      // Raqobat avzalligi kabi individual kodlarni cheklashlar shu yerda olib tashlandi,
+      // chunki normal o'yinchilar botga o'tmasdan ham xona kodi (A2D4F) orqali kiritishganda kirishi shart.
       res.status(HTTP_STATUS.OK).json({ success: true });
     } catch (error) {
       res.status(HTTP_STATUS.BAD_REQUEST).json({ message: error instanceof Error ? error.message : "Xatolik" });
@@ -437,6 +450,56 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
         const [foundBattle] = await db.select().from(battles).where(eq(battles.id, accessCodeEntry.roomId));
         matchedBattle = foundBattle;
+      }
+
+      // --- YANGI: Paid Creation Codes orqali qo'shilish ---
+      if (!matchedBattle) {
+        const [creationCodeEntry] = await db.select().from(competitionCreationCodes)
+          .where(eq(competitionCreationCodes.code, battleCode));
+
+        if (creationCodeEntry) {
+          if (creationCodeEntry.expiresAt && new Date() > creationCodeEntry.expiresAt) {
+             return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Ushbu kodning muddati tugagan." });
+          }
+
+          // Agar shu creation kodi allaqachon ishlatilayotgan bo'lmasa yoki qayta-ushbu xonaga kirish bo'lsa
+          let battleToJoin = null;
+          
+          if (creationCodeEntry.activeBattleId) {
+             const [activeBattle] = await db.select().from(battles).where(eq(battles.id, creationCodeEntry.activeBattleId));
+             if (activeBattle && activeBattle.status !== 'finished') {
+                battleToJoin = activeBattle;
+             }
+          }
+
+          if (!battleToJoin) {
+             battleToJoin = await storage.createBattle({
+               code: generateRoomCode(),
+               language: "uz",
+               mode: "30",
+               creatorId: userId,
+               status: 'waiting',
+               maxParticipants: creationCodeEntry.maxParticipants,
+               genderRestriction: 'all',
+               isOfficial: true,
+               roomPrice: 0,
+               accessCode: creationCodeEntry.code,
+               duration: 30,
+               competitionLength: 10,
+               role: 'participant'
+             });
+
+             await db.update(competitionCreationCodes)
+               .set({ 
+                 activeBattleId: battleToJoin.id,
+                 isUsed: true,
+                 usedByUserId: userId,
+                 usedAt: new Date()
+               })
+               .where(eq(competitionCreationCodes.id, creationCodeEntry.id));
+          }
+          matchedBattle = battleToJoin as any;
+        }
       }
 
       if (!matchedBattle) {
@@ -715,11 +778,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.post("/api/admin/creation-codes", adminAuth, async (req, res) => {
     try {
       const { code, maxParticipants, createdBy } = req.body;
+      
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 5); // 5 kunlik muddat
+
       const [newCode] = await db.insert(competitionCreationCodes).values({
         code,
         maxParticipants: parseInt(maxParticipants),
         createdBy: String(createdBy),
-        isUsed: false
+        isUsed: false,
+        expiresAt: expiresAt
       }).returning();
       
       res.json(newCode);
@@ -727,6 +795,42 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       console.error("Code Generation Error:", error);
       res.status(500).json({ error: "Kod yaratishda xatolik" });
     }
+  });
+
+  // Kod holatini tekshirish
+  app.get("/api/admin/creation-codes/status/:code", adminAuth, async (req, res) => {
+     try {
+        const [codeEntry] = await db.select().from(competitionCreationCodes).where(eq(competitionCreationCodes.code, req.params.code));
+        if (!codeEntry) return res.status(404).json({ error: "Kod topilmadi" });
+
+        let roomStatus = "inactive";
+        if (codeEntry.activeBattleId) {
+           const [battle] = await db.select().from(battles).where(eq(battles.id, codeEntry.activeBattleId));
+           if (battle) roomStatus = battle.status;
+        }
+
+        res.json({
+           ...codeEntry,
+           roomStatus,
+           isExpired: codeEntry.expiresAt ? new Date() > codeEntry.expiresAt : false
+        });
+     } catch (error) {
+        res.status(500).json({ error: "Xatolik" });
+     }
+  });
+
+  // Kodni o'chirish (deactivate)
+  app.post("/api/admin/creation-codes/deactivate", adminAuth, async (req, res) => {
+     try {
+        const { code } = req.body;
+        await db.update(competitionCreationCodes)
+          .set({ isUsed: true, expiresAt: new Date(0) }) // Muddatini o'tmishga surib qo'yamiz
+          .where(eq(competitionCreationCodes.code, code));
+        
+        res.json({ success: true });
+     } catch (error) {
+        res.status(500).json({ error: "Xatolik" });
+     }
   });
 
   // ==========================================

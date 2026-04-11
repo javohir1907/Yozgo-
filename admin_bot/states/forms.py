@@ -19,3 +19,8 @@ class UserSearchState(StatesGroup):
 class BroadcastState(StatesGroup):
     content = State()
     confirm = State()
+
+class PaidRoomState(StatesGroup):
+    max_participants = State()
+    code_status = State()
+    deactivate_code = State()

@@ -101,64 +101,9 @@ export default function BattlePage() {
   const [showTerms, setShowTerms] = useState<boolean>(false);
   const [isAgreed, setIsAgreed] = useState<boolean>(false);
 
-  // LOKAL TARJIMALAR (3 tilda)
-  const uiTexts = {
-    uz: {
-      genderLabel: "Auditoriya jinsi",
-      genderAll: "🚻 Aralash (Barchasi)",
-      genderMale: "🙋♂️ Faqat o'g'il bolalar",
-      genderFemale: "🙋♀️ Faqat qiz bolalar",
-      participantsLabel: "Ishtirokchilar soni (Narxlar)",
-      free: "Bepul",
-      negotiable: "Kelishiladi",
-      tier10: "10 tagacha",
-      tier20: "11-20 ta",
-      tier50: "21-50 ta",
-      tier100: "51-100 ta",
-      tierVIP: "101+ (VIP)",
-      winModeLabel: "Musobaqa usuli",
-      winModeOverall: "🏆 Umumiy davr (1 ta g'olib)",
-      winModePerRound: "🎯 Har bir davr (Alohida g'oliblar)"
-    },
-    ru: {
-      genderLabel: "Пол аудитории",
-      genderAll: "🚻 Смешанный (Все)",
-      genderMale: "🙋♂️ Только парни",
-      genderFemale: "🙋♀️ Только девушки",
-      participantsLabel: "Кол-во участников (Цены)",
-      free: "Бесплатно",
-      negotiable: "Договорная",
-      tier10: "До 10",
-      tier20: "11-20 чел",
-      tier50: "21-50 чел",
-      tier100: "51-100 чел",
-      tierVIP: "101+ (VIP)",
-      winModeLabel: "Формат турнира",
-      winModeOverall: "🏆 Общее время (1 победитель)",
-      winModePerRound: "🎯 По раундам (Победитель в каждом)"
-    },
-    en: {
-      genderLabel: "Audience Gender",
-      genderAll: "🚻 Mixed (Everyone)",
-      genderMale: "🙋♂️ Boys only",
-      genderFemale: "🙋♀️ Girls only",
-      participantsLabel: "Participants limit (Pricing)",
-      free: "Free",
-      negotiable: "Negotiable",
-      tier10: "Up to 10",
-      tier20: "11-20 users",
-      tier50: "21-50 users",
-      tier100: "51-100 users",
-      tierVIP: "101+ (VIP)",
-      winModeLabel: "Tournament Mode",
-      winModeOverall: "🏆 Overall duration (1 winner)",
-      winModePerRound: "🎯 Per round (Individual winners)"
-    }
-  };
-
   // Tizimdagi hozirgi tilni aniqlash (Default: 'uz')
-  const currentLang = localStorage.getItem('yozgo_lang') || 'uz';
-  const loc = (uiTexts as any)[currentLang] || uiTexts.uz;
+  // const currentLang = localStorage.getItem('yozgo_lang') || 'uz';
+  // const loc = (uiTexts as any)[currentLang] || uiTexts.uz;
 
   // --- WEBSOCKET HOOK ---
   const {
@@ -349,19 +294,15 @@ export default function BattlePage() {
   const handleCreateBattle = async () => {
     setIsCreating(true);
     try {
-      const array = new Uint8Array(3);
-      window.crypto.getRandomValues(array);
-      const code = Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join("").toUpperCase();
-      
-      await apiRequest("POST", "/api/battles", {
-        code,
-        status: "waiting",
+      const response = await apiRequest("POST", "/api/battles", {
         language,
         mode: testDuration.toString(),
         maxParticipants: participantTier,
         genderRestriction: genderRestriction,
+        accessCode: inputCode.trim().toUpperCase(), // Pullik kod bo'lsa yuborish
       });
-      setBattleCode(code);
+      const data = await response.json();
+      setBattleCode(data.code);
     } catch (err: any) {
       toast({ title: t.battle.error, description: err.message || t.battle.failedCreate, variant: "destructive" });
     } finally {
@@ -458,43 +399,43 @@ export default function BattlePage() {
 
                 {/* 2. Jins Cheklovi */}
                 <div className="space-y-1 md:col-span-2">
-                  <Label>{loc.genderLabel}</Label>
+                  <Label>{t.battle.genderLabel}</Label>
                   <select 
                     value={genderRestriction} 
                     onChange={e => setGenderRestriction(e.target.value as any)} 
                     className="w-full bg-background border p-3 rounded-xl font-medium focus:ring-2 focus:ring-primary/50 transition-all outline-none"
                   >
-                    <option value="all">{loc.genderAll}</option>
-                    <option value="male">{loc.genderMale}</option>
-                    <option value="female">{loc.genderFemale}</option>
+                    <option value="all">{t.battle.genderAll}</option>
+                    <option value="male">{t.battle.genderMale}</option>
+                    <option value="female">{t.battle.genderFemale}</option>
                   </select>
                 </div>
 
                 {/* 3. Musobaqa Usuli */}
                 <div className="space-y-1 md:col-span-2">
-                  <Label>{loc.winModeLabel}</Label>
+                  <Label>{t.battle.winModeLabel}</Label>
                   <select 
                     value={winMode} 
                     onChange={e => setWinMode(e.target.value as "overall" | "per_round")} 
                     className="w-full bg-background border p-3 rounded-xl font-medium focus:ring-2 focus:ring-primary/50 transition-all outline-none"
                   >
-                    <option value="overall">{loc.winModeOverall}</option>
-                    <option value="per_round">{loc.winModePerRound}</option>
+                    <option value="overall">{t.battle.winModeOverall}</option>
+                    <option value="per_round">{t.battle.winModePerRound}</option>
                   </select>
                 </div>
 
                 {/* 4. Ishtirokchilar soni (Chiroyli Tugmalar) */}
                 <div className="space-y-2 md:col-span-2 mt-2">
                   <Label className="flex items-center gap-2">
-                    {loc.participantsLabel}
+                    {t.battle.participantsLabel}
                   </Label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {[
-                      { val: 10, label: loc.tier10, price: loc.free, icon: "🚀", color: "text-green-500" },
-                      { val: 20, label: loc.tier20, price: "29 000 so'm", icon: "🔥", color: "text-orange-500" },
-                      { val: 50, label: loc.tier50, price: "59 000 so'm", icon: "⚡", color: "text-yellow-500" },
-                      { val: 100, label: loc.tier100, price: "109 000 so'm", icon: "👑", color: "text-purple-500" },
-                      { val: 999, label: loc.tierVIP, price: loc.negotiable, icon: "💎", color: "text-blue-500" },
+                      { val: 10, label: t.battle.tier10, price: t.battle.free, icon: "🚀", color: "text-green-500" },
+                      { val: 20, label: t.battle.tier20, price: "29 000 so'm", icon: "🔥", color: "text-orange-500" },
+                      { val: 50, label: t.battle.tier50, price: "59 000 so'm", icon: "⚡", color: "text-yellow-500" },
+                      { val: 100, label: t.battle.tier100, price: "109 000 so'm", icon: "👑", color: "text-purple-500" },
+                      { val: 999, label: t.battle.tierVIP, price: t.battle.negotiable, icon: "💎", color: "text-blue-500" },
                     ].map(tier => (
                       <button
                         key={tier.val}
@@ -522,6 +463,28 @@ export default function BattlePage() {
                     ))}
                   </div>
                 </div>
+
+                {/* 5. Pullik xona uchun kod kiritish */}
+                {participantTier > 10 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-2 md:col-span-2 mt-4 p-4 bg-primary/5 rounded-2xl border-2 border-dashed border-primary/30"
+                  >
+                    <Label className="text-primary font-bold flex items-center gap-2">
+                       🎟️ {t.battle.enterPaidCode}
+                    </Label>
+                    <Input 
+                      placeholder={t.battle.paidCodePlaceholder} 
+                      value={inputCode} 
+                      onChange={e => setInputCode(e.target.value.toUpperCase())}
+                      className="bg-background font-mono text-center text-lg h-12"
+                    />
+                    <p className="text-[10px] text-muted-foreground text-center">
+                      {t.battle.paidCodeHint}
+                    </p>
+                  </motion.div>
+                )}
 
               </div>
               
@@ -612,18 +575,18 @@ export default function BattlePage() {
                 {/* Agar HAR BIR DAVR (Per Round) usuli bo'lsa */}
                 {battleEnd.mode === "per_round" && (
                   <div className="w-full max-w-md mb-8">
-                    <p className="text-muted-foreground text-center mb-4">Har bir davr g'oliblarlari:</p>
+                    <p className="text-muted-foreground text-center mb-4">{t.battle.roundWinners}:</p>
                     <div className="space-y-2">
                       {battleEnd.roundWinners.map((w: any) => (
                         <div key={w.round} className="flex justify-between items-center bg-background/50 p-3 rounded-lg border border-primary/20">
-                          <span className="font-bold text-muted-foreground">{w.round}-Davr:</span>
+                          <span className="font-bold text-muted-foreground">{w.round}-{t.battle.round}:</span>
                           <span className="font-black text-lg flex items-center gap-2">
                             {w.username} <Badge variant="secondary">{w.wpm} WPM</Badge>
                           </span>
                         </div>
                       ))}
                       {battleEnd.roundWinners.length === 0 && (
-                        <p className="text-center text-sm text-red-500">Hech kim raundni to'liq yakunlamadi.</p>
+                        <p className="text-center text-sm text-red-500">{t.battle.noRoundWinners}</p>
                       )}
                     </div>
                   </div>
@@ -685,11 +648,11 @@ export default function BattlePage() {
                      <div className="flex justify-center gap-8 sm:gap-20 mb-6 sm:mb-10">
                         <div className="text-center">
                           <div className="text-5xl sm:text-6xl font-black text-primary leading-none">{wpm}</div>
-                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2">WPM (TEZLIK)</div>
+                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">{t.battle.wpmSpeed}</div>
                         </div>
                         <div className="text-center">
                           <div className="text-5xl sm:text-6xl font-black text-primary leading-none">{accuracy}%</div>
-                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2">ANIQLIK</div>
+                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">{t.battle.accuracy}</div>
                         </div>
                      </div>
                      <TypingArea 

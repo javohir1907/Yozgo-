@@ -177,6 +177,8 @@ export const competitionCreationCodes = pgTable("competition_creation_codes", {
   isUsed: boolean("is_used").default(false).notNull(),
   createdBy: text("created_by").notNull(), // Uni yaratgan admin Telegram ID
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"), // 5 kunlik muddat uchun
+  activeBattleId: uuid("active_battle_id").references(() => battles.id), // Hozirgi ochiq xona
   usedByUserId: varchar("used_by_user_id").references(() => users.id),
   usedAt: timestamp("used_at"),
 });

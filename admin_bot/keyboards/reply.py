@@ -5,7 +5,7 @@ def main_menu_kb():
         keyboard=[
             [KeyboardButton(text="📊 Statistikalar"), KeyboardButton(text="👥 Foydalanuvchilar")],
             [KeyboardButton(text="📢 Reklamalar"), KeyboardButton(text="🏆 Musobaqalar")],
-            [KeyboardButton(text="⚙️ Sozlamalar")]
+            [KeyboardButton(text="🎟️ Pullik xonalar"), KeyboardButton(text="⚙️ Sozlamalar")]
         ],
         resize_keyboard=True
     )
@@ -39,6 +39,15 @@ def users_menu_kb():
         keyboard=[
             [KeyboardButton(text="🏆 Top Liderlar"), KeyboardButton(text="🔍 Foydalanuvchini izlash")],
             [KeyboardButton(text="📊 Bazani yuklash")],
+            [KeyboardButton(text="🔙 Asosiy menyu")]
+        ],
+        resize_keyboard=True
+    )
+def paid_rooms_menu_kb():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="🆕 Kod yaratish"), KeyboardButton(text="ℹ️ Kod xolati")],
+            [KeyboardButton(text="🚫 Kodni o'chirish")],
             [KeyboardButton(text="🔙 Asosiy menyu")]
         ],
         resize_keyboard=True
