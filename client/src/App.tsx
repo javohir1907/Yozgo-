@@ -31,8 +31,19 @@ function Router() {
     if (location !== "/" && location.endsWith("/")) {
       setLocation(location.slice(0, -1), { replace: true });
     }
+    
+    // Intercept Google Token for Safari ITP fallback
+    const searchParams = new URLSearchParams(window.location.search);
+    const token = searchParams.get("googleToken");
+    if (token) {
+      localStorage.setItem("yozgo_session", token);
+      searchParams.delete("googleToken");
+      const newUrl = window.location.pathname + (searchParams.toString() ? `?${searchParams.toString()}` : "");
+      window.history.replaceState({}, "", newUrl);
+    }
+
     ReactGA.send({ hitType: "pageview", page: location });
-  }, [location]);
+  }, [location, setLocation]);
 
   return (
     <React.Suspense fallback={

@@ -146,6 +146,10 @@ export default function AuthPage() {
            const data = await res.json().catch(()=>({}));
            throw new Error(data.message || "Kod xato");
         }
+        const resCode = await res.json();
+        if (resCode.token) {
+           localStorage.setItem("yozgo_session", resCode.token);
+        }
         window.location.href = "/typing-test";
       } else {
         await register({ email, password, firstName, otp: otpCode, gender });

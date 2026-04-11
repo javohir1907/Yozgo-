@@ -440,7 +440,14 @@ export function setupAuth(app: Express): void {
 
       (req.session as any).userId = existingUser.id;
       
-      res.redirect(frontendUrl);
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
+      res.redirect(`${frontendUrl}?googleToken=${req.sessionID}`);
     } catch (error) {
       console.error("[AUTH] Google Callback Error:", error);
       const frontendUrl = process.env.NODE_ENV === "production" ? "https://yozgo.uz" : "http://localhost:5173";
