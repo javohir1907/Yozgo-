@@ -315,9 +315,12 @@ if (!isTestEnvironment) {
         expires_at TIMESTAMP,
         active_battle_id UUID REFERENCES battles(id),
         used_by_user_id VARCHAR REFERENCES users(id),
-        used_at TIMESTAMP
       );
     `);
+    
+    // Yagonga xona kodi (room_user) limitini olib tashlaymiz (individual kodlarni ko'paytirish uchun)
+    await db.execute(sql`ALTER TABLE room_access_codes DROP CONSTRAINT IF EXISTS room_user_unique;`);
+    
     logger.info(`[DB] Bazaga barcha yangi ustunlar muvaffaqiyatli qo'shildi / tekshirildi!`);
   } catch (err: any) {
     logger.info(`[DB ERROR] Bazani avtomatik yangilashda xato: ` + err.message);

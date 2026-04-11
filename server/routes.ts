@@ -340,11 +340,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         role: role || 'participant'
       });
       
-      const adminMsg = `⚡️ <b>YANGI JANG XONASI!</b>\n\n` +
-                       `👤 Creator: ${userRecord.firstName}\n` +
-                       `👥 Limit: ${finalMaxParticipants} ta\n` +
-                       `💰 Narx: ${roomPrice} so'm\n` +
-                       `🚀 Kod: <code>${createdBattle.code}</code>`;
+      const adminMsg = `⚡️ <b>JANG XONASIGA KIRISH OCHILDI!</b>\n\n` +
+                       `🚀 Asl Xona Kodi: <code>${createdBattle.code}</code>\n\n` +
+                       `👆 Xona kodining ustiga bossangiz avtomatik nusxa olinadi. Nuxsalangan kodni tegishli @yozgo_bot ga yuborib, o'z individual bir martalik kodingizni oling.`;
                        
       sendAdminNotification(adminMsg).catch(console.error);
 

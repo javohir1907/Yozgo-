@@ -241,21 +241,26 @@ export async function generateAndSendRoomCode(
     return;
   }
 
-  const code = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8 characters
-  await db.insert(roomAccessCodes).values({
-    roomId: battleId,
-    userId: dummyUserId,
-    code: code,
-  });
+  try {
+    const code = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8 characters
+    await db.insert(roomAccessCodes).values({
+      roomId: battleId,
+      userId: dummyUserId,
+      code: code,
+    });
 
-  const text = `🎉 Sizning kirish kodingiz:\n\n\`${code}\`\n\n👆 Yuqoridagi kod ustiga bir marta bossangiz avtomatik nusxalanadi (copy bo'ladi).\nKodni saytdagi maydonga kiritib jangga qo'shiling. Kod bir martalik!`;
+    const text = `🎉 Sizning kirish kodingiz:\n\n\`${code}\`\n\n👆 Yuqoridagi kod ustiga bir marta bossangiz avtomatik nusxalanadi (copy bo'ladi).\nKodni saytdagi maydonga kiritib jangga qo'shiling. Kod bir martalik!`;
 
-  userBot?.sendMessage(chatId, text, {
-    parse_mode: "Markdown",
-    reply_markup: {
-      inline_keyboard: [[{ text: "📲 Jangga kirish", web_app: { url: `${MINI_APP_URL}/battle` } }]],
-    },
-  });
+    userBot?.sendMessage(chatId, text, {
+      parse_mode: "Markdown",
+      reply_markup: {
+        inline_keyboard: [[{ text: "📲 Jangga kirish", web_app: { url: `${MINI_APP_URL}/battle` } }]],
+      },
+    });
+  } catch (err: any) {
+    console.error("individual_code_generate_error:", err.message);
+    userBot?.sendMessage(chatId, `Xatolik yuz berdi: ${err.message}`);
+  }
 }
 
 export async function sendMessageToWinner(telegramId: number, text: string) {
