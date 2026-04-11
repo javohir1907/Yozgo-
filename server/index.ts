@@ -289,6 +289,8 @@ if (!isTestEnvironment) {
 
   // ============ CLIENT SERVING ============
 
+  log(`[SYSTEM] Frontend va Backend muvaffaqiyatli bog'landi va Server ishga tushirildi!`);
+  
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
