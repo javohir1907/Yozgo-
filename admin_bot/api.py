@@ -35,7 +35,7 @@ async def api_request(method: str, endpoint: str, payload: dict = None):
                     else:
                         logging.error(f"API Error ({endpoint}): Status {resp.status}")
                         return None
-    except asyncio.TimeoutError:
+    except (asyncio.TimeoutError, TimeoutError):
         logging.error(f"API Timeout ({endpoint})")
         return None
     except Exception as e:

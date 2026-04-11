@@ -43,7 +43,17 @@ async def main():
 
     print("🤖 YOZGO Admin Bot (MemoryStorage bilan) ishga tushmoqda...")
     
-    await bot.delete_webhook(drop_pending_updates=True)
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        # Diagnostika uchun adminga xabar yuboramiz
+        for admin_id in ADMIN_IDS:
+            try:
+                await bot.send_message(admin_id, "✅ <b>YOZGO Admin Bot muvaffaqiyatli ishga tushdi va ulanish o'rnatildi!</b>")
+            except Exception as e:
+                logging.error(f"Could not send startup message to {admin_id}: {e}")
+    except Exception as e:
+        print(f"⚠️ Webhook/Startup error: {e}")
+        
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

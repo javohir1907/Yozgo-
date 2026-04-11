@@ -4,5 +4,7 @@ from config import ADMIN_IDS
 
 class SuperAdminFilter(BaseFilter):
     async def __call__(self, event: Message | CallbackQuery) -> bool:
+        if not event.from_user:
+            return False
         user_id = event.from_user.id
         return user_id in ADMIN_IDS
