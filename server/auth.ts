@@ -628,7 +628,7 @@ export function setupAuth(app: Express): void {
       if (!foundUser) return res.status(401).json({ message: "Unauthorized" });
 
       const { password: _, ...userSummary } = foundUser;
-      res.json(userSummary);
+      res.json({ ...userSummary, token: req.sessionID });
     } catch (error) {
       res.status(500).json({ message: "Internal error" });
     }
