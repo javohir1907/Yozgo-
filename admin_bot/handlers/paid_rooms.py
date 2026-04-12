@@ -8,7 +8,11 @@ from api import api_request
 from keyboards.reply import paid_rooms_menu_kb, main_menu_kb, cancel_kb
 from states.forms import PaidRoomState
 
+from filters import SuperAdminFilter
+
 router = Router()
+router.message.filter(SuperAdminFilter())
+router.callback_query.filter(SuperAdminFilter())
 
 def generate_random_code(length=8):
     chars = string.ascii_uppercase + string.digits

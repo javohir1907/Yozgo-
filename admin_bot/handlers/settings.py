@@ -4,6 +4,9 @@ from keyboards.inline import settings_action_kb
 from api import api_request
 
 router = Router()
+from filters import SuperAdminFilter
+router.message.filter(SuperAdminFilter())
+router.callback_query.filter(SuperAdminFilter())
 
 @router.message(F.text.contains("Sozlamalar"))
 async def settings_menu(message: Message):

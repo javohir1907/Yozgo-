@@ -11,6 +11,9 @@ from api import api_request
 from config import API_URL, ADMIN_API_TOKEN
 
 router = Router()
+from filters import SuperAdminFilter
+router.message.filter(SuperAdminFilter())
+router.callback_query.filter(SuperAdminFilter())
 
 @router.message(F.text.contains("Musobaqalar"))
 async def comps_menu(message: Message):

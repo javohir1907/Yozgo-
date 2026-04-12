@@ -28,10 +28,12 @@ async def main():
     # Redis o'rniga kompyuterning oddiy xotirasini ishlatamiz!
     dp = Dispatcher(storage=MemoryStorage())
     
-    # GLOBAL FILTER: Faqat ADMIN_IDS dagi odamlarga javob beradi
-    dp.message.filter(SuperAdminFilter())
-    dp.callback_query.filter(SuperAdminFilter())
-    
+    # Global xatoliklarni tutish (Debug uchun)
+    @dp.error()
+    async def global_error_handler(event, exception: Exception):
+        logging.error(f"⚠️ GLOBAL ERROR: {exception}", exc_info=True)
+        return True
+
     # Routerlarni ulash
     dp.include_router(common.router)
     dp.include_router(stats.router)
@@ -48,7 +50,7 @@ async def main():
         # Diagnostika uchun adminga xabar yuboramiz
         for admin_id in ADMIN_IDS:
             try:
-                await bot.send_message(admin_id, "✅ <b>YOZGO Admin Bot muvaffaqiyatli ishga tushdi va ulanish o'rnatildi!</b>")
+                await bot.send_message(admin_id, "✅ <b>YOZGO Admin Bot muvaffaqiyatli ishga tushdi va ulanish o'rnatildi!</b>\n\nAgar buni o'qiyotgan bo'lsangiz, demak bot tirik!")
             except Exception as e:
                 logging.error(f"Could not send startup message to {admin_id}: {e}")
     except Exception as e:

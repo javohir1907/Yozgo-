@@ -8,7 +8,9 @@ async def api_request(method: str, endpoint: str, payload: dict = None):
         "X-Admin-Token": ADMIN_API_TOKEN,
         "X-Bot-Secret": ADMIN_API_TOKEN
     }
-    url = f"{API_URL}{endpoint}"
+    base_url = API_URL.rstrip('/')
+    clean_endpoint = endpoint.lstrip('/')
+    url = f"{base_url}/{clean_endpoint}"
     
     timeout = aiohttp.ClientTimeout(total=15)
     

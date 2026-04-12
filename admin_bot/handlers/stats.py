@@ -3,6 +3,9 @@ from aiogram.types import Message
 from api import api_request
 
 router = Router()
+from filters import SuperAdminFilter
+router.message.filter(SuperAdminFilter())
+router.callback_query.filter(SuperAdminFilter())
 
 @router.message(F.text == "📊 Statistikalar")
 async def show_stats(message: Message):
