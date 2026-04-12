@@ -1,17 +1,18 @@
 from aiogram import Router, F
 from aiogram.types import Message
 from api import api_request
+from filters import SuperAdminFilter
 
 router = Router()
-from filters import SuperAdminFilter
 router.message.filter(SuperAdminFilter())
 router.callback_query.filter(SuperAdminFilter())
+
 
 @router.message(F.text == "📊 Statistikalar")
 async def show_stats(message: Message):
     msg = await message.answer("🔄 API dan ma'lumot olinmoqda...")
     data = await api_request("GET", "/stats")
-    
+
     if data:
         text = (
             "📊 <b>Platforma Statistikasi:</b>\n\n"
