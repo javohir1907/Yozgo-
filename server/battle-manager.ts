@@ -19,6 +19,12 @@ import { words } from "../shared/words";
 import { type User } from "@shared/schema";
 import { sendAdminNotification } from "./utils/notifier";
 import { sessionMiddleware } from "./auth";
+import { 
+  analyzeTyping, 
+  banUser, 
+  isVpnOrProxy, 
+  resetPlayerSnapshots 
+} from "./utils/anti-cheat";
 
 // ============ TYPES & INTERFACES ============
 
@@ -197,7 +203,7 @@ export class BattleManager {
       // Natijani yuborish (har bir urinish oxirida)
       socket.on("submit-result", (data: { wpm: number; accuracy: number; progress: number }) => {
         if (currentRoomCode && currentUserId) {
-          this.handleResultSubmission(currentRoomCode, currentUserId, data);
+          this.handleResultSubmission(socket, currentRoomCode, currentUserId, data);
         }
       });
 
@@ -217,7 +223,7 @@ export class BattleManager {
         if (typingEventCount > 5) return;
 
         if (currentRoomCode && currentUserId) {
-          this.handleTypingProgress(currentRoomCode, currentUserId, data.progress, data.wpm);
+          this.handleTypingProgress(socket, currentRoomCode, currentUserId, data.progress, data.wpm);
         }
       });
 
@@ -254,18 +260,44 @@ export class BattleManager {
         adminId: battleRecord.creatorId || user.id,
         players: new Map(),
         status: battleRecord.status as any,
-        settings: {
-          testDuration: 30,
-          totalTime: 5,
-          maxAttempts: 10,
-          genderRestriction: battleRecord.genderRestriction || "all", // DB dan yuklash
-        },
-        testWords: this.generateTestWords(battleRecord.language, 3000),
-      };
-      this.rooms.set(code, room);
-    }
+          settings: {
+            testDuration: 30,
+            totalTime: 5,
+            maxAttempts: 10,
+            maxParticipants: battleRecord.maxParticipants || 10, // DB dan yuklash
+            genderRestriction: battleRecord.genderRestriction || "all", // DB dan yuklash
+          },
+          testWords: this.generateTestWords(battleRecord.language, 3000),
+        };
+        this.rooms.set(code, room);
+      }
 
-    if (room.status === "finished") {
+      // XAVFSIZLIK: Ban qilinganmi?
+      if (user.isBanned) {
+        socket.emit("error-message", { message: "Sizning hisobingiz bloklangan!" });
+        socket.disconnect();
+        return;
+      }
+
+      // XAVFSIZLIK: VPN/Proxy tekshiruvi (Faqat musobaqa/official xonalar kabi muhim xonalar uchun)
+      const ip = (socket.handshake.headers['x-forwarded-for'] as string) || socket.handshake.address;
+      const isProxy = await isVpnOrProxy(ip, socket.handshake.headers);
+      if (isProxy && room.settings.maxParticipants && room.settings.maxParticipants > 10) { 
+        // 10 tadan ko'p kishilik (pullik yoki musobaqa) xonalari uchun qat'iy tekshiruv
+        socket.emit("error-message", { message: "VPN yoki Proxy orqali musobaqa xonalariga kirish taqiqlangan!" });
+        socket.disconnect();
+        return;
+      }
+
+      // CHECK CAPACITY
+      const currentPlayerCount = room.players.size;
+      const capacityLimit = room.settings.maxParticipants || 10;
+      if (currentPlayerCount >= capacityLimit && !room.players.has(user.id)) {
+        socket.emit("error-message", { message: `Xona to'lgan! Maksimal sig'im: ${capacityLimit} kishi.` });
+        return;
+      }
+
+      if (room.status === "finished") {
       socket.emit("error-message", { message: "Ushbu jang yakunlangan" });
       return;
     }
@@ -341,12 +373,21 @@ export class BattleManager {
   /**
    * Real-vaqtda progress yangilanishini guruhga tarqatish.
    */
-  private handleTypingProgress(code: string, userId: string, progress: number, wpm: number): void {
+  private handleTypingProgress(socket: Socket, code: string, userId: string, progress: number, wpm: number): void {
     const room = this.rooms.get(code);
     if (!room || room.status !== "playing") return;
 
     // ANTI-CHEAT TEKSHIRUVI
-    const safeWpm = wpm > 250 ? 0 : wpm; // 250 dan yuqori tezlikni nolga tenglaymiz (yoki cheater deb belgilaymiz)
+    const isCheating = analyzeTyping(userId, wpm, progress);
+    if (isCheating) {
+       banUser(userId, `Typing patterns detected as cheating (WPM: ${wpm}, Prog: ${progress})`);
+       socket.emit("error-message", { message: "Siz cheaterlik qilganingiz uchun bloklandingiz!" });
+       socket.disconnect();
+       this.handleLeaveRoom(code, userId);
+       return;
+    }
+
+    const safeWpm = wpm > 250 ? 0 : wpm;
     const safeProgress = progress > 100 ? 100 : progress;
 
     const player = room.players.get(userId);
@@ -365,6 +406,7 @@ export class BattleManager {
    * Urinish natijasini qabul qilish va bazaga/peshqadamlarga yozish.
    */
   private async handleResultSubmission(
+    socket: Socket,
     code: string,
     userId: string,
     data: { wpm: number; accuracy: number; progress: number }
@@ -373,9 +415,13 @@ export class BattleManager {
     if (!room || room.status !== "playing") return;
 
     // ANTI-CHEAT TEKSHIRUVI
-    if (data.wpm > 250 || data.accuracy > 100 || data.accuracy < 0) {
+    if (data.wpm > 260 || data.accuracy > 100 || data.accuracy < 0) {
       console.warn(`🚨 [ANTI-CHEAT] Foydalanuvchi ${userId} shubhali natija yubordi: ${data.wpm} WPM`);
-      data.wpm = 0; // Natijani bekor qilish
+      banUser(userId, `Extreme result submission: ${data.wpm} WPM`);
+      socket.emit("error-message", { message: "Siz cheaterlik qilganingiz uchun bloklandingiz!" });
+      socket.disconnect();
+      this.handleLeaveRoom(code, userId);
+      return;
     }
 
     const player = room.players.get(userId);
@@ -510,6 +556,7 @@ export class BattleManager {
       if (player) {
         player.isDisconnected = true;
       }
+      resetPlayerSnapshots(userId);
     }
 
     const activePlayersCount = Array.from(room.players.values()).filter(p => !p.isDisconnected).length;

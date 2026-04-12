@@ -113,6 +113,18 @@ export default function BattlePage() {
     sendProgress,
   } = useWebsocket(battleCode, user as any);
 
+  // Focus Detection
+  useEffect(() => {
+    const handleBlur = () => {
+      if (isAttemptActive && battleCode) {
+        // Option: Send a message to server that user lost focus
+        // For now, we just slow down or mark
+      }
+    };
+    window.addEventListener("blur", handleBlur);
+    return () => window.removeEventListener("blur", handleBlur);
+  }, [isAttemptActive, battleCode]);
+
   const isAdmin = room?.adminId === user?.id;
 
   // ============ EFFECTS ============

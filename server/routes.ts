@@ -132,6 +132,13 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // Ma'lumotlarni validatsiya qilish
       const validatedData = insertTestResultSchema.parse({ ...req.body, userId });
+
+      // ANTI-CHEAT: Absolute limit check
+      if (validatedData.wpm > 260) {
+        console.warn(`🚨 [LIMIT] Manual Result: User ${userId} exceeded WPM limit: ${validatedData.wpm}`);
+        return res.status(HTTP_STATUS.FORBIDDEN).json({ message: "Sizning natijangiz shubhali deb topildi. Iltimos, halol o'ynang!" });
+      }
+
       const savedResult = await storage.createTestResult(validatedData);
 
       // Leaderboard-dagi umumiy hisobni yangilash
@@ -734,6 +741,19 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!res.headersSent) {
           res.status(500).json({ error: "Serverda xatolik yuz berdi" });
       }
+    }
+  });
+
+  // 1.5. FOYDALANUVCHINI BAN QILISH
+  app.post("/api/admin/users/ban", adminAuth, async (req, res) => {
+    try {
+      const { userId, isBanned } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId talab qilinadi" });
+
+      await storage.setUserBanned(userId, isBanned);
+      res.json({ success: true, message: `Foydalanuvchi ${isBanned ? 'bloklandi' : 'blokdan chiqarildi'}` });
+    } catch (error) {
+      res.status(500).json({ error: "Foydalanuvchini ban qilishda xatolik" });
     }
   });
 

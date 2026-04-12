@@ -64,6 +64,11 @@ export interface IStorage {
   updateBattleStatus(id: string, status: string): Promise<Battle>;
   addBattleParticipant(participant: InsertBattleParticipant): Promise<BattleParticipant>;
   getBattleParticipants(battleId: string): Promise<(BattleParticipant & { user: User })[]>;
+  updateBattleParticipant(id: string, data: Partial<BattleParticipant>): Promise<BattleParticipant>;
+
+  // Security & Moderation
+  setUserBanned(userId: string, isBanned: boolean): Promise<void>;
+  updateUserIp(userId: string, ip: string): Promise<void>;
 
   // Social & Marketing
   createReview(review: InsertReview): Promise<Review>;
@@ -304,6 +309,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(battleParticipants.id, id))
       .returning();
     return updatedParticipant;
+  }
+
+  // ============ SECURITY & MODERATION ============
+
+  async setUserBanned(userId: string, isBanned: boolean): Promise<void> {
+    await db
+      .update(users)
+      .set({ isBanned })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserIp(userId: string, ip: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ updatedAt: new Date() }) // or add an ip field if we want to store it in user table too
+      .where(eq(users.id, userId));
   }
 }
 
