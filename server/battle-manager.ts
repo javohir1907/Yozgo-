@@ -36,11 +36,15 @@ interface Player {
   user: User;
   progress: number;
   wpm: number;
+  rawWpm?: number;
+  consistency?: number;
   accuracy: number;
   bestWpm: number;
   bestAccuracy: number;
+  bestRawWpm?: number;
+  bestConsistency?: number;
   attempts: number;
-  attemptHistory: { wpm: number; accuracy: number }[]; // <-- YANGI QO'SHILDI
+  attemptHistory: { wpm: number; accuracy: number; rawWpm?: number; consistency?: number }[]; // <-- YANGI QO 'SHILDI
   isReady: boolean;
   isFinished: boolean;
   isDisconnected?: boolean;
@@ -223,7 +227,8 @@ export class BattleManager {
         if (typingEventCount > 5) return;
 
         if (currentRoomCode && currentUserId) {
-          this.handleTypingProgress(socket, currentRoomCode, currentUserId, data.progress, data.wpm);
+          const { progress, wpm, ...extra } = data;
+          this.handleTypingProgress(socket, currentRoomCode, currentUserId, progress, wpm, extra);
         }
       });
 
@@ -373,7 +378,7 @@ export class BattleManager {
   /**
    * Real-vaqtda progress yangilanishini guruhga tarqatish.
    */
-  private handleTypingProgress(socket: Socket, code: string, userId: string, progress: number, wpm: number): void {
+  private handleTypingProgress(socket: Socket, code: string, userId: string, progress: number, wpm: number, extraData: any = {}): void {
     const room = this.rooms.get(code);
     if (!room || room.status !== "playing") return;
 
@@ -387,13 +392,16 @@ export class BattleManager {
        return;
     }
 
-    const safeWpm = wpm > 250 ? 0 : wpm;
+    const safeWpm = wpm > 260 ? 0 : wpm;
     const safeProgress = progress > 100 ? 100 : progress;
 
     const player = room.players.get(userId);
     if (player) {
       player.progress = safeProgress;
       player.wpm = safeWpm;
+      player.rawWpm = extraData.rawWpm;
+      player.consistency = extraData.consistency;
+      if (extraData.accuracy) player.accuracy = extraData.accuracy;
 
       this.io.to(code).emit("leaderboard-update", {
         players: this.getFormattedPlayers(room),
@@ -409,7 +417,7 @@ export class BattleManager {
     socket: Socket,
     code: string,
     userId: string,
-    data: { wpm: number; accuracy: number; progress: number }
+    data: { wpm: number; accuracy: number; progress: number; rawWpm?: number; consistency?: number }
   ): Promise<void> {
     const room = this.rooms.get(code);
     if (!room || room.status !== "playing") return;
@@ -429,11 +437,18 @@ export class BattleManager {
       player.attempts++;
       
       // Har bir raund natijasini saqlab borish
-      player.attemptHistory.push({ wpm: data.wpm, accuracy: data.accuracy });
+      player.attemptHistory.push({ 
+        wpm: data.wpm, 
+        accuracy: data.accuracy,
+        rawWpm: data.rawWpm,
+        consistency: data.consistency
+      });
 
       if (data.wpm >= player.bestWpm) {
         player.bestWpm = data.wpm;
         player.bestAccuracy = data.accuracy;
+        player.bestRawWpm = data.rawWpm;
+        player.bestConsistency = data.consistency;
       }
 
       // Xronologik natijani bazada yangilash (yaxshiroq natija uchun)
@@ -592,14 +607,23 @@ export class BattleManager {
         gender: p.user.gender || "male", // UI uchun jins ni qo'shildi
         progress: p.progress,
         wpm: p.wpm,
+        rawWpm: p.rawWpm,
+        consistency: p.consistency,
+        accuracy: p.accuracy,
         bestWpm: p.bestWpm,
         bestAccuracy: p.bestAccuracy,
+        bestRawWpm: p.bestRawWpm,
+        bestConsistency: p.bestConsistency,
         attempts: p.attempts,
         attemptHistory: p.attemptHistory, // QO'SHILDI: Frontendda raundlarni ko'rsatish uchun
         isAdmin: p.user.id === room.adminId,
         isDisconnected: !!p.isDisconnected,
       }))
-      .sort((a, b) => b.bestWpm - a.bestWpm);
+      .sort((a, b) => {
+        if (b.bestWpm !== a.bestWpm) return b.bestWpm - a.bestWpm;
+        if (b.bestAccuracy !== a.bestAccuracy) return b.bestAccuracy - a.bestAccuracy;
+        return (b.bestConsistency || 0) - (a.bestConsistency || 0);
+      });
   }
 
   private calculateLeader(room: Room): string | null {

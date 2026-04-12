@@ -83,6 +83,11 @@ export default function BattlePage() {
 
   const correctCharsRef = useRef(0);
   const allKeystrokesRef = useRef(0);
+  const keystrokeIntervalsRef = useRef<number[]>([]);
+  const lastKeystrokeTimeRef = useRef<number | null>(null);
+
+  const [rawWpm, setRawWpm] = useState<number>(0);
+  const [consistency, setConsistency] = useState<number>(100);
   
   // --- STATE: Settings & Terms ---
   const [testDuration, setTestDuration] = useState<number>(GAME_DEFAULTS.TEST_DURATION);
@@ -182,15 +187,29 @@ export default function BattlePage() {
       const elapsedMins = (Date.now() - attemptStartTime) / 60000;
       if (elapsedMins > 0) {
         const currentWpm = Math.max(0, Math.round((correctCharsRef.current / 5) / elapsedMins));
+        const currentRawWpm = Math.max(0, Math.round((allKeystrokesRef.current / 5) / elapsedMins));
         const currentAcc = allKeystrokesRef.current > 0 
             ? Math.round((correctCharsRef.current / allKeystrokesRef.current) * 100) 
             : 100;
         
+        // Consistency calculation
+        const intervals = keystrokeIntervalsRef.current;
+        let currentConsistency = 100;
+        if (intervals.length >= 2) {
+          const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          const variance = intervals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / intervals.length;
+          const stdDev = Math.sqrt(variance);
+          const cv = stdDev / mean;
+          currentConsistency = Math.max(0, Math.min(100, Math.round(100 * (1 - cv))));
+        }
+
         setWpm(currentWpm);
+        setRawWpm(currentRawWpm);
         setAccuracy(currentAcc);
+        setConsistency(currentConsistency);
 
         const prog = currentWords.length > 0 ? Math.min(100, Math.round((currentIndex / currentWords.length) * 100)) : 0;
-        sendProgress(prog, currentWpm);
+        sendProgress(prog, currentWpm, { rawWpm: currentRawWpm, consistency: currentConsistency, accuracy: currentAcc });
       }
     };
 
@@ -218,6 +237,10 @@ export default function BattlePage() {
     setHistory([]);
     correctCharsRef.current = 0;
     allKeystrokesRef.current = 0;
+    keystrokeIntervalsRef.current = [];
+    lastKeystrokeTimeRef.current = null;
+    setRawWpm(0);
+    setConsistency(100);
     setAttemptCount(prev => prev + 1);
   };
 
@@ -228,8 +251,8 @@ export default function BattlePage() {
     setIsAttemptActive(false);
     setAttemptTimer(null);
     if (wpm > 0) {
-      submitResult(wpm, accuracy, 100);
-      toast({ title: t.battle.readyStatus, description: `${wpm} WPM ${t.battle.resultSaved}` });
+      submitResult(wpm, accuracy, 100, { rawWpm, consistency });
+      toast({ title: t.battle.readyStatus, description: `${wpm} WPM | ${accuracy}% ACC | ${consistency}% CNS` });
     }
   };
 
@@ -276,6 +299,16 @@ export default function BattlePage() {
         }
         setUserInput(value);
       }
+
+      // Track intervals for consistency
+      const now = Date.now();
+      if (lastKeystrokeTimeRef.current) {
+        const interval = now - lastKeystrokeTimeRef.current;
+        if (interval < 2000) { // Filter out long pauses (e.g. over 2s)
+          keystrokeIntervalsRef.current.push(interval);
+        }
+      }
+      lastKeystrokeTimeRef.current = now;
     },
     [isAttemptActive, battleStart, currentIndex, history, userInput, currentWords]
   );
@@ -582,15 +615,17 @@ export default function BattlePage() {
 
                 {/* Agar HAR BIR DAVR (Per Round) usuli bo'lsa */}
                 {battleEnd.mode === "per_round" && (
-                  <div className="w-full max-w-md mb-8">
-                    <p className="text-muted-foreground text-center mb-4">{t.battle.roundWinners}:</p>
-                    <div className="space-y-2">
+                  <div className="w-full max-w-2xl mb-8 px-4">
+                    <p className="text-muted-foreground text-center mb-4 font-bold uppercase tracking-widest text-xs">{t.battle.roundWinners}:</p>
+                    <div className="grid grid-cols-1 gap-3">
                       {battleEnd.roundWinners.map((w: any) => (
-                        <div key={w.round} className="flex justify-between items-center bg-background/50 p-3 rounded-lg border border-primary/20">
-                          <span className="font-bold text-muted-foreground">{w.round}-{t.battle.round}:</span>
-                          <span className="font-black text-lg flex items-center gap-2">
-                            {w.username} <Badge variant="secondary">{w.wpm} WPM</Badge>
-                          </span>
+                        <div key={w.round} className="flex flex-col sm:flex-row justify-between items-center bg-background/50 p-4 rounded-xl border border-primary/20 gap-4 shadow-sm hover:shadow-md transition-all">
+                          <span className="font-extrabold text-muted-foreground bg-secondary/80 px-3 py-1 rounded-full text-xs sm:text-sm">{w.round}-{t.battle.round}</span>
+                          <span className="font-black text-lg text-primary truncate max-w-[150px]">{w.username}</span>
+                          <div className="flex gap-2">
+                             <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">{w.wpm} WPM</Badge>
+                             <Badge variant="outline" className="opacity-70 text-[10px]">{w.accuracy || 100}% ACC</Badge>
+                          </div>
                         </div>
                       ))}
                       {battleEnd.roundWinners.length === 0 && (
@@ -653,14 +688,22 @@ export default function BattlePage() {
                     </div>
                   )}
                   <div className={!isAttemptActive ? "blur-md pointer-events-none opacity-40" : ""}>
-                     <div className="flex justify-center gap-8 sm:gap-20 mb-6 sm:mb-10">
+                     <div className="flex justify-center gap-4 sm:gap-12 mb-6 sm:mb-10 flex-wrap">
                         <div className="text-center">
-                          <div className="text-5xl sm:text-6xl font-black text-primary leading-none">{wpm}</div>
+                          <div className="text-4xl sm:text-6xl font-black text-primary leading-none">{wpm}</div>
                           <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">{t.battle.wpmSpeed}</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-5xl sm:text-6xl font-black text-primary leading-none">{accuracy}%</div>
+                          <div className="text-4xl sm:text-6xl font-black text-primary leading-none">{accuracy}%</div>
                           <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">{t.battle.accuracy}</div>
+                        </div>
+                        <div className="text-center opacity-70">
+                          <div className="text-4xl sm:text-6xl font-black text-foreground/50 leading-none">{rawWpm}</div>
+                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">Raw</div>
+                        </div>
+                        <div className="text-center opacity-70">
+                          <div className="text-4xl sm:text-6xl font-black text-foreground/50 leading-none">{consistency}%</div>
+                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">CNS</div>
                         </div>
                      </div>
                      <TypingArea 
@@ -706,17 +749,22 @@ export default function BattlePage() {
                     <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
                   </div>
                   <div className="relative z-10 text-right">
-                    <div className="font-black text-primary">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
+                    <div className="font-black text-primary leading-none">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
+                    <div className="text-[9px] font-bold text-muted-foreground/60 flex gap-1 justify-end mt-0.5">
+                       <span>{p.accuracy || p.bestAccuracy}% ACC</span>
+                       <span>•</span>
+                       <span>{p.consistency || p.bestConsistency || 0}% CNS</span>
+                    </div>
                     {room?.settings?.winMode === "per_round" ? (
-                      <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-1 max-w-[120px]">
+                      <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-2 max-w-[120px]">
                         {p.attemptHistory?.map((h: any, idx: number) => (
-                          <span key={idx} className="bg-primary/20 px-1 rounded border border-primary/30" title={`${idx+1}-davr natijasi: ${h.wpm} WPM`}>
+                          <span key={idx} className="bg-primary/20 px-1.5 py-0.5 rounded-md border border-primary/30 text-[9px]" title={`${idx+1}-r: ${h.wpm}W | ${h.accuracy}%A`}>
                             R{idx + 1}: <span className="text-primary">{h.wpm}</span>
                           </span>
                         ))}
                       </div>
                     ) : (
-                      <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
+                      <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50 mt-1">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
                     )}
                   </div>
                 </div>
@@ -746,17 +794,22 @@ export default function BattlePage() {
                         <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
                       </div>
                       <div className="relative z-10 text-right">
-                        <div className="font-black text-primary">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
+                        <div className="font-black text-primary leading-none">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
+                        <div className="text-[9px] font-bold text-muted-foreground/60 flex gap-1 justify-end mt-0.5">
+                           <span>{p.accuracy || p.bestAccuracy}% ACC</span>
+                           <span>•</span>
+                           <span>{p.consistency || p.bestConsistency || 0}% CNS</span>
+                        </div>
                         {room?.settings?.winMode === "per_round" ? (
-                          <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-1 max-w-[120px]">
+                          <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-2 max-w-[120px]">
                             {p.attemptHistory?.map((h: any, idx: number) => (
-                              <span key={idx} className="bg-primary/20 px-1 rounded border border-primary/30" title={`${idx+1}-davr natijasi: ${h.wpm} WPM`}>
+                              <span key={idx} className="bg-primary/20 px-1.5 py-0.5 rounded-md border border-primary/30 text-[9px]" title={`${idx+1}-r: ${h.wpm}W | ${h.accuracy}%A`}>
                                 R{idx + 1}: <span className="text-primary">{h.wpm}</span>
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
+                          <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50 mt-1">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
                         )}
                       </div>
                     </div>
@@ -785,17 +838,22 @@ export default function BattlePage() {
                       <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
                     </div>
                     <div className="relative z-10 text-right">
-                      <div className="font-black text-primary">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
+                      <div className="font-black text-primary leading-none">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
+                      <div className="text-[9px] font-bold text-muted-foreground/60 flex gap-1 justify-end mt-0.5">
+                         <span>{p.accuracy || p.bestAccuracy}% ACC</span>
+                         <span>•</span>
+                         <span>{p.consistency || p.bestConsistency || 0}% CNS</span>
+                      </div>
                       {room?.settings?.winMode === "per_round" ? (
-                        <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-1 max-w-[120px]">
+                        <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-2 max-w-[120px]">
                           {p.attemptHistory?.map((h: any, idx: number) => (
-                            <span key={idx} className="bg-primary/20 px-1 rounded border border-primary/30" title={`${idx+1}-davr natijasi: ${h.wpm} WPM`}>
+                            <span key={idx} className="bg-primary/20 px-1.5 py-0.5 rounded-md border border-primary/30 text-[9px]" title={`${idx+1}-r: ${h.wpm}W | ${h.accuracy}%A`}>
                               R{idx + 1}: <span className="text-primary">{h.wpm}</span>
                             </span>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
+                        <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50 mt-1">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
                       )}
                     </div>
                   </div>

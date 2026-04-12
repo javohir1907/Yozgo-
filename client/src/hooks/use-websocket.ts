@@ -70,12 +70,12 @@ export function useWebsocket(code: string | null, user: User | null) {
     socketRef.current?.emit("start-battle", { settings });
   }, []);
 
-  const submitResult = useCallback((wpm: number, accuracy: number, progress: number) => {
-    socketRef.current?.emit("submit-result", { wpm, accuracy, progress });
+  const submitResult = useCallback((wpm: number, accuracy: number, progress: number, extraData: any = {}) => {
+    socketRef.current?.emit("submit-result", { wpm, accuracy, progress, ...extraData });
   }, []);
 
-  const sendProgress = useCallback((progress: number, wpm: number) => {
-    socketRef.current?.emit("typing-progress", { progress, wpm });
+  const sendProgress = useCallback((progress: number, wpm: number, extraData: any = {}) => {
+    socketRef.current?.emit("typing-progress", { progress, wpm, ...extraData });
   }, []);
 
   return {
