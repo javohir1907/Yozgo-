@@ -1,7 +1,7 @@
 import React from "react";
 import { Switch, Route, useLocation } from "wouter";
 import ReactGA from "react-ga4";
-ReactGA.initialize("G-H5C2NHLJZ4");
+ReactGA.initialize("G-56W2C1S1FV");
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
