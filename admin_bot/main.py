@@ -7,7 +7,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
-from config import BOT_TOKEN
+from config import BOT_TOKEN, ADMIN_IDS
 from filters import SuperAdminFilter
 from handlers import common, stats, ads, comps, users, settings, paid_rooms
 

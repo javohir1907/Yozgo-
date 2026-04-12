@@ -25,8 +25,8 @@ async def start_code_creation(message: Message, state: FSMContext):
 
 @router.message(PaidRoomState.max_participants, F.text != "❌ Bekor qilish")
 async def create_code(message: Message, state: FSMContext):
-    if not message.text.isdigit():
-        return await message.answer("Faqat raqam kiriting!")
+    if not message.text or not message.text.isdigit():
+        return await message.answer("❌ Iltimos, faqat raqam kiriting!")
     
     max_p = int(message.text)
     code = generate_random_code()
@@ -59,6 +59,9 @@ async def start_code_status(message: Message, state: FSMContext):
 
 @router.message(PaidRoomState.code_status, F.text != "❌ Bekor qilish")
 async def check_code_status(message: Message, state: FSMContext):
+    if not message.text:
+        return await message.answer("Iltimos, kodni matn ko'rinishida yuboring.")
+    
     code = message.text.strip().upper()
     
     result = await api_request("GET", f"/creation-codes/status/{code}")
@@ -88,6 +91,9 @@ async def start_code_deactivate(message: Message, state: FSMContext):
 
 @router.message(PaidRoomState.deactivate_code, F.text != "❌ Bekor qilish")
 async def deactivate_code(message: Message, state: FSMContext):
+    if not message.text:
+        return await message.answer("Iltimos, kodni matn ko'rinishida yuboring.")
+        
     code = message.text.strip().upper()
     
     result = await api_request("POST", "/creation-codes/deactivate", {"code": code})
