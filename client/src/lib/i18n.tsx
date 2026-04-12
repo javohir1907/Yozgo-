@@ -194,7 +194,8 @@ const translations = {
         "In case of technical issues, prizes will not be awarded.",
         "Cheating will result in disqualification and immediate ban.",
         "Each user can only claim one prize per day.",
-        "VPN usage is strictly prohibited in official competitions.",
+        "VPN, Proxy or any bots usage is strictly prohibited!",
+        "Cheaters will be banned permanently!",
       ],
     },
     profile: {
@@ -465,7 +466,8 @@ const translations = {
         "В случае технических проблем призы не выдаются.",
         "Обман (чит) приведет к дисквалификации и бану.",
         "Каждый пользователь может получить только один приз.",
-        "Использование VPN строго запрещено на соревнованиях.",
+        "Использование VPN, Proxy или любых ботов строго запрещено!",
+        "Читеры будут забанены навсегда!",
       ],
     },
     profile: {
@@ -736,7 +738,8 @@ const translations = {
         "Texnik nosozlik yuzaga kelsa, sovrinlar berilmaydi.",
         "Firibgarlik (Cheating) aniqlansa, natija bekor qilinadi.",
         "Har bir foydalanuvchi faqat bir marta sovrin olishi mumkin.",
-        "VPN orqali kirish qat'iyan taqiqlanadi.",
+        "VPN, Proxy yoki har qanday botdan foydalanish taqiqlanadi!",
+        "Cheat ishlatgan foydalanuvchi butunlay bloklanadi!",
       ],
     },
     profile: {

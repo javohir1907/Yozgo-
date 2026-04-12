@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Share2 } from "lucide-react";
+import { RefreshCw, Share2, Copy, Check } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ResultCardProps {
   wpm: number;
@@ -23,6 +25,17 @@ export function ResultCard({
   onRestart,
 }: ResultCardProps) {
   const { t } = useI18n();
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = () => {
+    const text = `YOZGO Typing Test Result:\n🚀 Speed: ${wpm} WPM\n🎯 Accuracy: ${accuracy}%\n📊 Raw WPM: ${rawWpm || 0}\n📈 Consistency: ${consistency || 0}%\n\nJoin the arena at yozgo.uz!`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      toast({ title: t.battle.copied, description: t.battle.copiedDesc });
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   return (
     <Card className="w-full max-w-2xl mx-auto border-none bg-transparent" data-testid="result-card">
@@ -96,8 +109,9 @@ export function ResultCard({
             variant="ghost"
             className="hover-elevate active-elevate-2 font-mono"
             data-testid="button-share"
+            onClick={handleShare}
           >
-            <Share2 className="mr-2 h-4 w-4" />
+            {copied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Share2 className="mr-2 h-4 w-4" />}
             {t.typing.share}
           </Button>
         </div>

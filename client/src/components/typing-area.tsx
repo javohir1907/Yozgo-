@@ -236,7 +236,7 @@ export function TypingArea({
 
   return (
     <div
-      className="relative w-full max-w-5xl mx-auto h-[10.5rem] overflow-hidden cursor-text"
+      className="relative w-full max-w-5xl mx-auto h-[15rem] overflow-hidden cursor-text"
       onClick={() => inputRef.current?.focus()}
       ref={containerRef}
       data-testid="typing-area"

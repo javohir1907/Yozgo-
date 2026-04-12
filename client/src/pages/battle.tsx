@@ -195,6 +195,7 @@ export default function BattlePage() {
   const allKeystrokesRef = useRef(0);
   const keystrokeIntervalsRef = useRef<number[]>([]);
   const lastKeystrokeTimeRef = useRef<number | null>(null);
+  const currentIndexRef = useRef(0);
 
   const [rawWpm, setRawWpm] = useState<number>(0);
   const [consistency, setConsistency] = useState<number>(100);
@@ -211,10 +212,6 @@ export default function BattlePage() {
   const [genderRestriction, setGenderRestriction] = useState<"all" | "male" | "female">("all");
   const [showTerms, setShowTerms] = useState<boolean>(false);
   const [isAgreed, setIsAgreed] = useState<boolean>(false);
-
-  // Tizimdagi hozirgi tilni aniqlash (Default: 'uz')
-  // const currentLang = localStorage.getItem('yozgo_lang') || 'uz';
-  // const loc = (uiTexts as any)[currentLang] || uiTexts.uz;
 
   // --- WEBSOCKET HOOK ---
   const {
@@ -318,7 +315,7 @@ export default function BattlePage() {
         setAccuracy(currentAcc);
         setConsistency(currentConsistency);
 
-        const prog = currentWords.length > 0 ? Math.min(100, Math.round((currentIndex / currentWords.length) * 100)) : 0;
+        const prog = currentWords.length > 0 ? Math.min(100, Math.round((currentIndexRef.current / currentWords.length) * 100)) : 0;
         sendProgress(prog, currentWpm, { rawWpm: currentRawWpm, consistency: currentConsistency, accuracy: currentAcc });
       }
     };
@@ -327,7 +324,7 @@ export default function BattlePage() {
       statsInterval = setInterval(updateLiveStats, 200);
     }
     return () => clearInterval(statsInterval);
-  }, [isAttemptActive, attemptStartTime, currentIndex, currentWords.length, sendProgress]);
+  }, [isAttemptActive, attemptStartTime, currentWords.length, sendProgress]);
 
   // ============ ACTIONS ============
 
@@ -342,6 +339,7 @@ export default function BattlePage() {
     setAttemptStartTime(Date.now());
     setUserInput("");
     setCurrentIndex(0);
+    currentIndexRef.current = 0;
     setWpm(0);
     setAccuracy(100);
     setHistory([]);
@@ -394,7 +392,11 @@ export default function BattlePage() {
         if (currentTyped === word) correctCharsRef.current += 1; 
 
         setHistory((prev) => [...prev, currentTyped]);
-        setCurrentIndex((prev) => prev + 1);
+        setCurrentIndex(prev => {
+          const next = prev + 1;
+          currentIndexRef.current = next;
+          return next;
+        });
         setUserInput("");
       } else {
         if (value.length > userInput.length) {
@@ -669,8 +671,6 @@ export default function BattlePage() {
             <div className="space-y-4 py-4">
               <ul className="text-sm space-y-2 list-disc list-inside text-muted-foreground">
                 {t.battle.rules.map((term, i) => <li key={i}>{term}</li>)}
-                <li className="text-red-500 font-bold">🚫 VPN, Proxy yoki har qanday botdan foydalanish taqiqlanadi!</li>
-                <li className="text-red-500 font-bold">🚫 Cheat ishlatgan foydalanuvchi butunlay bloklanadi!</li>
               </ul>
               <div className="flex items-center space-x-2 pt-4 border-t">
                 <Checkbox id="accept" checked={isAgreed} onCheckedChange={(c) => setIsAgreed(c as boolean)} />
