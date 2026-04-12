@@ -1,4 +1,5 @@
 import logging
+import time
 import aiohttp
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, BufferedInputFile
@@ -17,21 +18,17 @@ router.message.filter(SuperAdminFilter())
 router.callback_query.filter(SuperAdminFilter())
 
 
-# ==========================================
-# 👥 FOYDALANUVCHILAR ASOSIY MENYUSI
-# ==========================================
 @router.message(F.text.contains("Foydalanuvchilar"))
 async def users_menu(message: Message):
     await message.answer("👥 Foydalanuvchilarni boshqarish bo'limi:", reply_markup=users_menu_kb())
 
 
-# ==========================================
-# 🏆 TOP LIDERLARNI KO'RISH
-# ==========================================
 @router.message(F.text.contains("Top Liderlar"))
 async def show_top_users(message: Message):
+    start = time.monotonic()
     msg = await message.answer("🔄 Liderlar yuklanmoqda...")
     data = await api_request("GET", "/users/top")
+    elapsed = round(time.monotonic() - start, 1)
 
     if data:
         text = "🏆 <b>TOP Foydalanuvchilar:</b>\n\n"
@@ -39,18 +36,16 @@ async def show_top_users(message: Message):
             status = "🚫" if u.get('isBanned') else "🟢"
             username = u.get('firstName') or u.get('email') or "Noma'lum"
             text += f"{idx}. <b>{username}</b> [ID: {u.get('id')}] - {status}\n"
+        text += f"\n⏱ {elapsed}s"
         await msg.edit_text(text)
     else:
-        await msg.edit_text("❌ Liderlarni yuklab bo'lmadi yoki API xatoligi.")
+        await msg.edit_text(f"❌ Liderlarni yuklab bo'lmadi. (⏱ {elapsed}s)\n\n<i>API javob bermadi yoki token noto'g'ri.</i>")
 
 
-# ==========================================
-# 🔍 FOYDALANUVCHINI QIDIRISH VA BAN QILISH
-# ==========================================
 @router.message(F.text.contains("Foydalanuvchini izlash"))
 async def search_user_start(message: Message, state: FSMContext):
     await state.set_state(UserSearchState.user_id)
-    await message.answer("🔍 Qidirmoqchi bo'lgan foydalanuvchining <b>ID raqami, ismi yoki emailini</b> yuboring:", reply_markup=cancel_kb())
+    await message.answer("🔍 Foydalanuvchining <b>ID, ismi yoki emailini</b> yuboring:", reply_markup=cancel_kb())
 
 
 @router.message(UserSearchState.user_id)
@@ -60,9 +55,11 @@ async def search_user_result(message: Message, state: FSMContext):
         return await message.answer("Iltimos, matn yuboring.", reply_markup=users_menu_kb())
 
     query = message.text.strip()
-    msg = await message.answer("🔄 Izlanmoqda...", reply_markup=users_menu_kb())
+    start = time.monotonic()
+    msg = await message.answer("🔄 Izlanmoqda...")
 
     users_data = await api_request("GET", f"/users/search/{query}")
+    elapsed = round(time.monotonic() - start, 1)
 
     if users_data and isinstance(users_data, list) and len(users_data) > 0:
         user_data = users_data[0]
@@ -75,21 +72,28 @@ async def search_user_result(message: Message, state: FSMContext):
             f"🆔 ID: {user_data.get('id')}\n"
             f"📧 User: {username}\n"
             f"📊 Holati: <b>{status}</b>\n"
-            f"📅 Ro'yxatdan o'tgan: {str(user_data.get('createdAt', ''))[:10]}"
+            f"📅 Ro'yxatdan o'tgan: {str(user_data.get('createdAt', ''))[:10]}\n"
+            f"⏱ Qidiruv vaqti: {elapsed}s"
         )
         if len(users_data) > 1:
-            text += f"\n\n<i>Qidiruv bo'yicha yana {len(users_data) - 1} ta foydalanuvchi topildi. Aniqroq izlang.</i>"
+            text += f"\n\n<i>Yana {len(users_data) - 1} ta natija topildi.</i>"
 
         await msg.edit_text(text, reply_markup=user_action_kb(user_data['id'], is_banned))
+    elif users_data is not None and isinstance(users_data, list) and len(users_data) == 0:
+        await msg.edit_text(f"❌ «{query}» bo'yicha hech kim topilmadi. (⏱ {elapsed}s)", reply_markup=users_menu_kb())
     else:
-        await msg.edit_text("❌ Bunday ma'lumotga ega foydalanuvchi topilmadi.")
+        await msg.edit_text(
+            f"❌ <b>Qidirish amalga oshmadi!</b> (⏱ {elapsed}s)\n\n"
+            f"<i>Ehtimoliy sabablar:\n"
+            f"• Backend server uxlab yotgan (Render Free Tier ~30s uyg'onadi)\n"
+            f"• API tokeni noto'g'ri\n"
+            f"• Qaytadan urinib ko'ring</i>",
+            reply_markup=users_menu_kb()
+        )
 
     await state.clear()
 
 
-# ==========================================
-# 🚫 BAN / UNBAN (Callback)
-# ==========================================
 @router.callback_query(F.data.startswith("ban_"))
 async def toggle_ban_callback(call: CallbackQuery):
     user_id = call.data.split("_")[1]
@@ -113,16 +117,12 @@ async def toggle_ban_callback(call: CallbackQuery):
     await call.answer()
 
 
-# ==========================================
-# 📢 OMMAVIY XABAR (BROADCAST) YUBORISH
-# ==========================================
 @router.message(F.text.contains("Hammaga xabar") | F.text.contains("Xabar yuborish"))
 async def broadcast_start(message: Message, state: FSMContext):
     await state.set_state(BroadcastState.content)
     await message.answer(
-        "📢 <b>Barcha foydalanuvchilarga xabar yuborish bo'limi.</b>\n\n"
-        "Matnni xuddi foydalanuvchilarga qanday borishi kerak bo'lsa shunday yuboring "
-        "(Rasm va video ham qo'shishingiz mumkin):",
+        "📢 <b>Barcha foydalanuvchilarga xabar yuborish.</b>\n\n"
+        "Matnni yuboring (Rasm va video ham qo'shish mumkin):",
         reply_markup=cancel_kb()
     )
 
@@ -151,14 +151,15 @@ async def broadcast_content(message: Message, state: FSMContext):
         await message.send_copy(chat_id=message.chat.id)
     except Exception:
         pass
-    await message.answer("👆 Xabar ko'rinishi shunday bo'ladi. Hammaga yuboramizmi?", reply_markup=confirm_kb)
+    await message.answer("👆 Xabar shunday ko'rinadi. Hammaga yuboramizmi?", reply_markup=confirm_kb)
 
 
 @router.callback_query(F.data == "confirm_broadcast", BroadcastState.confirm)
 async def confirm_broadcast(call: CallbackQuery, state: FSMContext):
     data = await state.get_data()
 
-    await call.message.edit_text("🔄 Xabar Node.js orqali hammaga tarqatilmoqda... Bu biroz vaqt olishi mumkin.")
+    start = time.monotonic()
+    await call.message.edit_text("🔄 Xabar tarqatilmoqda...")
 
     payload = {
         "text": data.get("html_text"),
@@ -167,14 +168,15 @@ async def confirm_broadcast(call: CallbackQuery, state: FSMContext):
     }
 
     response = await api_request("POST", "/broadcast", payload=payload)
+    elapsed = round(time.monotonic() - start, 1)
 
     if response:
-        await call.message.edit_text("✅ <b>Ommaviy xabar barcha YOZGO foydalanuvchilariga muvaffaqiyatli tarqatildi!</b>")
+        await call.message.edit_text(f"✅ <b>Ommaviy xabar tarqatildi!</b>\n⏱ {elapsed}s")
         await call.message.answer("Asosiy menyu:", reply_markup=main_menu_kb())
     else:
         await call.message.edit_text(
-            "❌ Xatolik! Node.js API bilan bog'lanib bo'lmadi.\n"
-            "Backend'da <code>/broadcast</code> endpointi tayyor ekanligini tekshiring."
+            f"❌ API bilan bog'lanib bo'lmadi. (⏱ {elapsed}s)\n"
+            f"Backend'da <code>/broadcast</code> endpointi tayyor ekanligini tekshiring."
         )
 
     await state.clear()
@@ -182,17 +184,15 @@ async def confirm_broadcast(call: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "cancel_broadcast", BroadcastState.confirm)
 async def cancel_broadcast(call: CallbackQuery, state: FSMContext):
-    await call.message.edit_text("❌ Ommaviy xabar yuborish bekor qilindi.")
+    await call.message.edit_text("❌ Ommaviy xabar bekor qilindi.")
     await call.message.answer("Asosiy menyu:", reply_markup=main_menu_kb())
     await state.clear()
 
 
-# ==========================================
-# 📊 BAZANI YUKLAB OLISH (CSV EXPORT)
-# ==========================================
 @router.message(F.text.contains("Bazani yuklash") | F.text.contains("Export"))
 async def export_users_db(message: Message):
-    msg = await message.answer("🔄 Baza tayyorlanmoqda, kuting...")
+    start = time.monotonic()
+    msg = await message.answer("🔄 Baza tayyorlanmoqda...")
 
     headers = {
         "X-Admin-Token": ADMIN_API_TOKEN,
@@ -204,6 +204,7 @@ async def export_users_db(message: Message):
         async with aiohttp.ClientSession(timeout=timeout) as session:
             base_url = API_URL.rstrip('/')
             async with session.get(f"{base_url}/users/export", headers=headers) as resp:
+                elapsed = round(time.monotonic() - start, 1)
                 if resp.status == 200:
                     csv_data = await resp.read()
 
@@ -211,11 +212,14 @@ async def export_users_db(message: Message):
 
                     await message.answer_document(
                         document=file,
-                        caption="📊 <b>YOZGO - Barcha foydalanuvchilar bazasi</b>\n\nBu faylni bemalol Excel yoki Google Sheets orqali ochishingiz mumkin."
+                        caption=f"📊 <b>YOZGO - Foydalanuvchilar bazasi</b>\n⏱ {elapsed}s"
                     )
                     await msg.delete()
+                elif resp.status == 403:
+                    await msg.edit_text(f"🔒 Token noto'g'ri! (403 Forbidden, ⏱ {elapsed}s)")
                 else:
-                    await msg.edit_text("❌ Bazani yuklab olishda xatolik yuz berdi (API javob qaytarmadi).")
+                    await msg.edit_text(f"❌ Xatolik: Status {resp.status} (⏱ {elapsed}s)")
     except Exception as e:
+        elapsed = round(time.monotonic() - start, 1)
         logger.error(f"CSV export xatoligi: {e}")
-        await msg.edit_text(f"❌ Xatolik yuz berdi: {str(e)[:100]}")
+        await msg.edit_text(f"❌ Xatolik: {str(e)[:100]} (⏱ {elapsed}s)")

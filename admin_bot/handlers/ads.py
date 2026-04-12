@@ -1,6 +1,7 @@
 import math
 import base64
 import logging
+import time
 from aiogram import Bot, Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -85,12 +86,24 @@ async def ad_duration(message: Message, state: FSMContext):
         return await message.answer("❌ Iltimos, faqat raqam kiriting (masalan: 7)!")
     await state.update_data(durationDays=int(message.text))
     data = await state.get_data()
+    
+    start = time.monotonic()
     msg = await message.answer("🔄 Saytga yuklanmoqda...", reply_markup=main_menu_kb())
+    
     response = await api_request("POST", "/ads", payload=data)
+    elapsed = round(time.monotonic() - start, 1)
+    
     if response:
-        await msg.edit_text("✅ <b>Reklama muvaffaqiyatli qo'shildi!</b>")
+        await msg.edit_text(f"✅ <b>Reklama muvaffaqiyatli qo'shildi!</b>\n⏱ Vaqt: {elapsed} soniya")
     else:
-        await msg.edit_text("❌ Reklama qo'shishda xatolik yuz berdi.")
+        await msg.edit_text(
+            f"❌ <b>Reklama qo'shishda xatolik!</b>\n"
+            f"⏱ Vaqt: {elapsed} soniya\n\n"
+            f"<i>Ehtimoliy sabablar:\n"
+            f"1. Backend server uxlab yotgan bo'lishi mumkin (Render Free Tier)\n"
+            f"2. API tokeni noto'g'ri (BOT_SECRET tekshiring)\n"
+            f"3. Baza (Database) bilan muammo</i>"
+        )
     await state.clear()
 
 
@@ -101,7 +114,7 @@ async def render_ads_page(message_or_call, page: int):
     try:
         ads_data = await api_request("GET", "/ads/all")
         if not ads_data:
-            text = "📭 Hozircha faol reklamalar yo'q."
+            text = "📭 Hozircha faol reklamalar yo'q yoki API javob bermadi."
             if isinstance(message_or_call, Message):
                 return await message_or_call.answer(text)
             else:
