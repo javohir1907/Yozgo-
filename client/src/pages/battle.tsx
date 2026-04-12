@@ -13,8 +13,9 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Trophy, Users, Play, Copy, Loader2, Crown, 
-  Timer, Settings, RotateCcw, Flame, Check 
+  Crown, Play, Copy, Users, Clock, Timer, 
+  Flame, Trophy, Check, Loader2, Maximize2, 
+  BarChart3, Zap, Target, Activity, ShieldAlert
 } from "lucide-react";
 
 // UI Components
@@ -31,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
 
@@ -56,6 +58,114 @@ const GAME_DEFAULTS = {
 
 
 // ============ MAIN COMPONENT ============
+
+
+function PlayerListItem({ p, i, room, t }: { p: any; i: number; room: any; t: any }) {
+  const [showDetails, setShowDetails] = useState(false);
+
+  return (
+    <Dialog open={showDetails} onOpenChange={setShowDetails}>
+      <DialogTrigger asChild>
+        <button className={`w-full relative overflow-hidden flex items-center justify-between p-3 rounded-xl border border-transparent transition-all group ${p.isDisconnected ? "bg-secondary/20 opacity-50 grayscale" : "bg-secondary/40 hover:border-primary/30 hover:bg-primary/5 active:scale-[0.98]"}`}>
+          {/* Live Progress Bar Background */}
+          <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
+          
+          <div className="relative z-10 flex items-center gap-3">
+            <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
+            <div className="relative">
+              {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
+              <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10 flex items-center justify-center overflow-hidden">
+                {p.avatarUrl ? (
+                  <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <Users className="w-4 h-4 opacity-40" />
+                )}
+              </div>
+            </div>
+            <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
+          </div>
+          <div className="relative z-10 text-right flex items-center gap-2">
+            <div>
+              <div className="font-black text-primary leading-none">{p.bestWpm || 0} WPM</div>
+              <div className="text-[10px] font-bold text-muted-foreground/50">{t.battle.best}</div>
+            </div>
+            <Maximize2 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </button>
+      </DialogTrigger>
+      <DialogContent className="max-w-xl rounded-3xl border-2">
+        <DialogHeader>
+          <div className="flex items-center gap-4 mb-4">
+             <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+                {p.avatarUrl ? <img src={p.avatarUrl} className="w-full h-full object-cover rounded-3xl"/> : <Users className="w-8 h-8 opacity-40" />}
+             </div>
+             <div>
+                <DialogTitle className="text-2xl font-black">{p.username}</DialogTitle>
+                <div className="flex gap-2 mt-1">
+                   <Badge variant="secondary" className="bg-primary/5 text-primary">ID: {p.id.slice(0, 8)}</Badge>
+                   {p.gender === "male" ? <Badge className="bg-blue-500/10 text-blue-500">MALE</Badge> : <Badge className="bg-pink-500/10 text-pink-500">FEMALE</Badge>}
+                </div>
+             </div>
+          </div>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+           <div className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-center">
+              <Zap className="w-5 h-5 mx-auto mb-2 text-primary" />
+              <div className="text-2xl font-black">{p.bestWpm || 0}</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground">BEST WPM</div>
+           </div>
+           <div className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-center">
+              <Target className="w-5 h-5 mx-auto mb-2 text-green-500" />
+              <div className="text-2xl font-black">{p.bestAccuracy || 0}%</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground">ACCURACY</div>
+           </div>
+           <div className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-center">
+              <Activity className="w-5 h-5 mx-auto mb-2 text-orange-500" />
+              <div className="text-2xl font-black">{p.bestConsistency || 0}%</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground">CONSISTENCY</div>
+           </div>
+           <div className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-center">
+              <BarChart3 className="w-5 h-5 mx-auto mb-2 text-blue-500" />
+              <div className="text-2xl font-black">{p.bestRawWpm || 0}</div>
+              <div className="text-[10px] uppercase font-bold text-muted-foreground">RAW WPM</div>
+           </div>
+        </div>
+
+        <div className="space-y-4">
+           <h4 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Batafsil Urinishlar Natijasi</h4>
+           <div className="grid grid-cols-1 gap-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+              {p.attemptHistory && p.attemptHistory.length > 0 ? (
+                p.attemptHistory.map((h: any, idx: number) => (
+                  <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30 border border-border/20">
+                     <span className="font-bold text-sm text-muted-foreground">{idx+1}-Urinish:</span>
+                     <div className="flex gap-3">
+                        <span className="font-black text-primary">{h.wpm} WPM</span>
+                        <span className="text-xs font-bold text-muted-foreground/60">{h.accuracy}% ACC</span>
+                        <span className="text-xs font-bold text-muted-foreground/60">{h.consistency || 0}% CNS</span>
+                     </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-muted-foreground text-sm italic">Hali urinishlar mavjud emas</div>
+              )}
+           </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t flex justify-between items-center">
+           <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="w-3 h-3" /> {p.attempts || 0} ta urinish qildi
+           </div>
+           {p.bestWpm > 200 && (
+             <div className="flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase animate-pulse">
+                <ShieldAlert className="w-3 h-3" /> Yuqori tezlik ko'rsatkichi
+             </div>
+           )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function BattlePage() {
   const { user } = useAuth();
@@ -559,6 +669,8 @@ export default function BattlePage() {
             <div className="space-y-4 py-4">
               <ul className="text-sm space-y-2 list-disc list-inside text-muted-foreground">
                 {t.battle.rules.map((term, i) => <li key={i}>{term}</li>)}
+                <li className="text-red-500 font-bold">🚫 VPN, Proxy yoki har qanday botdan foydalanish taqiqlanadi!</li>
+                <li className="text-red-500 font-bold">🚫 Cheat ishlatgan foydalanuvchi butunlay bloklanadi!</li>
               </ul>
               <div className="flex items-center space-x-2 pt-4 border-t">
                 <Checkbox id="accept" checked={isAgreed} onCheckedChange={(c) => setIsAgreed(c as boolean)} />
@@ -688,25 +800,14 @@ export default function BattlePage() {
                     </div>
                   )}
                   <div className={!isAttemptActive ? "blur-md pointer-events-none opacity-40" : ""}>
-                     <div className="flex justify-center gap-4 sm:gap-12 mb-6 sm:mb-10 flex-wrap">
+          <div className="flex justify-center gap-4 sm:gap-12 mb-6 sm:mb-10 flex-wrap">
                         <div className="text-center">
-                          <div className="text-4xl sm:text-6xl font-black text-primary leading-none">{wpm}</div>
-                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">{t.battle.wpmSpeed}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-4xl sm:text-6xl font-black text-primary leading-none">{accuracy}%</div>
-                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">{t.battle.accuracy}</div>
-                        </div>
-                        <div className="text-center opacity-70">
-                          <div className="text-4xl sm:text-6xl font-black text-foreground/50 leading-none">{rawWpm}</div>
-                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">Raw</div>
-                        </div>
-                        <div className="text-center opacity-70">
-                          <div className="text-4xl sm:text-6xl font-black text-foreground/50 leading-none">{consistency}%</div>
-                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase">CNS</div>
+                          <div className="text-5xl sm:text-7xl font-light text-primary leading-none transition-all duration-500">{wpm || 0}</div>
+                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase tracking-widest">{t.battle.wpmSpeed}</div>
                         </div>
                      </div>
-                     <TypingArea 
+                     <div className="min-h-[220px]">
+                      <TypingArea 
                         words={currentWords} 
                         isActive={isAttemptActive} 
                         onInputChange={handleInputChange} 
@@ -716,6 +817,7 @@ export default function BattlePage() {
                         onRestart={startAttempt}
                         onGoBack={handleGoBack} 
                       />
+                     </div>
                   </div>
                 </div>
               </motion.div>
@@ -727,51 +829,7 @@ export default function BattlePage() {
         <div className="lg:col-span-4 flex flex-col gap-6">
           {room?.settings?.genderRestriction === "all" ? (
             <>
-              <Card className="rounded-3xl border-2 border-blue-500/20 shadow-md">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xl flex items-center gap-2">👨 Yigitlar</CardTitle>
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                    {room.players.filter((p: any) => p.gender === "male").length} ta
-                  </Badge>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-2">
-                  {room.players.filter((p: any) => p.gender === "male").map((p: any, i: number) => (
-                    <div key={p.id} className={`relative overflow-hidden flex items-center justify-between p-3 rounded-xl border border-transparent transition-all ${p.isDisconnected ? "bg-secondary/20 opacity-50 grayscale" : "bg-secondary/40 hover:border-border"}`}>
-                      {/* Live Progress Bar Background */}
-                      <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
-                      
-                      <div className="relative z-10 flex items-center gap-3">
-                    <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
-                    <div className="relative">
-                      {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
-                      <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10" />
-                    </div>
-                    <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
-                  </div>
-                  <div className="relative z-10 text-right">
-                    <div className="font-black text-primary leading-none">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
-                    <div className="text-[9px] font-bold text-muted-foreground/60 flex gap-1 justify-end mt-0.5">
-                       <span>{p.accuracy || p.bestAccuracy}% ACC</span>
-                       <span>•</span>
-                       <span>{p.consistency || p.bestConsistency || 0}% CNS</span>
-                    </div>
-                    {room?.settings?.winMode === "per_round" ? (
-                      <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-2 max-w-[120px]">
-                        {p.attemptHistory?.map((h: any, idx: number) => (
-                          <span key={idx} className="bg-primary/20 px-1.5 py-0.5 rounded-md border border-primary/30 text-[9px]" title={`${idx+1}-r: ${h.wpm}W | ${h.accuracy}%A`}>
-                            R{idx + 1}: <span className="text-primary">{h.wpm}</span>
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50 mt-1">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-                </CardContent>
-              </Card>
-
+              {/* Qizlar (Chapda -> Birinchi) */}
               <Card className="rounded-3xl border-2 border-pink-500/20 shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xl flex items-center gap-2">👩 Qizlar</CardTitle>
@@ -781,38 +839,22 @@ export default function BattlePage() {
                 </CardHeader>
                 <CardContent className="space-y-4 pt-2">
                   {room.players.filter((p: any) => p.gender === "female").map((p: any, i: number) => (
-                    <div key={p.id} className={`relative overflow-hidden flex items-center justify-between p-3 rounded-xl border border-transparent transition-all ${p.isDisconnected ? "bg-secondary/20 opacity-50 grayscale" : "bg-secondary/40 hover:border-border"}`}>
-                      {/* Live Progress Bar Background */}
-                      <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
-                      
-                      <div className="relative z-10 flex items-center gap-3">
-                        <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
-                        <div className="relative">
-                          {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
-                          <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10" />
-                        </div>
-                        <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
-                      </div>
-                      <div className="relative z-10 text-right">
-                        <div className="font-black text-primary leading-none">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
-                        <div className="text-[9px] font-bold text-muted-foreground/60 flex gap-1 justify-end mt-0.5">
-                           <span>{p.accuracy || p.bestAccuracy}% ACC</span>
-                           <span>•</span>
-                           <span>{p.consistency || p.bestConsistency || 0}% CNS</span>
-                        </div>
-                        {room?.settings?.winMode === "per_round" ? (
-                          <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-2 max-w-[120px]">
-                            {p.attemptHistory?.map((h: any, idx: number) => (
-                              <span key={idx} className="bg-primary/20 px-1.5 py-0.5 rounded-md border border-primary/30 text-[9px]" title={`${idx+1}-r: ${h.wpm}W | ${h.accuracy}%A`}>
-                                R{idx + 1}: <span className="text-primary">{h.wpm}</span>
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50 mt-1">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
-                        )}
-                      </div>
-                    </div>
+                    <PlayerListItem key={p.id} p={p} i={i} room={room} t={t} />
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Yigitlar (O'ngda -> Ikkinchi) */}
+              <Card className="rounded-3xl border-2 border-blue-500/20 shadow-md">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-xl flex items-center gap-2">👨 Yigitlar</CardTitle>
+                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                    {room.players.filter((p: any) => p.gender === "male").length} ta
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-2">
+                  {room.players.filter((p: any) => p.gender === "male").map((p: any, i: number) => (
+                    <PlayerListItem key={p.id} p={p} i={i} room={room} t={t} />
                   ))}
                 </CardContent>
               </Card>
@@ -825,38 +867,7 @@ export default function BattlePage() {
               </CardHeader>
               <CardContent className="space-y-4 pt-2">
                 {room?.players.map((p: any, i: number) => (
-                  <div key={p.id} className={`relative overflow-hidden flex items-center justify-between p-3 rounded-xl border border-transparent transition-all ${p.isDisconnected ? "bg-secondary/20 opacity-50 grayscale" : "bg-secondary/40 hover:border-border"}`}>
-                    {/* Live Progress Bar Background */}
-                    <div className="absolute top-0 left-0 bottom-0 bg-primary/10 transition-all duration-300" style={{ width: `${p.progress}%` }} />
-                    
-                    <div className="relative z-10 flex items-center gap-3">
-                      <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
-                      <div className="relative">
-                        {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
-                        <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10" />
-                      </div>
-                      <span className="font-bold text-sm truncate max-w-[100px]">{p.username} {p.isDisconnected ? `(${t.battle.disconnected})` : ""}</span>
-                    </div>
-                    <div className="relative z-10 text-right">
-                      <div className="font-black text-primary leading-none">{p.wpm > 0 ? p.wpm : p.bestWpm} WPM</div>
-                      <div className="text-[9px] font-bold text-muted-foreground/60 flex gap-1 justify-end mt-0.5">
-                         <span>{p.accuracy || p.bestAccuracy}% ACC</span>
-                         <span>•</span>
-                         <span>{p.consistency || p.bestConsistency || 0}% CNS</span>
-                      </div>
-                      {room?.settings?.winMode === "per_round" ? (
-                        <div className="text-[10px] font-bold text-muted-foreground flex gap-1 justify-end flex-wrap mt-2 max-w-[120px]">
-                          {p.attemptHistory?.map((h: any, idx: number) => (
-                            <span key={idx} className="bg-primary/20 px-1.5 py-0.5 rounded-md border border-primary/30 text-[9px]" title={`${idx+1}-r: ${h.wpm}W | ${h.accuracy}%A`}>
-                              R{idx + 1}: <span className="text-primary">{h.wpm}</span>
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-[10px] uppercase font-bold text-muted-foreground opacity-50 mt-1">{p.attempts} {t.battle.attempts} ({t.battle.best}: {p.bestWpm})</div>
-                      )}
-                    </div>
-                  </div>
+                  <PlayerListItem key={p.id} p={p} i={i} room={room} t={t} />
                 ))}
               </CardContent>
             </Card>

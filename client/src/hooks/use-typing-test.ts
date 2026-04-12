@@ -33,7 +33,11 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
   const startTimeRef = useRef<number | null>(null);
   const wpmRef = useRef(0);
   const accuracyRef = useRef(100);
-  const [displayStats, setDisplayStats] = useState({ wpm: 0, accuracy: 100 });
+  const [displayStats, setDisplayStats] = useState({ wpm: 0, accuracy: 100, rawWpm: 0, consistency: 100 });
+  const keystrokeIntervalsRef = useRef<number[]>([]);
+  const lastKeystrokeTimeRef = useRef<number | null>(null);
+  const rawWpmRef = useRef(0);
+  const consistencyRef = useRef(100);
 
   // FIX: live stats yangilanishi uchun interval
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -76,8 +80,12 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     allKeystrokesRef.current = 0;
     wpmRef.current = 0;
     accuracyRef.current = 100;
+    rawWpmRef.current = 0;
+    consistencyRef.current = 100;
+    keystrokeIntervalsRef.current = [];
+    lastKeystrokeTimeRef.current = null;
     startTimeRef.current = null;
-    setDisplayStats({ wpm: 0, accuracy: 100 });
+    setDisplayStats({ wpm: 0, accuracy: 100, rawWpm: 0, consistency: 100 });
   }, [generateWords, mode]);
 
   useEffect(() => {
@@ -98,9 +106,30 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
         ? 100
         : Math.round((correctCharsRef.current / allKeystrokesRef.current) * 100);
 
+    const currentRawWpm = Math.round(allKeystrokesRef.current / 5 / elapsedMinutes);
+
+    // Consistency
+    const intervals = keystrokeIntervalsRef.current;
+    let currentConsistency = 100;
+    if (intervals.length >= 2) {
+      const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const variance = intervals.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / intervals.length;
+      const stdDev = Math.sqrt(variance);
+      const cv = stdDev / mean;
+      currentConsistency = Math.max(0, Math.min(100, Math.round(100 * (1 - cv))));
+    }
+
     wpmRef.current = Math.max(0, currentWpm);
     accuracyRef.current = currentAccuracy;
-    setDisplayStats({ wpm: Math.max(0, currentWpm), accuracy: currentAccuracy });
+    rawWpmRef.current = currentRawWpm;
+    consistencyRef.current = currentConsistency;
+
+    setDisplayStats({ 
+       wpm: Math.max(0, currentWpm), 
+       accuracy: currentAccuracy,
+       rawWpm: currentRawWpm,
+       consistency: currentConsistency
+    });
   }, []);
 
   const finishTest = useCallback(() => {
@@ -113,6 +142,8 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     onComplete({
       wpm: wpmRef.current,
       accuracy: accuracyRef.current,
+      rawWpm: rawWpmRef.current,
+      consistency: consistencyRef.current,
       correctChars: correctCharsRef.current,
       incorrectChars: Math.max(0, allKeystrokesRef.current - correctCharsRef.current),
     });
@@ -211,6 +242,17 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
 
         setUserInput(value);
       }
+
+      // Consistency tracking
+      const now = Date.now();
+      if (lastKeystrokeTimeRef.current) {
+        const interval = now - lastKeystrokeTimeRef.current;
+        if (interval < 2000) {
+          keystrokeIntervalsRef.current.push(interval);
+        }
+      }
+      lastKeystrokeTimeRef.current = now;
+
     },
     [isFinished, isActive, userInput, words, currentIndex, startTest, updateLiveStats]
   );
@@ -246,6 +288,8 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     stats: {
       wpm: displayStats.wpm,
       accuracy: displayStats.accuracy,
+      rawWpm: displayStats.rawWpm,
+      consistency: displayStats.consistency,
       correctChars: correctCharsRef.current,
       incorrectChars: Math.max(0, allKeystrokesRef.current - correctCharsRef.current),
     },

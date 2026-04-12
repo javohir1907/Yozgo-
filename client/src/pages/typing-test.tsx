@@ -43,7 +43,7 @@ export default function TypingTestPage() {
   });
 
   const onComplete = useCallback(
-    (stats: { wpm: number; accuracy: number; correctChars: number; incorrectChars: number }) => {
+    (stats: { wpm: number; accuracy: number; rawWpm: number; consistency: number; correctChars: number; incorrectChars: number }) => {
       import("react-ga4").then((ReactGA) => {
         ReactGA.default.event({
           category: "TypingTest",
@@ -56,6 +56,8 @@ export default function TypingTestPage() {
         resultMutation.mutate({
           wpm: stats.wpm,
           accuracy: stats.accuracy,
+          rawWpm: stats.rawWpm,
+          consistency: stats.consistency,
           language,
           mode: mode.toString(),
         });
@@ -98,10 +100,10 @@ export default function TypingTestPage() {
             {/* FIX: Til va rejim selektorlari - faqat test boshlanmagan vaqtda ko'rinadi */}
             {/* Pastga tushish animatsiyasi bilan yashiriladi */}
             <div
-              className={`flex flex-col items-center gap-4 overflow-hidden transition-all duration-300 ease-in-out ${
+              className={`flex flex-col items-center gap-4 overflow-hidden transition-opacity duration-300 ${
                 isActive
-                  ? "max-h-0 opacity-0 -translate-y-2 pointer-events-none"
-                  : "max-h-40 opacity-100 translate-y-0"
+                  ? "opacity-0 invisible pointer-events-none"
+                  : "opacity-100 visible h-auto"
               }`}
             >
               <LanguageSelector currentLanguage={language} onLanguageChange={setLanguage} />
@@ -137,6 +139,8 @@ export default function TypingTestPage() {
           <ResultCard
             wpm={stats.wpm}
             accuracy={stats.accuracy}
+            rawWpm={stats.rawWpm}
+            consistency={stats.consistency}
             correctChars={stats.correctChars}
             incorrectChars={stats.incorrectChars}
             onRestart={reset}

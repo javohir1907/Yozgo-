@@ -6,6 +6,8 @@ import { useI18n } from "@/lib/i18n";
 interface ResultCardProps {
   wpm: number;
   accuracy: number;
+  rawWpm?: number;
+  consistency?: number;
   correctChars: number;
   incorrectChars: number;
   onRestart: () => void;
@@ -14,6 +16,8 @@ interface ResultCardProps {
 export function ResultCard({
   wpm,
   accuracy,
+  rawWpm,
+  consistency,
   correctChars,
   incorrectChars,
   onRestart,
@@ -26,35 +30,51 @@ export function ResultCard({
         <CardTitle className="text-5xl font-mono text-primary mb-2">{t.typing.result}</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="grid grid-cols-2 gap-8 mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
           <div className="text-center">
-            <p className="text-lg text-muted-foreground uppercase tracking-widest mb-2">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">
               {t.typing.wpm}
             </p>
-            <p className="text-7xl font-mono text-primary" data-testid="result-wpm">
+            <p className="text-5xl font-mono text-primary" data-testid="result-wpm">
               {wpm}
             </p>
           </div>
-          <div className="text-center">
-            <p className="text-lg text-muted-foreground uppercase tracking-widest mb-2">
+          <div className="text-center border-l border-border/10">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">
               {t.typing.acc}
             </p>
-            <p className="text-7xl font-mono text-primary" data-testid="result-accuracy">
+            <p className="text-5xl font-mono text-primary" data-testid="result-accuracy">
               {accuracy}%
+            </p>
+          </div>
+          <div className="text-center border-l border-border/10">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">
+              RAW
+            </p>
+            <p className="text-5xl font-mono text-muted-foreground/60 transition-colors hover:text-primary">
+              {rawWpm || 0}
+            </p>
+          </div>
+          <div className="text-center border-l border-border/10">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">
+              CONS
+            </p>
+            <p className="text-5xl font-mono text-muted-foreground/60 transition-colors hover:text-primary">
+              {consistency || 0}%
             </p>
           </div>
         </div>
 
-        <div className="flex justify-center gap-12 mb-12 text-muted-foreground font-mono">
+        <div className="flex justify-center gap-12 mb-12 text-muted-foreground font-mono bg-secondary/20 py-4 rounded-3xl border border-border/5">
           <div className="text-center">
-            <p className="text-xs uppercase mb-1">{t.typing.correct}</p>
-            <p className="text-2xl text-correct" data-testid="result-correct-chars">
+            <p className="text-[10px] uppercase mb-1 opacity-50">{t.typing.correct}</p>
+            <p className="text-xl text-primary/80" data-testid="result-correct-chars">
               {correctChars}
             </p>
           </div>
-          <div className="text-center">
-            <p className="text-xs uppercase mb-1">{t.typing.incorrect}</p>
-            <p className="text-2xl text-error" data-testid="result-incorrect-chars">
+          <div className="text-center border-l border-border/10 pl-12">
+            <p className="text-[10px] uppercase mb-1 opacity-50">{t.typing.incorrect}</p>
+            <p className="text-xl text-destructive/80" data-testid="result-incorrect-chars">
               {incorrectChars}
             </p>
           </div>

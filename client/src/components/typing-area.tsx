@@ -261,7 +261,7 @@ export function TypingArea({
 
       <div
         ref={wordsRef}
-        className="flex flex-wrap gap-x-3 gap-y-3 text-[1.5rem] md:text-[1.6rem] font-mono leading-relaxed select-none px-2 relative"
+        className="flex flex-wrap gap-x-4 gap-y-4 text-[1.8rem] md:text-[2.2rem] font-mono leading-relaxed select-none px-2 relative"
         style={{
           transform: `translateY(${offsetY}px)`,
           transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
