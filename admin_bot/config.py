@@ -9,7 +9,13 @@ API_URL = os.getenv("API_URL", "https://yozgo-backend.onrender.com/api/admin").s
 ADMIN_API_TOKEN = (os.getenv("ADMIN_API_TOKEN") or os.getenv("BOT_SECRET", "")).strip()
 
 if not ADMIN_API_TOKEN:
-    raise ValueError("ADMIN_API_TOKEN yoki BOT_SECRET muhit o'zgaruvchisi topilmadi! Tizim xavfsizligi doirasida bot ishlashdan to'xtatildi.")
+    msg = (
+        "\n❌ XATOLIK: ADMIN_API_TOKEN yoki BOT_SECRET topilmadi!\n"
+        "Render.com da 'yozgo-admin-bot' xizmati sozlamalariga kirib,\n"
+        "Environment Variables qismiga ushbu o'zgaruvchilarni qo'shishingiz kerak.\n"
+        "Shuningdek, PYTHON_VERSION ni 3.12.0 qilib belgilashni unutmang!"
+    )
+    raise ValueError(msg)
 
 # ADMIN_TELEGRAM_ID ni xavfsiz tarzda ro'yxatga o'giramiz
 _admin_ids_str = os.getenv("ADMIN_TELEGRAM_ID", "5150389360").strip()

@@ -21,7 +21,7 @@ export function startUserBot() {
   }
 
   // Webhookni birinchi o'chirib, keyin Polling bilan ishga tushirish xavfsizroq
-  fetch(`https://api.telegram.org/bot${token}/deleteWebhook`).catch(() => {});
+  fetch(`https://api.telegram.org/bot${token}/deleteWebhook`).catch((err) => console.error("Webhook deletion failed:", err));
 
   userBot = new TelegramBot(token, { 
     polling: { 
@@ -54,7 +54,7 @@ export function startUserBot() {
           web_app: { url: MINI_APP_URL },
         },
       }),
-    }).catch(() => {});
+    }).catch((err) => console.error("Menu button setup failed:", err));
   } catch (err) {}
 
   userBot.onText(/^\/start(?:\s+(.+))?$/, async (msg, match) => {

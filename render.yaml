@@ -12,3 +12,21 @@ services:
     env: python
     buildCommand: pip install -r admin_bot/requirements.txt
     startCommand: python admin_bot/main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: yozgo-web-service
+          property: envVar
+          envVar: DATABASE_URL
+      - key: ADMIN_BOT_TOKEN
+        sync: false # Admin bot token (Secret)
+      - key: ADMIN_API_TOKEN
+        sync: false # API communication token
+      - key: ADMIN_TELEGRAM_ID
+        sync: false # Admin Telegram ID
+      - key: API_URL
+        value: https://yozgo-backend.onrender.com/api/admin
+
