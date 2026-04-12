@@ -2,6 +2,7 @@ import math
 import base64
 import logging
 import time
+import asyncio
 from aiogram import Bot, Router, F
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
@@ -87,22 +88,44 @@ async def ad_duration(message: Message, state: FSMContext):
     await state.update_data(durationDays=int(message.text))
     data = await state.get_data()
     
-    start = time.monotonic()
-    msg = await message.answer("🔄 Saytga yuklanmoqda...", reply_markup=main_menu_kb())
+    msg = await message.answer("🔄 Saytga yuklanmoqda... (0s)\n<i>Render Free Tier serveri uyg'onishi 30-60s olishi mumkin.</i>", reply_markup=main_menu_kb())
     
+    # Progress ko'rsatuvchi task
+    stop_progress = asyncio.Event()
+    
+    async def update_progress():
+        seconds = 5
+        while not stop_progress.is_set():
+            await asyncio.sleep(5)
+            if stop_progress.is_set():
+                break
+            try:
+                await msg.edit_text(
+                    f"🔄 Saytga yuklanmoqda... ({seconds}s)\n"
+                    f"<i>Render serveri uyg'onmoqda, kutib turing...</i>"
+                )
+            except Exception:
+                pass
+            seconds += 5
+    
+    progress_task = asyncio.create_task(update_progress())
+    
+    start = time.monotonic()
     response = await api_request("POST", "/ads", payload=data)
     elapsed = round(time.monotonic() - start, 1)
     
+    stop_progress.set()
+    progress_task.cancel()
+    
     if response:
-        await msg.edit_text(f"✅ <b>Reklama muvaffaqiyatli qo'shildi!</b>\n⏱ Vaqt: {elapsed} soniya")
+        await msg.edit_text(f"✅ <b>Reklama muvaffaqiyatli qo'shildi!</b>\n⏱ Vaqt: {elapsed}s")
     else:
         await msg.edit_text(
-            f"❌ <b>Reklama qo'shishda xatolik!</b>\n"
-            f"⏱ Vaqt: {elapsed} soniya\n\n"
-            f"<i>Ehtimoliy sabablar:\n"
-            f"1. Backend server uxlab yotgan bo'lishi mumkin (Render Free Tier)\n"
-            f"2. API tokeni noto'g'ri (BOT_SECRET tekshiring)\n"
-            f"3. Baza (Database) bilan muammo</i>"
+            f"❌ <b>Reklama qo'shishda xatolik!</b> (⏱ {elapsed}s)\n\n"
+            f"<i>Sabablar:\n"
+            f"1. Server uxlab yotgan (Render Free Tier)\n"
+            f"2. API tokeni noto'g'ri\n"
+            f"3. Baza xatoligi</i>"
         )
     await state.clear()
 

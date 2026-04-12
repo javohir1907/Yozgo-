@@ -285,6 +285,11 @@ export function setupAuth(app: Express): void {
         return res.status(401).json({ message: "Email yoki parol xato" });
       }
 
+      // Ban tekshiruvi
+      if (userMatch.isBanned) {
+        return res.status(403).json({ message: "Sizning hisobingiz bloklangan. Administrator bilan bog'laning." });
+      }
+
       // Session saqlash
       (req.session as any).userId = userMatch.id;
       
@@ -349,6 +354,11 @@ export function setupAuth(app: Express): void {
           // profileImageUrl: tgUserRaw.photo_url || null, // O'chirildi
         }).returning();
         linkedUser = identity;
+      }
+
+      // Ban tekshiruvi (Telegram orqali ham)
+      if (linkedUser.isBanned) {
+        return res.status(403).json({ message: "Sizning hisobingiz bloklangan." });
       }
 
       (req.session as any).userId = linkedUser.id;
@@ -626,6 +636,12 @@ export function setupAuth(app: Express): void {
     try {
       const [foundUser] = await db.select().from(users).where(eq(users.id, activeUserId));
       if (!foundUser) return res.status(401).json({ message: "Unauthorized" });
+
+      // Ban qilingan foydalanuvchining sessiyasini bekor qilish
+      if (foundUser.isBanned) {
+        req.session.destroy(() => {});
+        return res.status(403).json({ message: "Sizning hisobingiz bloklangan." });
+      }
 
       const { password: _, ...userSummary } = foundUser;
       res.json({ ...userSummary, token: req.sessionID });
