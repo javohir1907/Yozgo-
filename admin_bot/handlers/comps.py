@@ -1,6 +1,7 @@
 import math
 import logging
 import time
+import asyncio
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
@@ -20,9 +21,10 @@ router.callback_query.filter(SuperAdminFilter())
 
 @router.message(F.text.contains("Musobaqalar"))
 async def comps_menu(message: Message):
-    await message.answer("🏆 Musobaqalar bo'limiga xush kelibsiz.", reply_markup=comps_menu_kb())
+    await message.answer("🏆 Musobaqalar bo'limiga xush kelibsiz. Nima qilamiz?", reply_markup=comps_menu_kb())
 
 
+# --- MUSOBAQA YARATISH (FSM) ---
 @router.message(F.text.contains("Musobaqa yaratish"))
 async def comp_start(message: Message, state: FSMContext):
     await state.set_state(CompState.title)
@@ -35,7 +37,7 @@ async def comp_title(message: Message, state: FSMContext):
         return await message.answer("Iltimos, matn yuboring.")
     await state.update_data(title=message.text)
     await state.set_state(CompState.desc)
-    await message.answer("2️⃣ Musobaqa shartlarini kiriting:")
+    await message.answer("2️⃣ Musobaqa haqida batafsil ma'lumot (shartlari, qoidalari) kiriting:")
 
 
 @router.message(CompState.desc)
@@ -44,7 +46,7 @@ async def comp_desc(message: Message, state: FSMContext):
         return await message.answer("Iltimos, matn yuboring.")
     await state.update_data(description=message.text)
     await state.set_state(CompState.reward)
-    await message.answer("3️⃣ Mukofot nima?")
+    await message.answer("3️⃣ Yutuq (Mukofot) nima?")
 
 
 @router.message(CompState.reward)
@@ -53,7 +55,7 @@ async def comp_reward(message: Message, state: FSMContext):
         return await message.answer("Iltimos, matn yuboring.")
     await state.update_data(reward=message.text)
     await state.set_state(CompState.start_time)
-    await message.answer("4️⃣ Boshlanish vaqti:\n<b>FORMAT:</b> YYYY-MM-DD HH:MM\nMasalan: <b>2024-12-01 14:00</b>")
+    await message.answer("4️⃣ Boshlanish vaqtini kiriting.\n❗️ <b>QAT'IY FORMAT:</b> YYYY-MM-DD HH:MM\nMasalan: <b>2024-12-01 14:00</b>")
 
 
 @router.message(CompState.start_time)
@@ -64,7 +66,7 @@ async def comp_start_time(message: Message, state: FSMContext):
         dt = datetime.strptime(message.text, "%Y-%m-%d %H:%M")
         await state.update_data(startTime=dt.isoformat())
         await state.set_state(CompState.end_time)
-        await message.answer("5️⃣ Tugash vaqti:\n<b>FORMAT:</b> YYYY-MM-DD HH:MM")
+        await message.answer("5️⃣ Tugash vaqtini kiriting.\n❗️ <b>QAT'IY FORMAT:</b> YYYY-MM-DD HH:MM")
     except ValueError:
         await message.answer("❌ Noto'g'ri format! YYYY-MM-DD HH:MM shaklida yozing.")
 
@@ -77,31 +79,63 @@ async def comp_end_time(message: Message, state: FSMContext):
         dt = datetime.strptime(message.text, "%Y-%m-%d %H:%M")
         await state.update_data(endTime=dt.isoformat())
         data = await state.get_data()
-
+        
+        msg = await message.answer(
+            "🔄 Musobaqa saytga yuklanmoqda... (0s)\n"
+            "<i>Render serveri uxlab qolgan bo'lsa, uyg'onishi 30-60s olishi mumkin.</i>", 
+            reply_markup=main_menu_kb()
+        )
+        
+        # Progress ko'rsatuvchi task
+        stop_progress = asyncio.Event()
+        
+        async def update_progress():
+            seconds = 5
+            while not stop_progress.is_set():
+                await asyncio.sleep(5)
+                if stop_progress.is_set():
+                    break
+                try:
+                    await msg.edit_text(
+                        f"🔄 Musobaqa saytga yuklanmoqda... ({seconds}s)\n"
+                        f"<i>Iltimos kuting, server javobini qabul qilyapman...</i>"
+                    )
+                except Exception:
+                    pass
+                seconds += 5
+        
+        progress_task = asyncio.create_task(update_progress())
+        
         start = time.monotonic()
-        msg = await message.answer("🔄 Musobaqa saytga yuklanmoqda...", reply_markup=main_menu_kb())
-
         response = await api_request("POST", "/competitions", payload=data)
         elapsed = round(time.monotonic() - start, 1)
-
+        
+        stop_progress.set()
+        progress_task.cancel()
+        
         if response:
-            await msg.edit_text(f"✅ <b>Musobaqa e'lon qilindi!</b>\n⏱ Vaqt: {elapsed}s")
+            await msg.edit_text(f"✅ <b>Musobaqa e'lon qilindi!</b>\n⏱ Yuklash vaqti: {elapsed} soniya")
         else:
             await msg.edit_text(
-                f"❌ <b>Musobaqa yaratishda xatolik!</b> (⏱ {elapsed}s)\n\n"
-                f"<i>Render serveri uyg'onishi 30s gacha vaqt olishi mumkin.\n"
-                f"Yoki BOT_SECRET/ADMIN_API_TOKEN mos kelmaydi.</i>"
+                f"❌ <b>Xatolik: Musobaqa qo'shilmadi.</b> (⏱ {elapsed}s)\n\n"
+                f"<i>Ehtimoliy sabablar:\n"
+                f"1. Server uzoq vaqt javob bermadi (Timeout)\n"
+                f"2. Sanalar formati noto'g'ri\n"
+                f"3. API tokeni mos kelmaydi</i>"
             )
         await state.clear()
     except ValueError:
-        await message.answer("❌ Noto'g'ri format!")
+        await message.answer("❌ Noto'g'ri format! YYYY-MM-DD HH:MM shaklida yozing.")
 
 
+# ==========================================
+# 📋 SAHIFALASH (PAGINATION)
+# ==========================================
 async def render_comps_page(message_or_call, page: int):
     try:
         comps_data = await api_request("GET", "/competitions")
         if not comps_data:
-            text = "📭 Hozircha faol musobaqalar yo'q yoki API javob bermadi."
+            text = "📭 Hozircha faol musobaqalar yo'q."
             if isinstance(message_or_call, Message):
                 return await message_or_call.answer(text)
             else:
@@ -113,7 +147,7 @@ async def render_comps_page(message_or_call, page: int):
 
         page_comps = comps_data[page * PER_PAGE: (page + 1) * PER_PAGE]
 
-        text = f"🏆 <b>Faol Musobaqalar ({page + 1}/{total_pages})</b>\n\n"
+        text = f"🏆 <b>Faol Musobaqalar (Sahifa {page + 1}/{total_pages})</b>\n\n"
         for i, comp in enumerate(page_comps, start=1):
             text += f"<b>{i}. {comp.get('title')}</b>\n🎁 Mukofot: {comp.get('reward')}\n"
             start_time = comp.get('startTime', '')
@@ -129,7 +163,7 @@ async def render_comps_page(message_or_call, page: int):
         else:
             await message_or_call.message.edit_text(text, reply_markup=kb)
     except Exception as e:
-        logger.error(f"Musobaqalar xatolik: {e}")
+        logger.error(f"Musobaqalar sahifasini ko'rsatishda xatolik: {e}")
 
 
 @router.message(F.text.contains("Faol musobaqalar"))
