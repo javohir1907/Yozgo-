@@ -183,13 +183,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // ============ FINAL STARTUP ============
 const isTestEnvironment = process.env.NODE_ENV === "test";
 
-if (!isTestEnvironment) {
-  httpServer.listen(PORT, "0.0.0.0", () => {
-    logger.info(`🚀 [SYSTEM] SERVER BOUND TO PORT: ${PORT}`);
-    logger.info(`🚀 [SYSTEM] STATUS: ONLINE (MODE: ${process.env.NODE_ENV?.toUpperCase() || 'DEVELOPMENT'})`);
-    logger.info(`[SUCCESS] Port ${PORT} is open and ready for Render health checks.`);
-  });
-}
+// Port will be bound at the end of the initialization flow below.
 
 (async () => {
   // Test muhitida migratsiyalar va botlarni bloklash
@@ -335,6 +329,13 @@ if (!isTestEnvironment) {
   }
 
   // Port already bound at top
+  if (!isTestEnvironment) {
+    httpServer.listen(PORT, "0.0.0.0", () => {
+      logger.info(`🚀 [SYSTEM] SERVER BOUND TO PORT: ${PORT}`);
+      logger.info(`🚀 [SYSTEM] STATUS: ONLINE (MODE: ${process.env.NODE_ENV?.toUpperCase() || 'DEVELOPMENT'})`);
+      logger.info(`[SUCCESS] Port ${PORT} is open and ready for Render health checks.`);
+    });
+  }
 })();
 
 export { app, httpServer };
