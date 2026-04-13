@@ -78,18 +78,17 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        defaultSrc: ["'self'", "https://yozgo.uz", "https://www.yozgo.uz"],
+        defaultSrc: ["'self'", "https://yozgo.uz", "https://www.yozgo.uz", "https://*.onrender.com"],
         scriptSrc: [
           "'self'", "'unsafe-inline'", "'unsafe-eval'",
           "https://yozgo.uz", "https://www.yozgo.uz",
           "https://www.googletagmanager.com", "https://www.google-analytics.com",
         ],
         styleSrc: ["'self'", "'unsafe-inline'", "https://yozgo.uz", "https://www.yozgo.uz", "https://fonts.googleapis.com"],
-        imgSrc: ["'self'", "data:", "https:", "blob:"],
-        connectSrc: ["'self'", "wss:", "ws:", "https:", "http:"],
+        imgSrc: ["'self'", "data:", "https:", "blob:", "*"], // Allow all images temporary to restore visibility
+        connectSrc: ["'self'", "wss:", "ws:", "https:", "http:", "https://yozgo.uz", "https://www.yozgo.uz"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         frameAncestors: ["'none'"],
-        // requireTrustedTypesFor removed — it blocks React, Framer Motion, and Cloudflare scripts
       },
     },
     hsts: {
