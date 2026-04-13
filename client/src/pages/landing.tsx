@@ -96,23 +96,17 @@ export default function LandingPage() {
       {/* Hero Section - Edge-to-Edge Full Spread Style (Mobile Responsive Setup) */}
       <section className="relative min-h-[95vh] flex flex-col items-center justify-center overflow-hidden bg-background">
         
-        {/* 1. Background Image Container - Absolute Full Spread */}
-        <div className="absolute inset-0 w-full h-full z-0 opacity-80 flex items-center justify-center" data-testid="logo-background-container">
-          {/* Light mode: Yirik oq klavishli rasm */}
-          <img 
-            src="/assets/logo-white-keys.png" 
-            alt="YOZGO Background" 
-            className="w-full h-full object-contain md:object-cover object-center block dark:hidden p-4 md:p-0" 
-            style={{ mixBlendMode: 'multiply' }} 
-          />
-          
-          {/* Dark mode: Yirik qora klavishli rasm - Kontrast oshirilgan ('upscale' effekti) */}
-          <img 
-            src="/assets/logo-black-keys.png" 
-            alt="YOZGO Background" 
-            className="w-full h-full object-contain md:object-cover object-center hidden dark:block p-4 md:p-0" 
-            style={{ filter: 'brightness(1.15) contrast(1.1)' }} /* Klavishlarni yaqqolroq ko'rsatish uchun kontrast */
-          />
+        {/* CSS-only background — no images needed (saves 1.2MB!) */}
+        <div className="absolute inset-0 w-full h-full z-0 pointer-events-none" aria-hidden="true">
+          {/* Gradient base */}
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-background to-orange-100/30 dark:from-orange-950/30 dark:via-background dark:to-orange-900/10" />
+          {/* Keyboard key grid pattern */}
+          <div className="absolute inset-0 opacity-[0.07] dark:opacity-[0.12]" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='8' y='8' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3Crect x='44' y='8' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3Crect x='8' y='44' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3Crect x='44' y='44' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3C/svg%3E")`,
+            backgroundSize: '80px 80px'
+          }} />
+          {/* Central glow */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
         </div>
 
         {/* 2. Content Container - Split into Top (Title) and Bottom (Subtitle & Buttons) */}

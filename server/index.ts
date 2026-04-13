@@ -55,7 +55,7 @@ declare module "http" {
 
 // ============ INITIALIZATION ============
 const app = express();
-app.use(compression());
+app.use(compression({ level: 9, threshold: 1024 }));
 const httpServer: Server = createServer(app);
 const PORT = parseInt(process.env.PORT || "5000", 10);
 
