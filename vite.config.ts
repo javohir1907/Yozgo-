@@ -25,6 +25,18 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
+    cssCodeSplit: true,
+    target: "esnext",
+    minify: "esbuild",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "wouter", "@tanstack/react-query"],
+          "vendor-ui": ["framer-motion", "lucide-react", "clsx", "tailwind-merge"],
+          "vendor-utils": ["socket.io-client", "date-fns", "zod"],
+        },
+      },
+    },
   },
   server: {
     fs: {

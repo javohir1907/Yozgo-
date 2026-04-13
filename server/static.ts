@@ -21,8 +21,14 @@ export function serveStatic(app: Express) {
 
   console.log(`🚀 [SYSTEM] Serving static files from: ${finalPath}`);
   
-  // Serve static assets
-  app.use(express.static(finalPath, { index: false }));
+  // Serve hashed assets with aggressive caching
+  app.use("/assets", express.static(path.join(finalPath, "assets"), {
+    maxAge: "1y",
+    immutable: true,
+  }));
+
+  // Serve other static assets
+  app.use(express.static(finalPath, { index: false, maxAge: "1h" }));
 
   // CATCH-ALL ROUTE: Must be last to handle SPA routing without swallowing API calls
   app.use((req, res, next) => {
