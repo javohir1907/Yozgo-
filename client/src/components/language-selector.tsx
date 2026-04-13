@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
-export type Language = "en" | "ru" | "uz";
+export type Language = "en" | "ru" | "uz" | "kaa";
 
 interface LanguageSelectorProps {
   currentLanguage: Language;
@@ -16,6 +16,7 @@ export function LanguageSelector({ currentLanguage, onLanguageChange }: Language
     { code: "en", label: t.languages.english },
     { code: "ru", label: t.languages.russian },
     { code: "uz", label: t.languages.uzbek },
+    { code: "kaa", label: t.languages.karakalpak },
   ];
 
   return (

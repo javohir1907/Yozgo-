@@ -545,6 +545,7 @@ export default function BattlePage() {
                   <Label>{t.battle.language}</Label>
                   <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-background border p-3 rounded-xl focus:ring-2 focus:ring-primary/50 transition-all outline-none">
                     <option value="uz">{t.languages.uzbek}</option>
+                    <option value="kaa">{t.languages.karakalpak}</option>
                     <option value="en">{t.languages.english}</option>
                     <option value="ru">{t.languages.russian}</option>
                   </select>
