@@ -39,11 +39,12 @@ interface ProfileData {
     bestWpm: number;
     avgAccuracy: number;
   };
-  detailedStats: {
-    uz: Record<string, number>;
-    ru: Record<string, number>;
-    en: Record<string, number>;
-  };
+    detailedStats: {
+      uz: Record<string, number>;
+      ru: Record<string, number>;
+      en: Record<string, number>;
+      kaa: Record<string, number>;
+    };
   recentResults: {
     id: string;
     wpm: number;
@@ -225,12 +226,12 @@ export default function Profile() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {['uz', 'ru', 'en'].map((lang) => (
+        {['uz', 'ru', 'en', 'kaa'].map((lang) => (
           <Card key={lang} className="overflow-hidden border-border bg-card/50">
             <CardHeader className="bg-secondary/20 py-3">
               <CardTitle className="text-sm font-bold uppercase tracking-widest text-center flex items-center justify-center gap-2">
-                <Trophy className={cn("w-4 h-4", lang === 'uz' ? "text-blue-500" : lang === 'ru' ? "text-red-500" : "text-green-500")} />
-                {lang === 'uz' ? t.leaderboard.uzbekRanking : lang === 'ru' ? t.leaderboard.russianRanking : t.leaderboard.englishRanking}
+                <Trophy className={cn("w-4 h-4", lang === 'uz' ? "text-blue-500" : lang === 'ru' ? "text-red-500" : lang === 'en' ? "text-green-500" : "text-orange-500")} />
+                {lang === 'uz' ? t.leaderboard.uzbekRanking : lang === 'ru' ? t.leaderboard.russianRanking : lang === 'en' ? t.leaderboard.englishRanking : t.leaderboard.karakalpakRanking}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -239,7 +240,7 @@ export default function Profile() {
                   <div key={mode} className="p-4 text-center">
                     <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">{mode} {t.typing.time.toLowerCase()}</div>
                     <div className="text-2xl font-mono font-bold text-primary">
-                      {data.detailedStats?.[lang as 'uz'|'ru'|'en']?.[mode.toString()] || 0}
+                      {data.detailedStats?.[lang as 'uz'|'ru'|'en'|'kaa']?.[mode.toString()] || 0}
                     </div>
                   </div>
                 ))}

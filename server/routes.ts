@@ -237,6 +237,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
             15: recentAttempts.filter(r => r.language === 'en' && r.mode === '15').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
             30: recentAttempts.filter(r => r.language === 'en' && r.mode === '30').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
             60: recentAttempts.filter(r => r.language === 'en' && r.mode === '60').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+          },
+          kaa: {
+            15: recentAttempts.filter(r => r.language === 'kaa' && r.mode === '15').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+            30: recentAttempts.filter(r => r.language === 'kaa' && r.mode === '30').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
+            60: recentAttempts.filter(r => r.language === 'kaa' && r.mode === '60').sort((a,b) => b.wpm - a.wpm)[0]?.wpm || 0,
           }
         },
         recentResults: recentAttempts.slice(0, 20), // Oxirgi 20 ta natija chart uchun
