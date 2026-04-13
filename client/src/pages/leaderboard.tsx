@@ -50,6 +50,7 @@ export default function LeaderboardPage() {
             <TabsList data-testid="tabs-leaderboard-language">
               <TabsTrigger value="all">{t.leaderboard.all}</TabsTrigger>
               <TabsTrigger value="uz">UZ</TabsTrigger>
+              <TabsTrigger value="kaa">KAA</TabsTrigger>
               <TabsTrigger value="ru">RU</TabsTrigger>
               <TabsTrigger value="en">EN</TabsTrigger>
             </TabsList>

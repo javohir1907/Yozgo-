@@ -65,12 +65,14 @@ export default function SettingsPage() {
     { id: "en", name: t.settings.english },
     { id: "ru", name: t.settings.russian },
     { id: "uz", name: t.settings.uzbek },
+    { id: "kaa", name: t.settings.karakalpak },
   ];
 
   const UI_LANGUAGES: { id: UILanguage; name: string }[] = [
     { id: "en", name: t.settings.english },
     { id: "ru", name: t.settings.russian },
     { id: "uz", name: t.settings.uzbek },
+    { id: "kaa", name: t.settings.karakalpak },
   ];
 
   return (

@@ -30,6 +30,7 @@ export function NavHeader() {
     { code: "en", label: "EN" },
     { code: "ru", label: "RU" },
     { code: "uz", label: "UZ" },
+    { code: "kaa", label: "KAA" },
   ];
 
   return (
