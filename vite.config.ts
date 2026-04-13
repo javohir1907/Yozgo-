@@ -22,7 +22,7 @@ export default defineConfig({
     cssCodeSplit: false, // Bundle all CSS into one file for reliability
     target: "esnext",
     minify: "esbuild",
-    assetsInlineLimit: 4096, // Inline smaller assets
+    assetsInlineLimit: 2048, // Inline only very small assets to keep CSS lean
     rollupOptions: {
       output: {
         manualChunks: (id) => {
