@@ -1,5 +1,91 @@
 /**
  * YOZGO - Authentication & Session Management
+  *
+   * Ushbu modul foydalanuvchilarni ro'yxatdan o'tkazish, login, session
+    * boshqaruvi va Telegram mini-app avtorizatsiyasini ta'minlaydi.
+     */
+import session from "express-session";
+import connectPg from "connect-pg-simple";
+import bcrypt from "bcryptjs";
+import passport from "passport";
+import { type Express, Request, Response, NextFunction } from "express";
+import { eq, ilike } from "drizzle-orm";
+import crypto from "crypto";
+
+import { db, pool } from "./db";
+import { users } from "@shared/models/auth";
+import { sendAdminNotification } from "./utils/notifier";
+import { rateLimit } from "express-rate-limit";
+
+const PostgresSessionStore = connectPg(session);
+
+export function setupAuth(app: Express) {
+    const sessionSettings: session.SessionOptions = {
+          secret: process.env.SESSION_SECRET || "yozgo-dev-secret-key",
+          resave: false,
+          saveUninitialized: false,
+          store: new PostgresSessionStore({
+                  pool,
+                  tableName: "session",
+                  createTableIfMissing: true,
+          }),
+          cookie: {
+                  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+                  secure: process.env.NODE_ENV === "production",
+                  sameSite: "lax",
+          },
+    };
+  
+    if (app.get("env") === "production") {
+          app.set("trust proxy", 1);
+    }
+  
+    app.use(session(sessionSettings));
+    app.use(passport.initialize());
+    app.use(passport.session());
+  
+    passport.serializeUser((user: any, done) => done(null, user.id));
+    passport.deserializeUser(async (id: number, done) => {
+          try {
+                  const [user] = await db.select().from(users).where(eq(users.id, id));
+                  done(null, user);
+          } catch (err) {
+                  done(err);
+          }
+    });
+  
+    // Auth routes
+    app.post("/api/register", async (req, res) => {
+          const { username, password } = req.body;
+          const hashedPassword = await bcrypt.hash(password, 10);
+          const [user] = await db.insert(users).values({
+                  username,
+                  password: hashedPassword,
+          }).returning();
+          req.login(user, (err) => {
+                  if (err) return res.status(500).json(err);
+                  res.status(201).json(user);
+          });
+    });
+  
+    app.post("/api/login", passport.authenticate("local"), (req, res) => {
+          res.json(req.user);
+    });
+  
+    app.post("/api/logout", (req, res, next) => {
+          req.logout((err) => {
+                  if (err) return next(err);
+                  res.sendStatus(200);
+          });
+    });
+  
+    app.get("/api/user", (req, res) => {
+          if (!req.isAuthenticated()) return res.sendStatus(401);
+          res.json(req.user);
+    });
+}
+/**
+ * YOZGO - Authentication & Session Management
  * 
  * Ushbu modul foydalanuvchilarni ro'yxatdan o'tkazish, login, session
  * boshqaruvi va Telegram mini-app avtorizatsiyasini ta'minlaydi.
