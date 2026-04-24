@@ -1,5 +1,113 @@
 /**
  * YOZGO - Real-time Battle Manager
+  *
+   * Ushbu modul Socket.io yordamida real-vaqt rejimida "Battle" (jang)
+    * xonalarini boshqaradi. Ishtirokchilarning tezligi, progressi va
+     * natijalarini sinxronizatsiya qiladi.
+      */
+
+import { type Server } from "http";
+import { Server as SocketServer, Socket } from "socket.io";
+import { storage } from "./storage";
+import { type User } from "@shared/schema";
+import { sendAdminNotification } from "./utils/notifier";
+import { analyzeTyping, resetPlayerSnapshots } from "./utils/anti-cheat";
+
+interface Player {
+    socket: Socket;
+    user: User;
+    progress: number;
+    wpm: number;
+    isFinished: boolean;
+    finishedAt?: number;
+}
+
+interface BattleRoom {
+    id: number;
+    text: string;
+    players: Map<string, Player>;
+    status: "waiting" | "starting" | "playing" | "finished";
+    startTime?: number;
+    countdown: number;
+}
+
+export class BattleManager {
+    private io: SocketServer;
+    private rooms: Map<number, BattleRoom> = new Map();
+  
+    constructor(server: Server) {
+          this.io = new SocketServer(server, {
+                  path: "/socket.io",
+                  cors: { origin: "*" },
+          });
+          this.setupSocket();
+    }
+  
+    private setupSocket() {
+          this.io.on("connection", (socket) => {
+                  socket.on("join-battle", async ({ battleId, user }) => {
+                            let room = this.rooms.get(battleId);
+                            if (!room) {
+                                        const battle = await storage.getBattle(battleId);
+                                        if (!battle) return;
+                                        room = {
+                                                      id: battleId,
+                                                      text: battle.text,
+                                                      players: new Map(),
+                                                      status: "waiting",
+                                                      countdown: 10,
+                                        };
+                                        this.rooms.set(battleId, room);
+                            }
+                            room.players.set(socket.id, { socket, user, progress: 0, wpm: 0, isFinished: false });
+                            socket.join(`battle-${battleId}`);
+                            this.io.to(`battle-${battleId}`).emit("room-update", this.getRoomData(room));
+                  });
+          });
+    }
+  
+    private getRoomData(room: BattleRoom) {
+          return {
+                  id: room.id,
+                  status: room.status,
+                  players: Array.from(room.players.values()).map(p => ({
+                            id: p.user.id,
+                            username: p.user.username,
+                            progress: p.progress,
+                            wpm: p.wpm,
+                            isFinished: p.isFinished
+                  }))
+          };
+    }
+}
+  private startCountdown(room: BattleRoom) {
+        room.status = "starting";
+        const timer = setInterval(() => {
+                room.countdown--;
+                this.io.to(`battle-${room.id}`).emit("countdown", room.countdown);
+                if (room.countdown <= 0) {
+                          clearInterval(timer);
+                          this.startBattle(room);
+                }
+        }, 1000);
+  }
+
+  private startBattle(room: BattleRoom) {
+        room.status = "playing";
+        room.startTime = Date.now();
+        this.io.to(`battle-${room.id}`).emit("battle-start", { startTime: room.startTime });
+  }
+}
+  private handleProgress(socket: Socket, room: BattleRoom, progress: number) {
+        const player = room.players.get(socket.id);
+        if (!player || room.status !== "playing") return;
+        player.progress = progress;
+        // ... wpm logic ...
+        this.io.to(`battle-${room.id}`).emit("room-update", this.getRoomData(room));
+  }
+}
+/**
+ * YOZGO - Real-time Battle Manager
  * 
  * Ushbu modul Socket.io yordamida real-vaqt rejimida "Battle" (jang) 
  * xonalarini boshqaradi. Ishtirokchilarning tezligi, progressi va 
