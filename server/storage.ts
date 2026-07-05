@@ -23,14 +23,9 @@ import {
   testResults,
   battles,
   battleParticipants,
-  reviews,
   competitions,
-  advertisements,
-  Review,
-  InsertReview,
   Competition,
   InsertCompetition,
-  Advertisement,
 } from "@shared/schema";
 import { UpsertUser } from "@shared/models/auth";
 
@@ -63,9 +58,7 @@ export interface IStorage {
   updateUserIp(userId: string, ip: string): Promise<void>;
 
   // Social & Marketing
-  createReview(review: InsertReview): Promise<Review>;
   getActiveCompetitions(): Promise<Competition[]>;
-  getActiveAdvertisements(): Promise<Advertisement[]>;
 }
 
 export type UserStats = {
@@ -207,44 +200,12 @@ export class DatabaseStorage implements IStorage {
 
   // ============ SOCIAL & OTHERS ============
 
-  async createReview(review: InsertReview): Promise<Review> {
-    const [record] = await db.insert(reviews).values(review).returning();
-    return record;
-  }
-
   async getActiveCompetitions(): Promise<Competition[]> {
     return db
       .select()
       .from(competitions)
       .where(eq(competitions.isActive, true))
       .orderBy(competitions.startTime);
-  }
-
-  async getActiveAdvertisements(): Promise<Advertisement[]> {
-    return db
-      .select()
-      .from(advertisements)
-      .where(eq(advertisements.isActive, true))
-      .orderBy(desc(advertisements.createdAt));
-  }
-
-  async getAllAdvertisements(): Promise<Advertisement[]> {
-    return db.select().from(advertisements).orderBy(desc(advertisements.id));
-  }
-
-  async toggleAdvertisement(id: string, isActive: boolean): Promise<Advertisement> {
-    const [updatedAd] = await db
-      .update(advertisements)
-      .set({ isActive })
-      .where(eq(advertisements.id, Number(id)))
-      .returning();
-    return updatedAd;
-  }
-
-  async trackAdClick(id: string): Promise<void> {
-    const numericId = Number(id);
-    const [adRecord] = await db.select().from(advertisements).where(eq(advertisements.id, numericId));
-    // Schema no longer has clicks, so we just return
   }
 
   async createCompetition(competition: InsertCompetition): Promise<Competition> {

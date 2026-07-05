@@ -31,15 +31,7 @@ describe("General Route and Public API Test", () => {
     // Tanlovlar (Competitions) API testi
     it("Musobaqalar ro'yxati API 200 qaytarishi kerak", async () => {
         const res = await request(app).get("/api/competitions");
-        
-        expect(res.statusCode).toBe(200);
-        expect(Array.isArray(res.body)).toBe(true);
-    });
 
-    // E'lonlar (Advertisements)
-    it("Reklamalar API ishlayotganini tekshirish", async () => {
-        const res = await request(app).get("/api/advertisements");
-        
         expect(res.statusCode).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
     });

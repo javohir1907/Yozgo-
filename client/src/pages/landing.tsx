@@ -25,7 +25,6 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Banner } from "@/components/banner";
 import SEO from "@/components/SEO";
 
 // Hooks & Libs
@@ -38,13 +37,6 @@ interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-}
-
-interface ReviewEntry {
-  id: string;
-  user: { username: string };
-  rating: number;
-  comment: string;
 }
 
 interface CompetitionEntry {
@@ -62,26 +54,8 @@ export default function LandingPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // State
-  const [rating, setRating] = useState<number>(5);
-  const [comment, setComment] = useState<string>("");
-
   // Data Fetching
-  const { data: ads } = useQuery<any[]>({ queryKey: ["/api/advertisements"] });
   const { data: competitions } = useQuery<CompetitionEntry[]>({ queryKey: ["/api/competitions"] });
-  const { data: reviews } = useQuery<ReviewEntry[]>({ queryKey: ["/api/reviews"] });
-
-  // Mutations
-  const submitReview = useMutation({
-    mutationFn: async (data: { rating: number; comment: string }) => {
-      await apiRequest("POST", "/api/reviews", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/reviews"] });
-      setComment("");
-      setRating(5);
-    },
-  });
 
   // ============ RENDER HELPERS ============
 
@@ -154,13 +128,6 @@ export default function LandingPage() {
 
         </div>
       </section>
-
-      {/* Ads Banner */}
-      {ads && ads.length > 0 && (
-        <section className="bg-[#0f0f0f] py-8 border-b border-white/5 flex justify-center">
-          <Banner ads={ads} />
-        </section>
-      )}
 
       {/* About Section - Competitive Branding */}
       <section className="py-32 relative overflow-hidden bg-background">

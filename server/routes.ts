@@ -30,9 +30,7 @@ import {
   battles,
   roomAccessCodes,
   competitions,
-  advertisements,
   competitionParticipants,
-  reviews,
   insertTestResultSchema,
   systemSettings,
   competitionCreationCodes,
@@ -233,57 +231,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     } catch (error) {
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: "Failed to fetch profile" });
-    }
-  });
-
-  // ============ REVIEWS (SHARHLAR) ROUTES ============
-
-  // Ommaviy: oxirgi sharhlarni foydalanuvchi nomi bilan qaytaradi.
-  app.get("/api/reviews", async (_req: Request, res: Response) => {
-    try {
-      const rows = await db
-        .select({
-          id: reviews.id,
-          rating: reviews.rating,
-          comment: reviews.comment,
-          username: users.firstName,
-        })
-        .from(reviews)
-        .innerJoin(users, eq(reviews.userId, users.id))
-        .orderBy(desc(reviews.createdAt))
-        .limit(50);
-
-      res.status(HTTP_STATUS.OK).json(
-        rows.map((r) => ({
-          id: r.id,
-          rating: r.rating,
-          comment: r.comment,
-          user: { username: r.username || "Anonim" },
-        }))
-      );
-    } catch (error) {
-      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
-    }
-  });
-
-  // Auth talab qilinadi: joriy foydalanuvchi sharh qoldiradi.
-  app.post("/api/reviews", isAuthenticated, async (req: Request, res: Response) => {
-    try {
-      const userId = req.session.userId as string;
-      const rating = Number(req.body?.rating);
-      const comment = String(req.body?.comment ?? "").trim();
-
-      if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Reyting 1 dan 5 gacha bo'lishi kerak" });
-      }
-      if (!comment || comment.length > 1000) {
-        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Izoh bo'sh yoki juda uzun" });
-      }
-
-      const review = await storage.createReview({ userId, rating, comment });
-      res.status(HTTP_STATUS.CREATED).json(review);
-    } catch (error) {
-      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
     }
   });
 
@@ -672,18 +619,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  /**
-   * Reklamalarni olish (aktivlari).
-   */
-  app.get("/api/advertisements", async (_req: Request, res: Response) => {
-    try {
-      const activeAds = await db.select().from(advertisements).where(eq(advertisements.isActive, true));
-      res.status(HTTP_STATUS.OK).json(activeAds);
-    } catch (error) {
-      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
-    }
-  });
-
   // ============ ADMIN CONTROL PANEL ============
 
   /**
@@ -835,76 +770,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json({ success: true, message: `Foydalanuvchi ${isBanned ? 'bloklandi' : 'blokdan chiqarildi'}` });
     } catch (error) {
       res.status(500).json({ error: "Foydalanuvchini ban qilishda xatolik" });
-    }
-  });
-
-  // 2. REKLAMA QO'SHISH
-  // adminGuard ishlatiladi: brauzerdagi admin foydalanuvchi HAM, bot ham kira oladi.
-  app.post("/api/admin/ads", adminGuard, async (req, res) => {
-    try {
-      const { title, imageUrl, linkUrl, durationDays } = req.body;
-      const days = parseInt(durationDays) || 7;
-
-      // Tugash vaqtini hisoblash
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + days);
-
-      const [newAd] = await db.insert(advertisements).values({
-        title,
-        imageUrl,
-        linkUrl,
-        durationDays: days,
-        expiresAt,
-        isActive: true
-      }).returning();
-
-      res.json(newAd);
-    } catch (error) {
-      res.status(500).json({ error: "Reklama qo'shishda xatolik" });
-    }
-  });
-
-  // ==========================================
-  // REKLAMALARNI KO'RISH, YOQISH/O'CHIRISH VA O'CHIRISH
-  // ==========================================
-
-  // Barcha reklamalarni olish (admin panel uchun — faol va nofaol)
-  app.get("/api/admin/ads/all", adminGuard, async (req, res) => {
-    try {
-      const allAds = await db.select().from(advertisements).orderBy(desc(advertisements.createdAt));
-      res.json(allAds);
-    } catch (error) {
-      res.status(500).json({ error: "Reklamalarni olishda xatolik" });
-    }
-  });
-
-  // Reklamani yoqish/o'chirish (isActive ni almashtirish)
-  app.put("/api/admin/ads/:id/toggle", adminGuard, async (req, res) => {
-    try {
-      const adId = parseInt(req.params.id as string, 10);
-      if (Number.isNaN(adId)) return res.status(400).json({ error: "Noto'g'ri ID" });
-      const isActive = Boolean(req.body?.isActive);
-      const [updated] = await db
-        .update(advertisements)
-        .set({ isActive })
-        .where(eq(advertisements.id, adId))
-        .returning();
-      if (!updated) return res.status(404).json({ error: "Reklama topilmadi" });
-      res.json(updated);
-    } catch (error) {
-      res.status(500).json({ error: "Reklamani yangilashda xatolik" });
-    }
-  });
-
-  // Reklamani o'chirish
-  app.delete("/api/admin/ads/:id", adminGuard, async (req, res) => {
-    try {
-      const adId = parseInt(req.params.id as string, 10);
-      if (Number.isNaN(adId)) return res.status(400).json({ error: "Noto'g'ri ID" });
-      await db.delete(advertisements).where(eq(advertisements.id, adId));
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Reklamani o'chirishda xatolik" });
     }
   });
 

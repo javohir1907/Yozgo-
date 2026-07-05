@@ -19,7 +19,6 @@ const BattlePage = React.lazy(() => import("@/pages/battle"));
 const TypingTestPage = React.lazy(() => import("@/pages/typing-test"));
 const ProfilePage = React.lazy(() => import("@/pages/profile"));
 const AuthPage = React.lazy(() => import("@/pages/auth"));
-const AdminPage = React.lazy(() => import("@/pages/admin"));
 const ResetPasswordPage = React.lazy(() => import("@/pages/reset-password"));
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -69,7 +68,6 @@ function Router() {
             <Route path="/typing-test" component={TypingTestPage} />
             <Route path="/profile" component={ProfilePage} />
             <Route path="/profile/:userId" component={ProfilePage} />
-            <Route path="/admin" component={AdminPage} />
             <Route path="/reset-password" component={ResetPasswordPage} />
             <Route component={NotFound} />
           </Switch>

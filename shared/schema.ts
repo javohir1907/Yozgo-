@@ -67,16 +67,6 @@ export const battleParticipants = pgTable("battle_participants", {
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 
-export const reviews = pgTable("reviews", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: varchar("user_id")
-    .references(() => users.id)
-    .notNull(),
-  rating: integer("rating").notNull(),
-  comment: text("comment").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 export const competitions = pgTable("competitions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -97,17 +87,6 @@ export const competitionParticipants = pgTable("competition_participants", {
     .references(() => users.id)
     .notNull(),
   registeredAt: timestamp("registered_at").defaultNow().notNull(),
-});
-
-export const advertisements = pgTable("advertisements", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  imageUrl: text("image_url"),
-  linkUrl: text("link_url"),
-  durationDays: integer("duration_days").default(7),
-  expiresAt: timestamp("expires_at").notNull(),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const roomAccessCodes = pgTable(
@@ -166,12 +145,10 @@ export const insertBattleSchema = createInsertSchema(battles).omit({
   createdAt: true,
 });
 
-export const insertReviewSchema = createInsertSchema(reviews).omit({ id: true, createdAt: true });
 export const insertCompetitionSchema = createInsertSchema(competitions).omit({
   id: true,
   createdAt: true,
 });
-export const insertAdvertisementSchema = createInsertSchema(advertisements).omit({ id: true });
 
 export const insertBattleParticipantSchema = createInsertSchema(battleParticipants).omit({
   id: true,
@@ -189,14 +166,8 @@ export type InsertBattleParticipant = z.infer<typeof insertBattleParticipantSche
 
 export type User = typeof users.$inferSelect;
 
-export type Review = typeof reviews.$inferSelect;
-export type InsertReview = z.infer<typeof insertReviewSchema>;
-
 export type Competition = typeof competitions.$inferSelect;
 export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
-
-export type Advertisement = typeof advertisements.$inferSelect;
-export type InsertAdvertisement = z.infer<typeof insertAdvertisementSchema>;
 
 export type RoomAccessCode = typeof roomAccessCodes.$inferSelect;
 export type BotState = typeof botStates.$inferSelect;
