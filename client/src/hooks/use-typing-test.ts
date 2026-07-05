@@ -9,6 +9,8 @@ interface UseTypingTestProps {
   onComplete: (stats: {
     wpm: number;
     accuracy: number;
+    rawWpm: number;
+    consistency: number;
     correctChars: number;
     incorrectChars: number;
   }) => void;

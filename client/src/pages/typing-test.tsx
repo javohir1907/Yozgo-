@@ -23,6 +23,8 @@ export default function TypingTestPage() {
     mutationFn: async (result: {
       wpm: number;
       accuracy: number;
+      rawWpm: number;
+      consistency: number;
       language: string;
       mode: string;
     }) => {

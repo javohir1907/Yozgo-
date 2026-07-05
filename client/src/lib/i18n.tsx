@@ -102,6 +102,7 @@ const translations = {
       all: "All",
       avgWpm: "Avg WPM",
       bestWpm: "Best WPM",
+      accuracy: "Accuracy",
       testCount: "Tests Count",
       totalTime: "Total Time",
       enterRating: "Enter Rating",
