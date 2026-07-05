@@ -27,21 +27,27 @@ import { logger } from "./utils/logger";
 import * as Sentry from "@sentry/node";
 import { sendAdminNotification } from "./utils/notifier";
 import { startUserBot } from "./userBot";
+import { startStreakReminderJob } from "./jobs/streak-reminder.job";
+import { startWeeklyRolloverJob } from "./jobs/weekly-rollover.job";
+import { seedBadges } from "./gamification/badge-service";
+import { seedLeagues } from "./services/league.service";
+import { seedCosmetics } from "./gamification/cosmetic-defs";
 
-// Sentry'ni ishga tushirish (DSN .env dan olinadi, agar yo'q bo'lsa Sentry o'chirilgan holatda turadi)
-// Vaqtincha Sentry ni o'chirib qo'yamiz, sababi u Telegram tokenlaridagi ":" belgisi 
-// bilan 'path-to-regexp' kutubxonasida konflikt qilib, barcha Telegram API larni (shu jumladan userBotni) bloklamoqda.
-/*
+// Sentry — FAQAT SENTRY_DSN berilgan bo'lsa init qilinadi; bo'lmasa butunlay o'chiq
+// (server graceful, qulamaydi). tracesSampleRate:0 — HTTP/route tracing O'CHIQ: bu
+// Telegram bot token ichidagi ":" belgisi 'path-to-regexp' bilan konflikt qilishining
+// oldini oladi (avval userBot'ni bloklagan sabab). Butun init try/catch bilan himoyalangan.
 if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    integrations: [nodeProfilingIntegration()],
-    tracesSampleRate: 1.0, // Hamma so'rovlarni kuzatish
-    profilesSampleRate: 1.0,
-  });
-  logger.info("🛡️ [SYSTEM] Sentry Monitoring is ACTIVE.");
+  try {
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      tracesSampleRate: 0,
+    });
+    logger.info("🛡️ [SYSTEM] Sentry error-reporting yoqildi (tracing o'chiq).");
+  } catch (e) {
+    logger.warn("[SENTRY] init o'tkazib yuborildi (graceful):", e as any);
+  }
 }
-*/
 
 /**
  * Global HTTP turlarini kengaytirish
@@ -54,9 +60,21 @@ declare module "http" {
 
 // ============ INITIALIZATION ============
 const app = express();
+
+// Coolify/Traefik/Cloudflare orqasida BIRINCHI proksiga ishonish — `secure` cookie,
+// req.protocol (https) va real IP (rate-limit) to'g'ri ishlashi uchun. (auth.ts ham
+// o'rnatadi; bu yerda erta o'rnatilishi barcha middleware'lar ko'rishini kafolatlaydi.)
+app.set("trust proxy", 1);
+
 app.use(compression({ level: 9, threshold: 1024 }));
 const httpServer: Server = createServer(app);
 const PORT = parseInt(process.env.PORT || "5000", 10);
+
+// Health endpoint (Coolify/UptimeRobot healthcheck) — rate-limit va og'ir middleware'lardan
+// OLDIN, hamisha tez 200 qaytaradi (jarayon tirikligini bildiradi).
+app.get("/api/health", (_req: Request, res: Response) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
 
 // ============ PROCESS HANDLERS ============
 process.on("unhandledRejection", (reason: unknown, promise: Promise<unknown>) => {
@@ -78,13 +96,25 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'", "https://yozgo.uz", "https://www.yozgo.uz", "https://*.onrender.com"],
+        // XAVFSIZLIK (M2): 'unsafe-eval' va 'unsafe-inline' OLIB TASHLANDI (XSS himoyasi).
+        // Ilova skripti tashqi ('self') modul; yagona inline blok — index.html'dagi
+        // JSON-LD (SEO, ijro etilmaydigan data) — uni sha256 hash bilan ruxsat berdik.
+        // Hash statik (client/index.html bilan mos) — JSON-LD o'zgarsa qayta hisoblang.
         scriptSrc: [
-          "'self'", "'unsafe-inline'", "'unsafe-eval'",
+          "'self'",
+          "'sha256-rocP6WQ/X2Mh36w13yTIMoY1xtx72YZ2f//23z44QvI='",
           "https://yozgo.uz", "https://www.yozgo.uz",
           "https://www.googletagmanager.com", "https://www.google-analytics.com",
         ],
         styleSrc: ["'self'", "'unsafe-inline'", "https://yozgo.uz", "https://www.yozgo.uz", "https://fonts.googleapis.com"],
-        imgSrc: ["'self'", "data:", "https:", "blob:", "*"], // Allow all images temporary to restore visibility
+        // XAVFSIZLIK (M2): "*" va keng "https:" olib tashlandi — faqat kerakli domenlar.
+        // Rasmlar amalda: self (favicon/bundlar), data:/blob:, yozgo.uz (og-image).
+        // lh3.googleusercontent.com — legacy Google avatar uchun ehtiyot chorasi.
+        imgSrc: [
+          "'self'", "data:", "blob:",
+          "https://yozgo.uz", "https://www.yozgo.uz",
+          "https://lh3.googleusercontent.com",
+        ],
         connectSrc: ["'self'", "wss:", "ws:", "https:", "http:", "https://yozgo.uz", "https://www.yozgo.uz"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         frameAncestors: ["'none'"],
@@ -198,6 +228,18 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
         ALTER TABLE users ADD COLUMN IF NOT EXISTS gender varchar;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS last_nickname_change_at timestamp;
+        -- Gamifikatsiya Feature 1: XP & Level (additive, mavjud rowlar 0/1'ga backfill).
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS xp integer NOT NULL DEFAULT 0;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS level integer NOT NULL DEFAULT 1;
+        -- Gamifikatsiya Feature 2: Kunlik streak (additive).
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS current_streak integer NOT NULL DEFAULT 0;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS longest_streak integer NOT NULL DEFAULT 0;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_date date;
+        -- Gamifikatsiya Feature 8: Coin + kosmetika (additive).
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS coins integer NOT NULL DEFAULT 0;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS streak_freezes integer NOT NULL DEFAULT 0;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_theme_key varchar;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_frame_key varchar;
       `);
 
       // XAVFSIZLIK: Ilgari bu yerda profil rasmlarini bir marta NULL qiladigan
@@ -229,6 +271,19 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
     } catch (botError) {
       logger.error("[CRITICAL] Failed to start one or more bot services:", botError);
     }
+
+    // Scheduled jobs (node-cron) — FAQAT production'da va RUN_CRON=true bo'lgan BITTA
+    // instance'da. Multi-instance Render deploy'da har instance cron'ni ishga tushirsa
+    // dublikat Telegram xabar bo'ladi; RUN_CRON'ni bitta instance'ga qo'ying.
+    if (process.env.NODE_ENV === "production" && process.env.RUN_CRON === "true") {
+      try {
+        startStreakReminderJob();
+        startWeeklyRolloverJob();
+        logger.info("Scheduled jobs (cron) are active.", { source: "startup" });
+      } catch (cronError) {
+        logger.error("[CRITICAL] Failed to start scheduled jobs:", cronError);
+      }
+    }
   }
 
   // Swagger Documentation
@@ -246,7 +301,11 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
   // ============ ERROR HANDLING ============
 
   if (process.env.SENTRY_DSN) {
-    Sentry.setupExpressErrorHandler(app);
+    try {
+      Sentry.setupExpressErrorHandler(app);
+    } catch (e) {
+      logger.warn("[SENTRY] express error handler o'tkazib yuborildi:", e as any);
+    }
   }
 
   /**
@@ -308,6 +367,57 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
     
     // Yagonga xona kodi (room_user) limitini olib tashlaymiz (individual kodlarni ko'paytirish uchun)
     await db.execute(sql`ALTER TABLE room_access_codes DROP CONSTRAINT IF EXISTS room_user_unique;`);
+
+    // Gamifikatsiya Feature 1: per-natija XP audit ustunlari (additive).
+    await db.execute(sql`ALTER TABLE test_results ADD COLUMN IF NOT EXISTS xp_awarded integer NOT NULL DEFAULT 0;`);
+    await db.execute(sql`ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS xp_awarded integer NOT NULL DEFAULT 0;`);
+    // Feature 8: coin audit ustunlari (additive).
+    await db.execute(sql`ALTER TABLE test_results ADD COLUMN IF NOT EXISTS coins_awarded integer NOT NULL DEFAULT 0;`);
+    await db.execute(sql`ALTER TABLE battle_participants ADD COLUMN IF NOT EXISTS coins_awarded integer NOT NULL DEFAULT 0;`);
+
+    // Request-idempotency: client_result_id + (user_id, client_result_id) unikal (additive).
+    await db.execute(sql`ALTER TABLE test_results ADD COLUMN IF NOT EXISTS client_result_id uuid;`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS test_results_user_client_uniq ON test_results (user_id, client_result_id);`);
+
+    // Gamifikatsiya Feature 3: Badge katalogi + user_badges (additive, idempotent).
+    // UNIQUE(user_id,badge_id) alohida CREATE UNIQUE INDEX sifatida — mavjud jadvalda
+    // ham ON CONFLICT ishlashi uchun (Contract: migration qat'iyligi).
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS badges ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), key TEXT NOT NULL UNIQUE, icon TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0 );`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS user_badges ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id VARCHAR NOT NULL REFERENCES users(id), badge_id UUID NOT NULL REFERENCES badges(id), earned_at TIMESTAMP NOT NULL DEFAULT now() );`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS user_badge_unique ON user_badges (user_id, badge_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS user_badges_user_idx ON user_badges (user_id);`);
+    await seedBadges();
+
+    // Gamifikatsiya Feature 5: Ligalar (additive, idempotent). UNIQUE(user_id) alohida
+    // CREATE UNIQUE INDEX sifatida — ON CONFLICT (user_id) mavjud jadvalda ham ishlashi uchun.
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS leagues ( id SERIAL PRIMARY KEY, key TEXT NOT NULL UNIQUE, tier INTEGER NOT NULL UNIQUE, name TEXT NOT NULL, icon TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0 );`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS league_members ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id VARCHAR NOT NULL REFERENCES users(id), league_tier INTEGER NOT NULL DEFAULT 0, cohort_id UUID, weekly_xp INTEGER NOT NULL DEFAULT 0, week_start DATE, joined_at TIMESTAMP NOT NULL DEFAULT now(), updated_at TIMESTAMP NOT NULL DEFAULT now() );`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS league_members_user_uniq ON league_members (user_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS league_members_cohort_idx ON league_members (cohort_id, weekly_xp);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS league_members_tier_idx ON league_members (league_tier);`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS league_history ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id VARCHAR NOT NULL REFERENCES users(id), week_start DATE NOT NULL, league_tier INTEGER NOT NULL, final_rank INTEGER NOT NULL, weekly_xp INTEGER NOT NULL, outcome TEXT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT now() );`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS league_history_user_idx ON league_history (user_id, week_start);`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS league_reset_log ( week_start DATE PRIMARY KEY, run_at TIMESTAMP NOT NULL DEFAULT now() );`);
+    await seedLeagues();
+
+    // Gamifikatsiya Feature 6: Kunlik quest progressi (additive, idempotent).
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS daily_quest_progress ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id VARCHAR NOT NULL REFERENCES users(id), quest_key TEXT NOT NULL, quest_date DATE NOT NULL, progress INTEGER NOT NULL DEFAULT 0, target INTEGER NOT NULL, completed BOOLEAN NOT NULL DEFAULT false, completed_at TIMESTAMP, xp_awarded INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP NOT NULL DEFAULT now() );`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS daily_quest_user_key_date ON daily_quest_progress (user_id, quest_key, quest_date);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS daily_quest_user_date_idx ON daily_quest_progress (user_id, quest_date);`);
+
+    // Gamifikatsiya Feature 8: Kosmetika katalogi + egalik (additive, idempotent).
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS cosmetics ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), key TEXT NOT NULL UNIQUE, type TEXT NOT NULL, price INTEGER NOT NULL, meta JSONB NOT NULL DEFAULT '{}', sort_order INTEGER NOT NULL DEFAULT 0, is_active BOOLEAN NOT NULL DEFAULT true );`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS user_cosmetics ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id VARCHAR NOT NULL REFERENCES users(id), cosmetic_id UUID NOT NULL REFERENCES cosmetics(id), acquired_at TIMESTAMP NOT NULL DEFAULT now() );`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS user_cosmetic_unique ON user_cosmetics (user_id, cosmetic_id);`);
+    await seedCosmetics();
+
+    // Gamifikatsiya Feature 9: Do'stlar (additive, idempotent). LEAST/GREATEST unique
+    // index alohida — teskari juftlik dublikatini bloklaydi (mavjud jadvalda ham).
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS friendships ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), requester_id VARCHAR NOT NULL REFERENCES users(id), addressee_id VARCHAR NOT NULL REFERENCES users(id), status TEXT NOT NULL DEFAULT 'pending', created_at TIMESTAMP NOT NULL DEFAULT now() );`);
+    await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS friendships_pair_uniq ON friendships (LEAST(requester_id, addressee_id), GREATEST(requester_id, addressee_id));`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS friendship_requester_idx ON friendships (requester_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS friendship_addressee_idx ON friendships (addressee_id);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS friendship_status_idx ON friendships (status);`);
     
     logger.info(`[DB] Bazaga barcha yangi ustunlar muvaffaqiyatli qo'shildi / tekshirildi!`);
   } catch (err: any) {
