@@ -315,11 +315,48 @@ export class BattleManager {
 
       // JINS TEKSHIRUVI — REST /api/battles/join bilan bir xil qoida (checkGenderEligibility).
       // Xona egasi (admin) o'z xonasiga har doim kira oladi.
-      if (user.id !== room.adminId) {
+      const isRoomAdmin = user.id === room.adminId;
+      if (!isRoomAdmin) {
         const genderCheck = checkGenderEligibility(dbUser.gender, room.settings.genderRestriction);
         if (!genderCheck.ok) {
           socket.emit("error-message", { message: genderCheck.message });
           return;
+        }
+      }
+
+      // 🔒 ACCESS-CODE PARITETI (socket'ni REST /api/battles/join bilan tenglashtirish):
+      // REST join HAR QANDAY qo'shilishni access-code yoki creation-code orqali o'tkazadi
+      // va faqat o'shanda battle_participants qatorini yaratadi. Shuning uchun socket'da
+      // xona egasidan (admin) tashqari HAR KIM allaqachon ishtirokchi bo'lishi shart —
+      // aks holda kod'siz to'g'ridan real xona kodi bilan kirish (access-code'ni chetlab
+      // o'tish) hisoblanadi. Bu private/kodli xonaga ruxsatsiz kirishni bloklaydi.
+      let alreadyParticipant = false;
+      try {
+        const participants = await storage.getBattleParticipants(room.id);
+        alreadyParticipant = participants.some((p) => p.userId === user.id);
+      } catch (e) {
+        console.error("[BATTLE] Ishtirokchilarni tekshirishda xatolik:", e);
+        // Fail-closed: tasdiqlab bo'lmasa, admin bo'lmaganlarni kiritmaymiz.
+        if (!isRoomAdmin) {
+          socket.emit("error-message", { message: "Xonaga qo'shishda xatolik, qayta urinib ko'ring" });
+          return;
+        }
+      }
+
+      if (!isRoomAdmin && !alreadyParticipant) {
+        socket.emit("error-message", {
+          message: "Bu xonaga faqat individual kirish kodi orqali qo'shilish mumkin. Kodni @yozgo_bot dan oling.",
+        });
+        return;
+      }
+
+      // battle_participants qatorini ta'minlaymiz (xona egasi yoki qator hali yo'q bo'lsa)
+      // — aks holda natija saqlanmaydi (Phase 4 #1 bilan bir xil maqsad).
+      if (!alreadyParticipant) {
+        try {
+          await storage.addBattleParticipant({ battleId: room.id, userId: user.id });
+        } catch (e) {
+          console.error("[BATTLE] battle_participants qo'shishda xatolik:", e);
         }
       }
 
@@ -382,10 +419,8 @@ export class BattleManager {
 
     socket.join(code);
 
-    // FIX (#1): battle_participants qatorini ta'minlaymiz. Ilgari bu qator faqat
-    // POST /api/battles/join'da yaratilardi, shuning uchun xona YARATUVCHISI va
-    // socket orqali to'g'ridan kirganlarning natijasi hech qachon saqlanmasdi.
-    await this.ensureParticipant(room.id, user.id);
+    // NOTE: battle_participants qatori yuqorida (access-code pariteti blokida)
+    // allaqachon ta'minlangan — xona egasi/socket joinerlar natijasi saqlanadi.
 
     // FIX (#4): jang allaqachon boshlangan bo'lsa (kech qo'shilgan yangi o'yinchi),
     // unga ham darhol battle-start yuboramiz — aks holda kutish ekranida qotib qoladi.
@@ -399,21 +434,6 @@ export class BattleManager {
     }
 
     this.broadcastRoomUpdate(room);
-  }
-
-  /**
-   * Berilgan foydalanuvchi uchun battle_participants qatori mavjudligini ta'minlaydi
-   * (idempotent: yo'q bo'lsa yaratadi).
-   */
-  private async ensureParticipant(battleId: string, userId: string): Promise<void> {
-    try {
-      const participants = await storage.getBattleParticipants(battleId);
-      if (!participants.some((p) => p.userId === userId)) {
-        await storage.addBattleParticipant({ battleId, userId });
-      }
-    } catch (e) {
-      console.error("[BATTLE] battle_participants ta'minlashda xatolik:", e);
-    }
   }
 
   /**
