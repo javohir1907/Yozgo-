@@ -33,7 +33,6 @@ import {
   battleParticipants,
   competitions,
   advertisements,
-  notifications,
   competitionParticipants,
   reviews,
   insertTestResultSchema,
@@ -161,14 +160,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const savedResult = await storage.createTestResult(validatedData);
 
-      // Leaderboard-dagi umumiy hisobni yangilash
-      await storage.updateLeaderboardEntry({
-        userId,
-        wpm: validatedData.wpm,
-        accuracy: validatedData.accuracy,
-        language: validatedData.language,
-        period: "alltime",
-      });
+      // NOTE: leaderboard_entries yozuvi olib tashlandi (0-bosqich) — leaderboard
+      // test_results'dan hisoblanadi, shuning uchun alohida yozish shart emas.
 
       res.status(HTTP_STATUS.CREATED).json(savedResult);
     } catch (error) {
@@ -1065,23 +1058,24 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       // 2. CSV faylining sarlavhalari (Ustun nomlari)
       let csv = '\uFEFF'; // UTF-8 BOM qo'shamiz (Excelda rus/o'zbek harflari xatosiz chiqishi uchun)
-      csv += 'ID,Telegram ID,Ism,Username,Rol,Yaratilgan sana\n';
-      
+      csv += 'ID,Telegram ID,Ism,Email,Rol,Yaratilgan sana\n';
+
       // 3. Har bir userni tsiklda aylanib, qatorlarga qo'shish
       allUsers.forEach((user: any) => {
-        // Ism va usernamedagi ehtimoliy vergullarni bo'sh joyga almashtiramiz (CSV strukturasi buzilmasligi uchun)
+        // FIX: users jadvalida `username` ustuni yo'q (firstName nickname sifatida
+        // ishlatiladi). Ilgari user.username hamisha undefined edi. Email ishlatamiz.
         let name = user.firstName ? user.firstName.replace(/,/g, '') : 'Noma\'lum';
-        let username = user.username ? user.username.replace(/,/g, '') : '-';
+        let email = user.email ? user.email.replace(/,/g, '') : '-';
         const role = user.role || 'user';
-        
+
         // Kiberxavfsizlik (CSV Injection / Formula Injection oldini olish)
         if (/^[=\-+\@]/.test(name)) name = "'" + name;
-        if (/^[=\-+\@]/.test(username)) username = "'" + username;
-        
+        if (/^[=\-+\@]/.test(email)) email = "'" + email;
+
         // Sanani chiroyli formatlash
         const date = user.createdAt ? new Date(user.createdAt).toLocaleString('ru-RU') : '-';
-        
-        csv += `${user.id},"${user.telegramId}","${name}","${username}","${role}","${date}"\n`;
+
+        csv += `${user.id},"${user.telegramId}","${name}","${email}","${role}","${date}"\n`;
       });
 
       // 4. Brauzer yoki Bot buni oddiy JSON emas, fayl deb qabul qilishi uchun Headerlarni sozlaymiz

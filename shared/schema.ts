@@ -33,17 +33,8 @@ export const testResults = pgTable("test_results", {
   };
 });
 
-export const leaderboardEntries = pgTable("leaderboard_entries", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: varchar("user_id")
-    .references(() => users.id)
-    .notNull(),
-  wpm: integer("wpm").notNull(),
-  accuracy: integer("accuracy").notNull(),
-  language: text("language").notNull(),
-  period: text("period").notNull(), // 'daily', 'weekly', 'alltime'
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+// NOTE: `leaderboard_entries` jadvali olib tashlandi (0-bosqich qarori) — global
+// leaderboard yagona manba sifatida `test_results`dan hisoblanadi (LeaderboardService).
 
 export const battles = pgTable("battles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -74,8 +65,6 @@ export const battleParticipants = pgTable("battle_participants", {
   wpm: integer("wpm"),
   accuracy: integer("accuracy"),
   isWinner: boolean("is_winner").default(false),
-  ipAddress: varchar("ip_address"),
-  agreedAt: timestamp("agreed_at"),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 
@@ -111,13 +100,6 @@ export const competitionParticipants = pgTable("competition_participants", {
   registeredAt: timestamp("registered_at").defaultNow().notNull(),
 });
 
-export const notifications = pgTable("notifications", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: text("title").notNull(),
-  message: text("message").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
 export const advertisements = pgTable("advertisements", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -127,17 +109,6 @@ export const advertisements = pgTable("advertisements", {
   expiresAt: timestamp("expires_at").notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const prizeWinners = pgTable("prize_winners", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: varchar("user_id")
-    .references(() => users.id)
-    .notNull(),
-  competitionId: integer("competition_id")
-    .references(() => competitions.id)
-    .notNull(),
-  prizeGivenAt: timestamp("prize_given_at").defaultNow().notNull(),
 });
 
 export const roomAccessCodes = pgTable(
@@ -191,11 +162,6 @@ export const insertTestResultSchema = createInsertSchema(testResults).omit({
   createdAt: true,
 });
 
-export const insertLeaderboardEntrySchema = createInsertSchema(leaderboardEntries).omit({
-  id: true,
-  updatedAt: true,
-});
-
 export const insertBattleSchema = createInsertSchema(battles).omit({
   id: true,
   createdAt: true,
@@ -216,9 +182,6 @@ export const insertBattleParticipantSchema = createInsertSchema(battleParticipan
 export type TestResult = typeof testResults.$inferSelect;
 export type InsertTestResult = z.infer<typeof insertTestResultSchema>;
 
-export type LeaderboardEntry = typeof leaderboardEntries.$inferSelect;
-export type InsertLeaderboardEntry = z.infer<typeof insertLeaderboardEntrySchema>;
-
 export type Battle = typeof battles.$inferSelect;
 export type InsertBattle = z.infer<typeof insertBattleSchema>;
 
@@ -236,7 +199,6 @@ export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
 export type Advertisement = typeof advertisements.$inferSelect;
 export type InsertAdvertisement = z.infer<typeof insertAdvertisementSchema>;
 
-export type PrizeWinner = typeof prizeWinners.$inferSelect;
 export type RoomAccessCode = typeof roomAccessCodes.$inferSelect;
 export type BotState = typeof botStates.$inferSelect;
 

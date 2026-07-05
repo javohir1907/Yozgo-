@@ -15,15 +15,12 @@ import {
   User,
   TestResult,
   InsertTestResult,
-  LeaderboardEntry,
-  InsertLeaderboardEntry,
   Battle,
   InsertBattle,
   BattleParticipant,
   InsertBattleParticipant,
   users,
   testResults,
-  leaderboardEntries,
   battles,
   battleParticipants,
   reviews,
@@ -53,10 +50,6 @@ export interface IStorage {
   createTestResult(result: InsertTestResult): Promise<TestResult>;
   getTestResultsByUserId(userId: string): Promise<TestResult[]>;
   getUserStats(userId: string): Promise<UserStats>;
-
-  // Competitive (Leaderboard)
-  getLeaderboard(period: string, language: string): Promise<(LeaderboardEntry & { user: User })[]>;
-  updateLeaderboardEntry(entry: InsertLeaderboardEntry): Promise<LeaderboardEntry>;
 
   // Battle Arena (Multiplayer)
   createBattle(battle: InsertBattle): Promise<Battle>;
@@ -162,50 +155,8 @@ export class DatabaseStorage implements IStorage {
 
   // ============ LEADERBOARD OPERATIONS ============
 
-  /**
-   * Ma'lum til va davr uchun peshqadamlar ro'yxatini olish.
-   */
-  async getLeaderboard(period: string, language: string) {
-    const entries = await db
-      .select({ entry: leaderboardEntries, user: users })
-      .from(leaderboardEntries)
-      .innerJoin(users, eq(leaderboardEntries.userId, users.id))
-      .where(and(eq(leaderboardEntries.period, period), eq(leaderboardEntries.language, language)))
-      .orderBy(desc(leaderboardEntries.wpm));
-
-    return entries.map((r) => ({ ...r.entry, user: r.user }));
-  }
-
-  /**
-   * Foydalanuvchi natijasi oldingidan yaxshiroq bo'lsa, uni leaderboard-da yangilash.
-   */
-  async updateLeaderboardEntry(entry: InsertLeaderboardEntry): Promise<LeaderboardEntry> {
-    const [currentBest] = await db
-      .select()
-      .from(leaderboardEntries)
-      .where(
-        and(
-          eq(leaderboardEntries.userId, entry.userId),
-          eq(leaderboardEntries.period, entry.period),
-          eq(leaderboardEntries.language, entry.language)
-        )
-      );
-
-    if (currentBest) {
-      if (entry.wpm > currentBest.wpm) {
-        const [updated] = await db
-          .update(leaderboardEntries)
-          .set({ wpm: entry.wpm, accuracy: entry.accuracy, updatedAt: new Date() })
-          .where(eq(leaderboardEntries.id, currentBest.id))
-          .returning();
-        return updated;
-      }
-      return currentBest;
-    }
-
-    const [newEntry] = await db.insert(leaderboardEntries).values(entry).returning();
-    return newEntry;
-  }
+  // NOTE: getLeaderboard / updateLeaderboardEntry olib tashlandi (0-bosqich qarori) —
+  // global leaderboard endi faqat test_results'dan LeaderboardService orqali hisoblanadi.
 
   // ============ BATTLE OPERATIONS ============
 
