@@ -22,12 +22,18 @@ export interface LeaderboardEntry {
 
 export default function LeaderboardPage() {
   const [language, setLanguage] = useState<string>("all");
+  const [period, setPeriod] = useState<"weekly" | "monthly" | "all">("all");
+  const [mode, setMode] = useState<"global" | "friends">("global");
   const { t } = useI18n();
   const { user } = useAuth();
 
   const { data: entries, isLoading } = useQuery<LeaderboardEntry[]>({
-    queryKey: [`/api/leaderboard?language=${language}`],
+    queryKey: [`/api/leaderboard?language=${language}&period=${period}&mode=${mode}`],
   });
+
+  // Malakaviy chegara period bo'yicha: haftalik board'da 30 daqiqa (1800s) deyarli
+  // hammani chiqarib tashlaydi (bo'sh board). Period'ga qarab masshtablaymiz.
+  const minSeconds = period === "weekly" ? 300 : period === "monthly" ? 600 : 1800;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -55,6 +61,21 @@ export default function LeaderboardPage() {
               <TabsTrigger value="en">EN</TabsTrigger>
             </TabsList>
           </Tabs>
+          <Tabs value={period} onValueChange={(v) => setPeriod(v as "weekly" | "monthly" | "all")} className="w-full md:w-auto">
+            <TabsList data-testid="tabs-leaderboard-period">
+              <TabsTrigger value="weekly">{t.leaderboard.weekly}</TabsTrigger>
+              <TabsTrigger value="monthly">{t.leaderboard.monthly}</TabsTrigger>
+              <TabsTrigger value="all">{t.leaderboard.allTime}</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {user && (
+            <Tabs value={mode} onValueChange={(v) => setMode(v as "global" | "friends")} className="w-full md:w-auto">
+              <TabsList data-testid="tabs-leaderboard-mode">
+                <TabsTrigger value="global">{t.leaderboard.globalTab}</TabsTrigger>
+                <TabsTrigger value="friends">{t.leaderboard.friendsTab}</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
         </div>
 
         <div className="min-h-[400px] relative">
@@ -81,9 +102,9 @@ export default function LeaderboardPage() {
               >
                 {(() => {
                   if (!entries) return null;
-                  const validEntries = entries.filter((e) => e.totalSeconds >= 1800);
-                  const myEntry = entries.find((e) => e.userId === user?.id && e.totalSeconds < 1800);
-                  
+                  const validEntries = entries.filter((e) => e.totalSeconds >= minSeconds);
+                  const myEntry = entries.find((e) => e.userId === user?.id && e.totalSeconds < minSeconds);
+
                   const displayEntries = [...validEntries];
                   if (myEntry) displayEntries.push(myEntry);
 
@@ -99,10 +120,10 @@ export default function LeaderboardPage() {
 
                   const displayEntriesRanked = displayEntries.map((e, index) => ({
                     ...e,
-                    rank: e.totalSeconds >= 1800 ? index + 1 : e.rank
+                    rank: e.totalSeconds >= minSeconds ? index + 1 : e.rank
                   }));
 
-                  return <LeaderboardTable entries={displayEntriesRanked} currentUserId={user?.id} />;
+                  return <LeaderboardTable entries={displayEntriesRanked} currentUserId={user?.id} minSeconds={minSeconds} />;
                 })()}
               </motion.div>
             )}

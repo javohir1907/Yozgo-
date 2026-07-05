@@ -17,6 +17,12 @@ import { storage } from "./storage";
 import { pool } from "./db";
 import { words } from "../shared/words";
 import { type User } from "@shared/schema";
+import { computeBattleXp } from "@shared/lib/xp";
+import { computeBattleCoins } from "@shared/lib/coins";
+import { resolveRank } from "@shared/lib/rank";
+import * as StreakService from "./services/streak.service";
+import { evaluateBadges } from "./gamification/badge-service";
+import * as QuestService from "./services/quest.service";
 import { sendAdminNotification } from "./utils/notifier";
 import { checkGenderEligibility } from "./utils/battle-access";
 import { sessionMiddleware } from "./auth";
@@ -643,17 +649,43 @@ export class BattleManager {
         winnerIds.add(finalResults.winnerId);
       }
 
+      // mode ustuni endi '15'|'30'|'60' enum'i (insertTestResultSchema hardening).
+      // room.mode string bo'lgani uchun xavfsiz coerce qilamiz (server-controlled qiymat).
+      const battleMode: "15" | "30" | "60" = (["15", "30", "60"].includes(room.mode)
+        ? room.mode
+        : "60") as "15" | "30" | "60";
+
       for (const player of playersArray) {
         if (player.bestWpm <= 0) continue; // hech narsa yozmagan o'yinchini o'tkazamiz
 
         const bestWpm = Math.round(player.bestWpm);
         const bestAccuracy = Math.round(player.bestAccuracy);
+        const isWinner = winnerIds.has(player.user.id);
 
-        // battle_participants: eng yaxshi natija + g'oliblik bayrog'i
+        // ANTI-CHEAT/BAN gate (Rule 2 + Contract D): join-vaqtidagi ESKI snapshot
+        // (player.user.isBanned) EMAS — jonli is_banned'ni qayta o'qiymiz, chunki
+        // anti-cheat battle o'rtasida banUser() qilishi mumkin. Fetch xatosida
+        // xavfsizroq tomonga — stale snapshot bilan davom.
+        let banned = player.user.isBanned === true;
+        try {
+          const fresh = await storage.getUser(player.user.id);
+          if (fresh) banned = fresh.isBanned === true;
+        } catch {
+          /* stale snapshot bilan davom */
+        }
+        const rewardBlocked = banned || bestWpm > 260;
+        const xpAwarded = rewardBlocked
+          ? 0
+          : computeBattleXp({ wpm: bestWpm, accuracy: bestAccuracy, isWinner });
+        const coinsAwarded = rewardBlocked
+          ? 0
+          : computeBattleCoins({ wpm: bestWpm, accuracy: bestAccuracy, isWinner });
+
+        // battle_participants: eng yaxshi natija + g'oliblik bayrog'i + battle XP/coin.
         try {
           await pool.query(
-            "UPDATE battle_participants SET wpm = $1, accuracy = $2, is_winner = $3 WHERE battle_id = $4 AND user_id = $5",
-            [bestWpm, bestAccuracy, winnerIds.has(player.user.id), room.id, player.user.id],
+            "UPDATE battle_participants SET wpm = $1, accuracy = $2, is_winner = $3, xp_awarded = $4, coins_awarded = $5 WHERE battle_id = $6 AND user_id = $7",
+            [bestWpm, bestAccuracy, isWinner, xpAwarded, coinsAwarded, room.id, player.user.id],
           );
         } catch (e) {
           console.error("[BATTLE] battle_participants g'olib yozishda xatolik:", e);
@@ -661,17 +693,63 @@ export class BattleManager {
 
         // test_results'ga yozamiz, lekin source='battle' bilan — global (solo)
         // leaderboard bu natijalarni filtrlaydi, shu bilan battle/solo ajratiladi.
+        // Ko'zgu (mirror) yozuvida xp_awarded=0 (default) — battle XP battle_participants'da
+        // hisoblanadi, aks holda audit ikki marta sanaydi.
         try {
           await storage.createTestResult({
             userId: player.user.id,
             wpm: bestWpm,
             accuracy: bestAccuracy,
             language: room.language,
-            mode: room.mode,
+            mode: battleMode,
             source: "battle",
           });
         } catch (e) {
           console.error("[BATTLE] test_results'ga jang natijasini yozishda xatolik:", e);
+        }
+
+        // Reward (XP + streak) faqat gate o'tgan (banlanmagan, extreme emas) o'yinchiga.
+        // Har biri alohida try/catch — reward xatosi battle-persist'ni buzmasin.
+        if (!rewardBlocked) {
+          if (xpAwarded > 0) {
+            try {
+              await storage.addUserXp(player.user.id, xpAwarded);
+            } catch (e) {
+              console.error("[BATTLE] XP yangilashda xatolik:", e);
+            }
+            // Liga haftalik XP (Feature 5, Contract A) — solo bilan bir xil accounting.
+            try {
+              await storage.accrueWeeklyXp(player.user.id, xpAwarded);
+            } catch (e) {
+              console.error("[BATTLE] weekly_xp yangilashda xatolik:", e);
+            }
+          }
+          // Coin (Feature 8).
+          if (coinsAwarded > 0) {
+            try {
+              await storage.addUserCoins(player.user.id, coinsAwarded);
+            } catch (e) {
+              console.error("[BATTLE] coin yangilashda xatolik:", e);
+            }
+          }
+          try {
+            await StreakService.updateStreak(player.user.id);
+          } catch (e) {
+            console.error("[BATTLE] streak yangilashda xatolik:", e);
+          }
+          // Kunlik quest progressi (Feature 6) — battle event (mirror row EMAS).
+          void QuestService.incrementQuests(player.user.id, {
+            type: "battle",
+            wpm: bestWpm,
+            accuracy: bestAccuracy,
+            isWinner,
+          });
+          // Badge tekshiruvi (Feature 3) — fire-and-forget.
+          void evaluateBadges(player.user.id, {
+            resultAccuracy: bestAccuracy,
+            source: "battle",
+            isBattleWin: isWinner,
+          });
         }
       }
     } catch (persistError) {
@@ -745,6 +823,7 @@ export class BattleManager {
         username: p.user.firstName || p.user.email?.split("@")[0] || "Unknown",
         avatarUrl: p.user.profileImageUrl,
         gender: p.user.gender || "male", // UI uchun jins ni qo'shildi
+        rank: resolveRank(p.bestWpm || 0).key, // Feature 7 — unvon (battle xonasi uchun)
         progress: p.progress,
         wpm: p.wpm,
         rawWpm: p.rawWpm,

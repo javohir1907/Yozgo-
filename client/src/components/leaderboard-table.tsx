@@ -17,9 +17,12 @@ import type { LeaderboardEntry } from "@/pages/leaderboard";
 interface LeaderboardTableProps {
   entries: LeaderboardEntry[];
   currentUserId?: string;
+  // Malakaviy chegara (soniya). Period bo'yicha o'zgaradi (weekly=300, monthly=600,
+  // all=1800). Progress-bar shu chegaraga nisbatan ko'rsatiladi.
+  minSeconds?: number;
 }
 
-export function LeaderboardTable({ entries, currentUserId }: LeaderboardTableProps) {
+export function LeaderboardTable({ entries, currentUserId, minSeconds = 1800 }: LeaderboardTableProps) {
   const { t } = useI18n();
 
   const formatTime = (seconds: number) => {
@@ -47,9 +50,9 @@ export function LeaderboardTable({ entries, currentUserId }: LeaderboardTablePro
         <TableBody>
           {entries.map((entry) => {
             const isCurrentUser = currentUserId && entry.userId === currentUserId;
-            const progress = Math.min((entry.totalSeconds / 1800) * 100, 100);
-            const needsProgress = entry.totalSeconds < 1800;
-            const minutesLeft = Math.ceil((1800 - entry.totalSeconds) / 60);
+            const progress = Math.min((entry.totalSeconds / minSeconds) * 100, 100);
+            const needsProgress = entry.totalSeconds < minSeconds;
+            const minutesLeft = Math.ceil((minSeconds - entry.totalSeconds) / 60);
 
             return (
               <TableRow

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProgressChart } from "@/components/progress-chart";
@@ -13,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, Target, Timer, BarChart3, History, Key, AlertCircle, User as UserIcon } from "lucide-react";
+import { Trophy, Target, Timer, BarChart3, History, Key, AlertCircle, User as UserIcon, Rocket, Flame, Repeat, CalendarCheck, Swords, Star, Lock, Crown, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
@@ -32,6 +33,22 @@ interface ProfileData {
     avatarUrl?: string;
     gender?: string;
     role?: string;
+    // Gamifikatsiya — XP & Level (server GET /api/profile'dan). Optional chaining
+    // bilan o'qiladi (bosqichma-bosqich rollout).
+    xp?: number;
+    level?: number;
+    xpIntoLevel?: number;
+    xpForNextLevel?: number;
+    levelPct?: number;
+    // Feature 2 — kunlik streak
+    currentStreak?: number;
+    longestStreak?: number;
+    // Feature 7 — rank/unvon (key)
+    rank?: string;
+    // Feature 8 — coin + kiyilgan kosmetika
+    coins?: number;
+    themeMeta?: { accent?: string } | null;
+    frameMeta?: { ring?: string } | null;
   };
   stats: {
     totalTests: number;
@@ -53,7 +70,24 @@ interface ProfileData {
     mode: string;
     createdAt: string;
   }[];
+  // Feature 3 — badge katalogi (ochilgan + qulflangan)
+  badges?: {
+    earned: { key: string; icon: string; earnedAt?: string }[];
+    locked: { key: string; icon: string }[];
+  };
 }
+
+// badge-defs.ts dagi `icon` (lucide nomi) -> komponent.
+const BADGE_ICONS: Record<string, LucideIcon> = {
+  Rocket,
+  Flame,
+  Repeat,
+  CalendarCheck,
+  Swords,
+  Target,
+  Star,
+  Crown,
+};
 
 export default function Profile() {
   const [, params] = useRoute("/profile/:userId");
@@ -64,7 +98,8 @@ export default function Profile() {
   const currentUserId = params?.userId || authUser?.id;
   const isOwnProfile = !params?.userId || params.userId === authUser?.id;
 
-  const [currentPassword, setCurrentPassword] = useState("");
+  const [oldPassword, setOldPassword] = useState(""); // joriy (haqiqiy) parol — M3
+  const [currentPassword, setCurrentPassword] = useState(""); // yangi parolni tasdiqlash
   const [newPassword, setNewPassword] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
@@ -101,6 +136,10 @@ export default function Profile() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!oldPassword) {
+      toast({ title: t.profile.error, description: t.profile.currentPassword, variant: "destructive" });
+      return;
+    }
     if (newPassword !== currentPassword) {
       toast({
         title: t.profile.error,
@@ -119,13 +158,16 @@ export default function Profile() {
     }
     setIsChangingPassword(true);
     try {
+      // M3: joriy parolni ham yuboramiz — server bcrypt.compare bilan tekshiradi.
       await apiRequest("POST", "/api/auth/update-password", {
+        currentPassword: oldPassword,
         newPassword,
       });
       toast({
         title: t.profile.success,
         description: t.profile.passChanged,
       });
+      setOldPassword("");
       setCurrentPassword("");
       setNewPassword("");
     } catch (err: any) {
@@ -168,14 +210,20 @@ export default function Profile() {
   }));
 
   return (
-    <div className="container mx-auto p-8 space-y-8 animate-in fade-in duration-500">
-      <SEO 
+    <div
+      className="container mx-auto p-8 space-y-8 animate-in fade-in duration-500"
+      style={user.themeMeta?.accent ? ({ ["--primary" as any]: user.themeMeta.accent } as React.CSSProperties) : undefined}
+    >
+      <SEO
         title={`${user.username} | ${t.nav.profile}`} 
         description={`${user.username}нинг YOZGO platformasidagi natijalari va statistikasi.`}
       />
       
       <div className="flex items-center gap-6 mb-8">
-        <Avatar className="h-24 w-24 border-2 border-primary/20">
+        <Avatar
+          className="h-24 w-24 border-2 border-primary/20"
+          style={user.frameMeta?.ring ? { boxShadow: `0 0 0 4px ${user.frameMeta.ring}` } : undefined}
+        >
           <AvatarImage src={user.avatarUrl} />
           <AvatarFallback className="text-4xl bg-primary/10 text-primary">
             {user.username.slice(0, 2).toUpperCase()}
@@ -188,7 +236,9 @@ export default function Profile() {
           <div className="flex items-center gap-3 mt-1">
             <p className="text-muted-foreground flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
-              {t.profile.typingEnthusiast}
+              {user.rank
+                ? (t.leaderboard.rankTitles as Record<string, string>)[user.rank] ?? t.profile.typingEnthusiast
+                : t.profile.typingEnthusiast}
             </p>
             {user.gender && (
               <span className={cn(
@@ -198,9 +248,46 @@ export default function Profile() {
                 {user.gender === 'male' ? t.profile.boy : t.profile.girl}
               </span>
             )}
+            {typeof user.currentStreak === "number" && user.currentStreak > 0 && (
+              <span
+                className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-orange-500/10 text-orange-500 border-orange-500/20 flex items-center gap-1"
+                data-testid="badge-streak"
+                title={`${t.profile.bestStreak}: ${user.longestStreak ?? user.currentStreak}`}
+              >
+                🔥 {user.currentStreak} {t.profile.streak}
+              </span>
+            )}
+            {typeof user.coins === "number" && (
+              <span
+                className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-yellow-500/10 text-yellow-600 border-yellow-500/20 flex items-center gap-1"
+                data-testid="badge-coins"
+              >
+                🪙 {user.coins}
+              </span>
+            )}
           </div>
         </div>
       </div>
+
+      {typeof user.level === "number" && (
+        <Card className="bg-card border border-border shadow-sm" data-testid="card-level">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-yellow-500" />
+                {t.profile.level} {user.level}
+              </span>
+              <span className="text-xs font-mono text-muted-foreground" data-testid="text-xp">
+                {user.xpIntoLevel ?? 0} / {user.xpForNextLevel ?? 0} {t.profile.xp}
+              </span>
+            </div>
+            <Progress value={user.levelPct ?? 0} className="h-3" />
+            <div className="text-[10px] text-muted-foreground mt-1 text-right">
+              {Math.max(0, (user.xpForNextLevel ?? 0) - (user.xpIntoLevel ?? 0))} {t.profile.xp} {t.profile.xpToNext}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
@@ -249,6 +336,49 @@ export default function Profile() {
           </Card>
         ))}
       </div>
+
+      {data.badges && (data.badges.earned.length > 0 || data.badges.locked.length > 0) && (
+        <Card className="bg-card border border-border shadow-sm" data-testid="card-achievements">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
+              {t.profile.achievements}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+              {[
+                ...data.badges.earned.map((b) => ({ ...b, earned: true })),
+                ...data.badges.locked.map((b) => ({ ...b, earned: false })),
+              ].map((b) => {
+                const Icon = BADGE_ICONS[b.icon] ?? Trophy;
+                const meta = (t.profile.badges as Record<string, { title: string; desc: string }>)[b.key];
+                return (
+                  <div
+                    key={b.key}
+                    title={meta ? `${meta.title} — ${meta.desc}` : b.key}
+                    className={cn(
+                      "flex flex-col items-center gap-1 p-3 rounded-xl border text-center transition-all",
+                      b.earned
+                        ? "bg-yellow-500/5 border-yellow-500/30"
+                        : "bg-muted/30 border-border opacity-40 grayscale",
+                    )}
+                    data-testid={`badge-${b.key}`}
+                  >
+                    <div className="relative">
+                      <Icon className={cn("w-6 h-6", b.earned ? "text-yellow-500" : "text-muted-foreground")} />
+                      {!b.earned && (
+                        <Lock className="w-3 h-3 absolute -bottom-1 -right-1 text-muted-foreground" />
+                      )}
+                    </div>
+                    <span className="text-[10px] font-medium leading-tight">{meta?.title ?? b.key}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="bg-card border border-border shadow-sm">
         <CardHeader>
@@ -309,6 +439,18 @@ export default function Profile() {
               </div>
               <div className="grid gap-4">
                 <div className="space-y-2">
+                  <Label>{t.profile.currentPassword}</Label>
+                  <Input
+                    type="password"
+                    value={oldPassword}
+                    onChange={(e) => setOldPassword(e.target.value)}
+                    placeholder={t.profile.currentPassword}
+                    required
+                    minLength={6}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>{t.profile.newPassword}</Label>
                   <Input
                     type="password"
@@ -317,6 +459,7 @@ export default function Profile() {
                     placeholder={t.profile.passwordMin}
                     required
                     minLength={6}
+                    autoComplete="new-password"
                   />
                 </div>
                 <div className="space-y-2">

@@ -21,6 +21,15 @@ import { BattleManager } from "./battle-manager";
 import { sendAdminNotification } from "./utils/notifier";
 import { checkGenderEligibility } from "./utils/battle-access";
 import { LeaderboardService } from "./services/leaderboard.service";
+import * as StreakService from "./services/streak.service";
+import { evaluateBadges } from "./gamification/badge-service";
+import { getStandingForUser } from "./services/league.service";
+import * as QuestService from "./services/quest.service";
+import { computeSoloXp, xpProgress } from "@shared/lib/xp";
+import { resolveRank } from "@shared/lib/rank";
+import { computeSoloCoins } from "@shared/lib/coins";
+import { cosmeticMeta } from "./gamification/cosmetic-defs";
+import { inviteFriendToBattle } from "./userBot";
 
 // Shared Schemas & Models
 import crypto from "crypto";
@@ -28,6 +37,7 @@ import crypto from "crypto";
 import {
   users,
   battles,
+  testResults,
   roomAccessCodes,
   competitions,
   competitionParticipants,
@@ -36,8 +46,11 @@ import {
   competitionCreationCodes,
 } from "@shared/schema";
 
-let leaderboardCache = { data: null as any, lastFetched: 0 };
-const CACHE_TTL = 5 * 60 * 1000; // 5 daqiqa
+// Leaderboard cache — `${language}:${period}` bo'yicha kalanadi (period qo'shilgach
+// yagona obyekt yetmaydi: weekly so'rovga all-time payload berish data corruption bo'lardi).
+const leaderboardCache = new Map<string, { data: any; lastFetched: number }>();
+const CACHE_TTL_ALL = 5 * 60 * 1000; // all-time: 5 daqiqa
+const CACHE_TTL_PERIOD = 60 * 1000; // weekly/monthly: 60s (jonli board tez yangilansin)
 
 // XAVFSIZLIK: foydalanuvchini client'ga qaytarishda ishlatiladigan ustunlar.
 // `password` (bcrypt hash) ATAYLAB chiqarilmagan — admin endpointlari ham
@@ -129,12 +142,107 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(HTTP_STATUS.FORBIDDEN).json({ message: "Sizning natijangiz shubhali deb topildi. Iltimos, halol o'ynang!" });
       }
 
-      const savedResult = await storage.createTestResult(validatedData);
+      // ANTI-CHEAT/BAN gate (gamifikatsiya Rule 2): isAuthenticated faqat session'ni
+      // tekshiradi, is_banned'ni EMAS. Banlangan foydalanuvchi natija ham saqlamaydi,
+      // XP ham olmaydi.
+      const actor = await storage.getUser(userId);
+      if (!actor || actor.isBanned) {
+        return res.status(HTTP_STATUS.FORBIDDEN).json({ message: "Hisobingiz bloklangan." });
+      }
 
-      // NOTE: leaderboard_entries yozuvi olib tashlandi (0-bosqich) — leaderboard
-      // test_results'dan hisoblanadi, shuning uchun alohida yozish shart emas.
+      // XP/coin SERVER tomonda hisoblanadi (client hech qachon yubormaydi).
+      const xpAwarded = computeSoloXp({ wpm: validatedData.wpm, accuracy: validatedData.accuracy });
+      const coinsAwarded = computeSoloCoins({ wpm: validatedData.wpm, accuracy: validatedData.accuracy });
+      const clientResultId = validatedData.clientResultId ?? null;
 
-      res.status(HTTP_STATUS.CREATED).json(savedResult);
+      // IDEMPOTENCY tez yo'li: shu client_result_id bilan natija allaqachon bo'lsa —
+      // mavjudini qaytar, hech qanday mukofot bermay (retry to'liq no-op).
+      if (clientResultId) {
+        const existing = await storage.getTestResultByClientId(userId, clientResultId);
+        if (existing) {
+          const prog = xpProgress(actor.xp ?? 0);
+          return res.status(HTTP_STATUS.OK).json({
+            ...existing,
+            idempotent: true,
+            xp: prog.xp,
+            level: prog.level,
+            xpAwarded: 0,
+            coinsAwarded: 0,
+            currentStreak: actor.currentStreak ?? 0,
+            longestStreak: actor.longestStreak ?? 0,
+          });
+        }
+      }
+
+      // Natija + XP/level/streak/coin/weekly_xp — BITTA tranzaksiyada. GATE:
+      // INSERT ... ON CONFLICT (user_id, client_result_id) DO NOTHING — faqat haqiqatan
+      // yozgan (RETURNING) so'rov mukofot oladi (concurrent retry ham no-op).
+      const outcome = await db.transaction(async (tx) => {
+        const inserted = await tx
+          .insert(testResults)
+          .values({
+            userId,
+            wpm: validatedData.wpm,
+            accuracy: validatedData.accuracy,
+            language: validatedData.language,
+            mode: validatedData.mode,
+            source: "solo",
+            xpAwarded,
+            coinsAwarded,
+            clientResultId,
+          })
+          .onConflictDoNothing({ target: [testResults.userId, testResults.clientResultId] })
+          .returning();
+
+        if (inserted.length === 0) return { isNew: false as const };
+
+        const row = inserted[0];
+        // XP + streak (atomik) — tx bilan.
+        const streakXp = await StreakService.updateStreakAndXp(userId, xpAwarded, tx);
+        // Liga haftalik XP (Contract A) — faollik XP'si bilan — tx.
+        if (xpAwarded > 0) await storage.accrueWeeklyXp(userId, xpAwarded, tx);
+        // Coin — tx.
+        if (coinsAwarded > 0) await storage.addUserCoins(userId, coinsAwarded, tx);
+        return { isNew: true as const, row, ...streakXp };
+      });
+
+      if (!outcome.isNew) {
+        // Concurrent retry tranzaksiya ichida to'qnashdi — mavjud natijani qaytar (no-op).
+        const existing = clientResultId
+          ? await storage.getTestResultByClientId(userId, clientResultId)
+          : undefined;
+        const prog = xpProgress(actor.xp ?? 0);
+        return res.status(HTTP_STATUS.OK).json({
+          ...(existing ?? {}),
+          idempotent: true,
+          xp: prog.xp,
+          level: prog.level,
+          xpAwarded: 0,
+          coinsAwarded: 0,
+          currentStreak: actor.currentStreak ?? 0,
+          longestStreak: actor.longestStreak ?? 0,
+        });
+      }
+
+      // Yangi natija: quest + badge fire-and-forget (o'zlari idempotent — retry'da
+      // umuman chaqirilmaydi, chunki yuqorida no-op qaytdi).
+      void QuestService.incrementQuests(userId, {
+        type: "solo",
+        wpm: validatedData.wpm,
+        accuracy: validatedData.accuracy,
+        mode: validatedData.mode,
+      });
+      void evaluateBadges(userId, { resultAccuracy: validatedData.accuracy, source: "solo" });
+
+      res.status(HTTP_STATUS.CREATED).json({
+        ...outcome.row,
+        xp: outcome.xp,
+        level: outcome.level,
+        xpAwarded,
+        coinsAwarded,
+        currentStreak: outcome.currentStreak,
+        longestStreak: outcome.longestStreak,
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Invalid test results data" });
@@ -156,28 +264,183 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const querySchema = z.object({
         language: z.enum(["all", "en", "ru", "uz"]).default("all"),
+        period: z.enum(["weekly", "monthly", "all"]).default("all"),
+        mode: z.enum(["global", "friends"]).default("global"),
       });
 
-      const { language } = querySchema.parse(req.query);
+      const { language, period, mode } = querySchema.parse(req.query);
 
-      // Keshlash mantig'i (faqat "all" holati uchun, qolganlarini on-the-fly hisoblaymiz)
-      if (language === "all" && leaderboardCache.data && Date.now() - leaderboardCache.lastFetched < CACHE_TTL) {
-        return res.status(HTTP_STATUS.OK).json(leaderboardCache.data);
+      // Friends mode (Feature 9): har foydalanuvchi uchun har xil -> cache BYPASS.
+      if (mode === "friends") {
+        const userId = req.session.userId;
+        if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+        const friendIds = await storage.getFriendIds(userId);
+        friendIds.push(userId); // o'zini ham ko'rsin
+        const data = await LeaderboardService.getLeaderboardData(language, period, friendIds);
+        return res.status(HTTP_STATUS.OK).json(data);
+      }
+
+      // Keshlash: har (language, period) juftligi alohida kalit. Yangi natija faqat
+      // TTL tugagach ko'rinadi (leaderboard-write invalidation site YO'Q — 0-bosqichda
+      // olib tashlangan). weekly/monthly qisqa TTL bilan tezroq yangilanadi.
+      const cacheKey = `${language}:${period}`;
+      const ttl = period === "all" ? CACHE_TTL_ALL : CACHE_TTL_PERIOD;
+      const hit = leaderboardCache.get(cacheKey);
+      if (hit && Date.now() - hit.lastFetched < ttl) {
+        return res.status(HTTP_STATUS.OK).json(hit.data);
       }
 
       // Toza Arxitektura: DB va Mantiq Service'ga topshirildi
-      const formattedEntries = await LeaderboardService.getLeaderboardData(language);
-
-      // Ma'lumotlarni formatlash qismidan keyin:
-      if (language === "all") {
-        leaderboardCache = { data: formattedEntries, lastFetched: Date.now() };
-      }
+      const formattedEntries = await LeaderboardService.getLeaderboardData(language, period);
+      leaderboardCache.set(cacheKey, { data: formattedEntries, lastFetched: Date.now() });
 
       res.status(HTTP_STATUS.OK).json(formattedEntries);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Invalid query parameters" });
       }
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  /**
+   * Do'kon katalogi + foydalanuvchi balansi/egaligi (Feature 8).
+   */
+  app.get("/api/shop", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      const data = await storage.listCosmeticsForUser(userId);
+      res.status(HTTP_STATUS.OK).json(data);
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  /**
+   * Kosmetika sotib olish (SERVER tomonda balans/egalik, atomik). Feature 8.
+   */
+  app.post("/api/shop/buy", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      const key = String(req.body?.key || "");
+      if (!key) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "key kerak" });
+      const result = await storage.buyCosmetic(userId, key);
+      res.status(HTTP_STATUS.OK).json(result);
+    } catch (error: any) {
+      const msg = error?.message;
+      if (msg === "INSUFFICIENT") return res.status(HTTP_STATUS.PAYMENT_REQUIRED).json({ message: "Coin yetarli emas" });
+      if (msg === "ALREADY_OWNED") return res.status(HTTP_STATUS.CONFLICT).json({ message: "Allaqachon sizda bor" });
+      if (msg === "NOT_FOUND") return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Kosmetika topilmadi" });
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  /**
+   * Kosmetika kiyish (Feature 8).
+   */
+  app.post("/api/shop/equip", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      const key = String(req.body?.key || "");
+      if (!key) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "key kerak" });
+      await storage.equipCosmetic(userId, key);
+      res.status(HTTP_STATUS.OK).json({ ok: true });
+    } catch (error: any) {
+      const msg = error?.message;
+      if (msg === "NOT_OWNED") return res.status(HTTP_STATUS.FORBIDDEN).json({ message: "Bu sizda yo'q" });
+      if (msg === "NOT_FOUND") return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Kosmetika topilmadi" });
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  // ============ DO'STLAR (Feature 9) ============
+
+  app.get("/api/friends", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      res.status(HTTP_STATUS.OK).json(await storage.listFriendships(userId));
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  app.post("/api/friends/request", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      const addresseeId = String(req.body?.addresseeId || "");
+      if (!addresseeId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "addresseeId kerak" });
+      if (addresseeId === userId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "O'zingizga so'rov yubora olmaysiz" });
+      const target = await storage.getUser(addresseeId);
+      if (!target) return res.status(HTTP_STATUS.NOT_FOUND).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
+      await storage.sendFriendRequest(userId, addresseeId);
+      res.status(HTTP_STATUS.OK).json({ ok: true });
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  app.post("/api/friends/accept", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      const requesterId = String(req.body?.requesterId || "");
+      if (!requesterId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "requesterId kerak" });
+      const ok = await storage.acceptFriendRequest(userId, requesterId);
+      res.status(HTTP_STATUS.OK).json({ ok });
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  app.post("/api/friends/invite-battle", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      const friendId = String(req.body?.friendId || "");
+      const battleCode = String(req.body?.battleCode || "");
+      if (!friendId || !battleCode) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "friendId va battleCode kerak" });
+      // Faqat qabul qilingan do'stni taklif qilish mumkin (begonaga spam bo'lmasin).
+      const friendIds = await storage.getFriendIds(userId);
+      if (!friendIds.includes(friendId)) return res.status(HTTP_STATUS.FORBIDDEN).json({ message: "Bu foydalanuvchi do'stingiz emas" });
+      const friend = await storage.getUser(friendId);
+      if (!friend?.telegramId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Do'stingizda Telegram ulanmagan" });
+      const inviter = await storage.getUser(userId);
+      await inviteFriendToBattle(Number(friend.telegramId), battleCode, inviter?.firstName || "Do'stingiz");
+      res.status(HTTP_STATUS.OK).json({ ok: true });
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  /**
+   * Bugungi kunlik questlar va progress (Feature 6).
+   */
+  app.get("/api/quests", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      const data = await QuestService.getTodayQuests(userId);
+      res.status(HTTP_STATUS.OK).json(data);
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  /**
+   * Foydalanuvchining joriy liga holati va cohort reytingi (Feature 5).
+   */
+  app.get("/api/league/me", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      const standing = await getStandingForUser(userId);
+      res.status(HTTP_STATUS.OK).json(standing);
+    } catch (error) {
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
     }
   });
@@ -197,6 +460,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const userStats = await storage.getUserStats(userId);
       const recentAttempts = await storage.getTestResultsByUserId(userId);
 
+      // Gamifikatsiya — XP/level progress (xp.ts yagona manba; qo'shimcha query yo'q).
+      const prog = xpProgress(userRecord.xp ?? 0);
+      // Badge katalogi (ochilgan + qulflangan).
+      const badges = await storage.getUserBadges(userId);
+
       res.status(HTTP_STATUS.OK).json({
         user: {
           id: userRecord.id,
@@ -204,6 +472,20 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           avatarUrl: userRecord.profileImageUrl,
           gender: userRecord.gender, // Yangi qo'shilgan maydon
           role: userRecord.role,
+          xp: prog.xp,
+          level: prog.level,
+          xpIntoLevel: prog.xpIntoLevel,
+          xpForNextLevel: prog.xpForNextLevel,
+          levelPct: prog.pct,
+          currentStreak: userRecord.currentStreak ?? 0,
+          longestStreak: userRecord.longestStreak ?? 0,
+          rank: resolveRank(userStats.bestWpm).key, // Feature 7 — unvon (vizual)
+          // Feature 8 — coin + kiyilgan kosmetika (theme/frame meta bilan)
+          coins: userRecord.coins ?? 0,
+          equippedThemeKey: userRecord.equippedThemeKey ?? null,
+          equippedFrameKey: userRecord.equippedFrameKey ?? null,
+          themeMeta: cosmeticMeta(userRecord.equippedThemeKey),
+          frameMeta: cosmeticMeta(userRecord.equippedFrameKey),
         },
         stats: userStats,
         detailedStats: {
@@ -229,6 +511,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           }
         },
         recentResults: recentAttempts.slice(0, 20), // Oxirgi 20 ta natija chart uchun
+        badges, // Feature 3 — { earned, locked }
       });
     } catch (error) {
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: "Failed to fetch profile" });
