@@ -23,12 +23,14 @@ export const testResults = pgTable("test_results", {
   accuracy: integer("accuracy").notNull(),
   language: text("language").notNull(), // 'en', 'ru', 'uz'
   mode: text("mode").notNull(), // '15', '30', '60'
+  source: text("source").notNull().default("solo"), // 'solo' | 'battle' — leaderboard ajratish uchun
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
     userIdIdx: index("test_user_id_idx").on(table.userId),
     languageIdx: index("test_language_idx").on(table.language),
     wpmIdx: index("test_wpm_idx").on(table.wpm),
+    sourceIdx: index("test_source_idx").on(table.source),
   };
 });
 

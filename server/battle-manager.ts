@@ -659,7 +659,8 @@ export class BattleManager {
           console.error("[BATTLE] battle_participants g'olib yozishda xatolik:", e);
         }
 
-        // Global leaderboard uchun test_results'ga yozamiz
+        // test_results'ga yozamiz, lekin source='battle' bilan — global (solo)
+        // leaderboard bu natijalarni filtrlaydi, shu bilan battle/solo ajratiladi.
         try {
           await storage.createTestResult({
             userId: player.user.id,
@@ -667,6 +668,7 @@ export class BattleManager {
             accuracy: bestAccuracy,
             language: room.language,
             mode: room.mode,
+            source: "battle",
           });
         } catch (e) {
           console.error("[BATTLE] test_results'ga jang natijasini yozishda xatolik:", e);

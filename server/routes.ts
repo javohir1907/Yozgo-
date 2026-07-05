@@ -119,8 +119,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const userId = req.session.userId;
       if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
 
-      // Ma'lumotlarni validatsiya qilish
-      const validatedData = insertTestResultSchema.parse({ ...req.body, userId });
+      // Ma'lumotlarni validatsiya qilish. source majburan 'solo' — client uni
+      // 'battle' deb yuborib leaderboard'dan yashira olmasin (spoofing oldini olish).
+      const validatedData = insertTestResultSchema.parse({ ...req.body, userId, source: "solo" });
 
       // ANTI-CHEAT: Absolute limit check
       if (validatedData.wpm > 260) {

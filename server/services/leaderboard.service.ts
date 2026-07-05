@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { testResults, users } from "@shared/schema";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, and } from "drizzle-orm";
 
 export class LeaderboardService {
   /**
@@ -8,7 +8,11 @@ export class LeaderboardService {
    * Bu biznes mantiq routerdan ajratildi.
    */
   static async getLeaderboardData(language: "all" | "en" | "ru" | "uz") {
-    const filterConditions = language !== "all" ? eq(testResults.language, language) : undefined;
+    // Faqat SOLO natijalar: battle natijalari (source='battle') global
+    // leaderboard'ni ifloslantirmasligi kerak (foydalanuvchi qarori).
+    const soloOnly = eq(testResults.source, "solo");
+    const filterConditions =
+      language !== "all" ? and(soloOnly, eq(testResults.language, language)) : soloOnly;
 
     const leaderboardData = await db
       .select({
