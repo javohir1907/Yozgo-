@@ -26,20 +26,14 @@ import { LeaderboardService } from "./services/leaderboard.service";
 import crypto from "crypto";
 
 import {
-  testResults,
   users,
   battles,
   roomAccessCodes,
-  battleParticipants,
   competitions,
   advertisements,
   competitionParticipants,
   reviews,
   insertTestResultSchema,
-  insertBattleSchema,
-  insertReviewSchema,
-  insertCompetitionSchema,
-  insertAdvertisementSchema,
   systemSettings,
   competitionCreationCodes,
 } from "@shared/schema";
@@ -96,11 +90,6 @@ const ERROR_MESSAGES = {
   FORBIDDEN_ADMIN: "Faqat adminlar uchun ruxsat berilgan",
 };
 
-// ============ TYPES ============
-interface AuthenticatedRequest extends Request {
-  session: any;
-}
-
 // ============ ROUTES REGISTRATION ============
 
 /**
@@ -121,25 +110,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
   // ============ USER RESULTS ROUTES ============
 
-  /**
-   * @openapi
-   * /api/results/me:
-   *   get:
-   *     tags: [Results]
-   *     summary: Foydalanuvchining shaxsiy natijalarini olish
-   */
-  app.get("/api/results/me", isAuthenticated, async (req: Request, res: Response) => {
-    const userId = req.session.userId;
-    if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
-
-    try {
-      const results = await storage.getTestResultsByUserId(userId);
-      res.status(HTTP_STATUS.OK).json(results);
-    } catch (error) {
-      console.error("[API] Error fetching user results:", error);
-      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
-    }
-  });
+  // NOTE: GET /api/results/me olib tashlandi (orphan) — client uni chaqirmaydi;
+  // profil natijalari GET /api/profile/:userId orqali olinadi.
 
   /**
    * Yangi test natijasini saqlash va peshqadamlar jadvalini yangilash.
@@ -442,22 +414,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
-  /**
-   * Berilgan kod orqali jang haqida ma'lumot va ishtirokchilarni olish.
-   */
-  app.get("/api/battles/:code", async (req: Request, res: Response) => {
-    try {
-      const battleRecord = await storage.getBattleByCode(String(req.params.code));
-      if (!battleRecord) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({ message: ERROR_MESSAGES.BATTLE_NOT_FOUND });
-      }
-
-      const participantsList = await storage.getBattleParticipants(battleRecord.id);
-      res.status(HTTP_STATUS.OK).json({ ...battleRecord, participants: participantsList });
-    } catch (error) {
-      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
-    }
-  });
+  // NOTE: GET /api/battles/:code olib tashlandi (orphan + auth yo'q info-leak) —
+  // client uni chaqirmaydi; join oqimi validate-code + join orqali ishlaydi.
 
   /**
    * Xona kodini yoki individual kirish kodini validatsiya qilish (Anticheat birinchi qadam).

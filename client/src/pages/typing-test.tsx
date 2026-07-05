@@ -32,7 +32,6 @@ export default function TypingTestPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/results/me"] });
       // Leaderboard sahifasi kalit sifatida to'liq URL ishlatadi (masalan
       // "/api/leaderboard?language=uz"), shuning uchun oddiy ["/api/leaderboard"]
       // bilan mos kelmaydi. predicate orqali barcha leaderboard kalitlarini yangilaymiz.

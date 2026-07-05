@@ -25,7 +25,6 @@ import { setupSwagger } from "./swagger";
 import debugRouter from "./debug-auth";
 import { logger } from "./utils/logger";
 import * as Sentry from "@sentry/node";
-import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { sendAdminNotification } from "./utils/notifier";
 import { startUserBot } from "./userBot";
 

@@ -43,11 +43,6 @@ setInterval(() => {
   }
 }, 10 * 60 * 1000);
 
-// ============ TYPES ============
-interface SessionRequest extends Request {
-  session: any;
-}
-
 // ============ AUTHENTICATION SYSTEM ============
 
 export let sessionMiddleware: any = null;
@@ -328,74 +323,9 @@ export function setupAuth(app: Express): void {
     }
   });
 
-  // ============ TELEGRAM INTEGRATION ============
-
-  /**
-   * Telegram Mini-app orqali avtorizatsiyani tekshirish va kirish.
-   */
-  app.post("/api/auth/telegram", async (req: Request, res: Response) => {
-    try {
-      const { initData } = req.body;
-      if (!initData) return res.status(400).json({ message: "Telegram ma'lumotlari kiritilmadi" });
-
-      const urlParams = new URLSearchParams(initData);
-      const hashField = urlParams.get("hash");
-      urlParams.delete("hash");
-
-      const checkString = Array.from(urlParams.keys()).sort().map((k) => `${k}=${urlParams.get(k)}`).join("\n");
-      const secretKey = crypto.createHmac("sha256", "WebAppData").update(process.env.TELEGRAM_BOT_TOKEN || "").digest();
-      const calculatedHmac = crypto.createHmac("sha256", secretKey).update(checkString).digest("hex");
-
-      if (calculatedHmac !== hashField) {
-        return res.status(401).json({ message: "Telegram validatsiyasi xato" });
-      }
-
-      // Replay attack prevention: auth_date tekshiruvi (5 daqiqa ruxsat)
-      const authDate = Number(urlParams.get("auth_date"));
-      const now = Math.floor(Date.now() / 1000);
-      if (!authDate || now - authDate > 300) {
-        return res.status(401).json({ message: "Telegram sessiyasi muddati tugagan (Replay Attack)" });
-      }
-
-      const tgUserRaw = JSON.parse(urlParams.get("user") || "{}");
-      
-      // Bazadan telegram_id orqali izlash
-      let [linkedUser] = await db.select().from(users).where(eq(users.telegramId, String(tgUserRaw.id)));
-
-      // Agar topilmasa, yangi 'shadow' profil ochish
-      if (!linkedUser) {
-        const dummyPassword = crypto.randomBytes(16).toString("hex");
-        const [identity] = await db.insert(users).values({
-          email: `tg_${tgUserRaw.id}@telegram.mini`,
-          password: await bcrypt.hash(dummyPassword, 10),
-          firstName: tgUserRaw.first_name,
-          lastName: tgUserRaw.last_name || null,
-          telegramId: String(tgUserRaw.id),
-          // profileImageUrl: tgUserRaw.photo_url || null, // O'chirildi
-        }).returning();
-        linkedUser = identity;
-      }
-
-      // Ban tekshiruvi (Telegram orqali ham)
-      if (linkedUser.isBanned) {
-        return res.status(403).json({ message: "Sizning hisobingiz bloklangan." });
-      }
-
-      (req.session as any).userId = linkedUser.id;
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-
-      const { password: _, ...authResponse } = linkedUser;
-      res.status(200).json({ ...authResponse, token: req.sessionID });
-    } catch (error) {
-      console.error("[AUTH] Telegram auth error:", error);
-      res.status(500).json({ message: "Telegram orqali kirishda xatolik" });
-    }
-  });
+  // NOTE: POST /api/auth/telegram (Telegram Mini-app login) olib tashlandi (orphan) —
+  // Mini-app frontend'i o'chirilgan, telegram-web-app.js SDK ham yuklanmaydi, hech
+  // qanday first-party kod bu endpointni chaqirmaydi.
 
   // ============ GOOGLE OAUTH INTEGRATION ============
 

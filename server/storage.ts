@@ -9,7 +9,7 @@
  */
 
 // ============ IMPORTS ============
-import { eq, and, desc } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db } from "./db";
 import {
   User,
@@ -31,7 +31,6 @@ import {
   Competition,
   InsertCompetition,
   Advertisement,
-  InsertAdvertisement,
 } from "@shared/schema";
 import { UpsertUser } from "@shared/models/auth";
 

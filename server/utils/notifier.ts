@@ -1,5 +1,4 @@
 // server/utils/notifier.ts
-import https from "https";
 
 export async function sendAdminNotification(message: string, replyMarkup?: any) {
     const token = process.env.TELEGRAM_BOT_TOKEN || process.env.ADMIN_BOT_TOKEN;

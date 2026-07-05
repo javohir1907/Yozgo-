@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "./db";
-import { users, battles, roomAccessCodes, adminMessages } from "@shared/schema";
-import { isNotNull, sql, eq, and } from "drizzle-orm";
+import { users, battles, roomAccessCodes } from "@shared/schema";
+import { sql, eq } from "drizzle-orm";
 import crypto from "crypto";
 import { processInChunks } from "./utils/async-chunker";
 import { BotStateService } from "./services/bot-state.service";

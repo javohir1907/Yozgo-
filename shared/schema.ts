@@ -6,7 +6,6 @@ import {
   uuid,
   boolean,
   varchar,
-  unique,
   jsonb,
   index,
   serial,

@@ -6,7 +6,6 @@
  */
 
 import { storage } from "../storage";
-import { type User } from "@shared/schema";
 import { sendAdminNotification } from "./notifier";
 
 interface TypingSnapshot {
