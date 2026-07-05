@@ -15,6 +15,10 @@ const LandingPage = React.lazy(() => import("@/pages/landing"));
 const SettingsPage = React.lazy(() => import("@/pages/settings"));
 const NotFound = React.lazy(() => import("@/pages/not-found"));
 const LeaderboardPage = React.lazy(() => import("@/pages/leaderboard"));
+const LeaguePage = React.lazy(() => import("@/pages/league"));
+const QuestsPage = React.lazy(() => import("@/pages/quests"));
+const ShopPage = React.lazy(() => import("@/pages/shop"));
+const FriendsPage = React.lazy(() => import("@/pages/friends"));
 const BattlePage = React.lazy(() => import("@/pages/battle"));
 const TypingTestPage = React.lazy(() => import("@/pages/typing-test"));
 const ProfilePage = React.lazy(() => import("@/pages/profile"));
@@ -64,6 +68,10 @@ function Router() {
             <Route path="/auth" component={AuthPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route path="/leaderboard" component={LeaderboardPage} />
+            <Route path="/league" component={LeaguePage} />
+            <Route path="/quests" component={QuestsPage} />
+            <Route path="/shop" component={ShopPage} />
+            <Route path="/friends" component={FriendsPage} />
             <Route path="/battle" component={BattlePage} />
             <Route path="/typing-test" component={TypingTestPage} />
             <Route path="/profile" component={ProfilePage} />

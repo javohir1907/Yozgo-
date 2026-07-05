@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Keyboard, Trophy, Users, Settings, User as UserIcon, LogOut, Globe, Moon, Sun, Menu } from "lucide-react";
+import { Keyboard, Trophy, Users, Settings, User as UserIcon, LogOut, Globe, Moon, Sun, Menu, Shield, ListChecks, ShoppingBag, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/lib/theme";
 import { useI18n, type UILanguage } from "@/lib/i18n";
@@ -23,6 +23,10 @@ export function NavHeader() {
   const navItems = [
     { label: t.nav.test, href: "/typing-test", icon: Keyboard },
     { label: t.nav.leaderboard, href: "/leaderboard", icon: Trophy },
+    { label: t.leaderboard.leagueTitle, href: "/league", icon: Shield },
+    { label: t.leaderboard.questsTitle, href: "/quests", icon: ListChecks },
+    { label: t.leaderboard.shopTitle, href: "/shop", icon: ShoppingBag },
+    { label: t.leaderboard.friendsTitle, href: "/friends", icon: UserPlus },
     { label: t.nav.battle, href: "/battle", icon: Users },
   ];
 
