@@ -133,6 +133,26 @@ export function setupAuth(app: Express): void {
 
   // ============ REGISTER & LOGIN ROUTES ============
 
+  // Nickname (firstName) bandligini tekshirish. Register oqimi bilan bir xil
+  // qoida: NICKNAME_REGEX + ilike(users.firstName) unikallik tekshiruvi.
+  app.get("/api/auth/check-username", async (req: Request, res: Response) => {
+    try {
+      const raw = ((req.query.username as string) || "").trim();
+      // Yaroqsiz format = "mavjud emas" (band deb ko'rsatib, davom etishga yo'l qo'ymaymiz).
+      if (!raw || !NICKNAME_REGEX.test(raw)) {
+        return res.status(200).json({ available: false });
+      }
+      const [existing] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(ilike(users.firstName, raw));
+      res.status(200).json({ available: !existing });
+    } catch (e) {
+      console.error("check-username error", e);
+      res.status(500).json({ message: "Xatolik" });
+    }
+  });
+
   app.post("/api/auth/send-register-otp", otpLimiter, async (req: Request, res: Response) => {
     try {
       const { email, firstName } = req.body;

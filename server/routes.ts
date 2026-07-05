@@ -34,6 +34,7 @@ import {
   advertisements,
   notifications,
   competitionParticipants,
+  reviews,
   insertTestResultSchema,
   insertBattleSchema,
   insertReviewSchema,
@@ -266,6 +267,57 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       });
     } catch (error) {
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: "Failed to fetch profile" });
+    }
+  });
+
+  // ============ REVIEWS (SHARHLAR) ROUTES ============
+
+  // Ommaviy: oxirgi sharhlarni foydalanuvchi nomi bilan qaytaradi.
+  app.get("/api/reviews", async (_req: Request, res: Response) => {
+    try {
+      const rows = await db
+        .select({
+          id: reviews.id,
+          rating: reviews.rating,
+          comment: reviews.comment,
+          username: users.firstName,
+        })
+        .from(reviews)
+        .innerJoin(users, eq(reviews.userId, users.id))
+        .orderBy(desc(reviews.createdAt))
+        .limit(50);
+
+      res.status(HTTP_STATUS.OK).json(
+        rows.map((r) => ({
+          id: r.id,
+          rating: r.rating,
+          comment: r.comment,
+          user: { username: r.username || "Anonim" },
+        }))
+      );
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  // Auth talab qilinadi: joriy foydalanuvchi sharh qoldiradi.
+  app.post("/api/reviews", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId as string;
+      const rating = Number(req.body?.rating);
+      const comment = String(req.body?.comment ?? "").trim();
+
+      if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Reyting 1 dan 5 gacha bo'lishi kerak" });
+      }
+      if (!comment || comment.length > 1000) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Izoh bo'sh yoki juda uzun" });
+      }
+
+      const review = await storage.createReview({ userId, rating, comment });
+      res.status(HTTP_STATUS.CREATED).json(review);
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
     }
   });
 
@@ -616,6 +668,67 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     }
   });
 
+  // Musobaqaga ro'yxatdan o'tish (auth). competition_participants'ga yozadi.
+  app.post("/api/competitions/:id/register", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId as string;
+      const competitionId = parseInt(req.params.id as string, 10);
+      if (Number.isNaN(competitionId)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Noto'g'ri musobaqa ID" });
+      }
+
+      const [comp] = await db.select().from(competitions).where(eq(competitions.id, competitionId));
+      if (!comp) return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Musobaqa topilmadi" });
+
+      const [existing] = await db
+        .select({ id: competitionParticipants.id })
+        .from(competitionParticipants)
+        .where(and(eq(competitionParticipants.competitionId, competitionId), eq(competitionParticipants.userId, userId)));
+      if (existing) {
+        return res.status(HTTP_STATUS.OK).json({ message: "Siz allaqachon ro'yxatdan o'tgansiz", alreadyRegistered: true });
+      }
+
+      await db.insert(competitionParticipants).values({ competitionId, userId });
+      res.status(HTTP_STATUS.CREATED).json({ message: "Muvaffaqiyatli ro'yxatdan o'tdingiz" });
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  // Musobaqa ishtirokchilari ro'yxati (ommaviy).
+  app.get("/api/competitions/:id/participants", async (req: Request, res: Response) => {
+    try {
+      const competitionId = parseInt(req.params.id as string, 10);
+      if (Number.isNaN(competitionId)) {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Noto'g'ri musobaqa ID" });
+      }
+
+      const rows = await db
+        .select({
+          id: competitionParticipants.id,
+          userId: competitionParticipants.userId,
+          username: users.firstName,
+          avatarUrl: users.profileImageUrl,
+          registeredAt: competitionParticipants.registeredAt,
+        })
+        .from(competitionParticipants)
+        .innerJoin(users, eq(competitionParticipants.userId, users.id))
+        .where(eq(competitionParticipants.competitionId, competitionId))
+        .orderBy(desc(competitionParticipants.registeredAt));
+
+      res.status(HTTP_STATUS.OK).json(
+        rows.map((r) => ({
+          id: r.id,
+          userId: r.userId,
+          registeredAt: r.registeredAt,
+          user: { username: r.username || "Anonim", avatarUrl: r.avatarUrl },
+        }))
+      );
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
   /**
    * Reklamalarni olish (aktivlari).
    */
@@ -634,14 +747,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
    * Admin ekanligini tekshirish uchun middleware.
    */
   const adminGuard = async (req: Request, res: Response, next: any) => {
-    const botSecret = process.env.BOT_SECRET;
-    
-    // XAVFSIZLIK: Bot secret faqat serverdan (localhost yoki render internal) kelsa ishlashi kerak
-    // Ammo hozircha oddiy tekshiruv qoldiramiz, faqat sir o'ta kuchli bo'lishi shart!
-    if (botSecret && req.headers["x-bot-secret"] === botSecret) {
+    // 1-yo'l: server-server (bot) sir tokeni — x-bot-secret yoki x-admin-token.
+    const secret = process.env.BOT_SECRET || process.env.ADMIN_API_TOKEN;
+    const token = req.headers["x-bot-secret"] || req.headers["x-admin-token"];
+    if (secret && token === secret) {
       return next();
     }
 
+    // 2-yo'l: brauzer sessiyasi orqali admin foydalanuvchi.
     const currentUserId = req.session?.userId;
     if (!currentUserId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
 
@@ -783,19 +896,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // 2. REKLAMA QO'SHISH
-  app.post("/api/admin/ads", adminAuth, async (req, res) => {
+  // adminGuard ishlatiladi: brauzerdagi admin foydalanuvchi HAM, bot ham kira oladi.
+  app.post("/api/admin/ads", adminGuard, async (req, res) => {
     try {
-      const { title, imageUrl, linkUrl, durationDays } = req.body;
-      
+      const { title, description, imageUrl, linkUrl, durationDays } = req.body;
+      const days = parseInt(durationDays) || 7;
+
       // Tugash vaqtini hisoblash
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + parseInt(durationDays));
+      expiresAt.setDate(expiresAt.getDate() + days);
 
       const [newAd] = await db.insert(advertisements).values({
         title,
+        description: description || null,
         imageUrl,
         linkUrl,
-        durationDays: parseInt(durationDays),
+        durationDays: days,
         expiresAt,
         isActive: true
       }).returning();
@@ -807,27 +923,61 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   });
 
   // ==========================================
-  // REKLAMALARNI KO'RISH VA O'CHIRISH
+  // REKLAMALARNI KO'RISH, YOQISH/O'CHIRISH VA O'CHIRISH
   // ==========================================
-  
-  // Faol reklamalarni olish
-  app.get("/api/admin/ads/all", adminAuth, async (req, res) => {
+
+  // Barcha reklamalarni olish (admin panel uchun — faol va nofaol)
+  app.get("/api/admin/ads/all", adminGuard, async (req, res) => {
     try {
-      const activeAds = await db.select().from(advertisements).where(eq(advertisements.isActive, true));
-      res.json(activeAds);
+      const allAds = await db.select().from(advertisements).orderBy(desc(advertisements.createdAt));
+      res.json(allAds);
     } catch (error) {
       res.status(500).json({ error: "Reklamalarni olishda xatolik" });
     }
   });
 
-  // Reklamani o'chirish
-  app.delete("/api/admin/ads/:id", adminAuth, async (req, res) => {
+  // Reklamani yoqish/o'chirish (isActive ni almashtirish)
+  app.put("/api/admin/ads/:id/toggle", adminGuard, async (req, res) => {
     try {
-      const adId = req.params.id as string;
-      await db.delete(advertisements).where(eq(advertisements.id, adId as any));
+      const adId = parseInt(req.params.id as string, 10);
+      if (Number.isNaN(adId)) return res.status(400).json({ error: "Noto'g'ri ID" });
+      const isActive = Boolean(req.body?.isActive);
+      const [updated] = await db
+        .update(advertisements)
+        .set({ isActive })
+        .where(eq(advertisements.id, adId))
+        .returning();
+      if (!updated) return res.status(404).json({ error: "Reklama topilmadi" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Reklamani yangilashda xatolik" });
+    }
+  });
+
+  // Reklamani o'chirish
+  app.delete("/api/admin/ads/:id", adminGuard, async (req, res) => {
+    try {
+      const adId = parseInt(req.params.id as string, 10);
+      if (Number.isNaN(adId)) return res.status(400).json({ error: "Noto'g'ri ID" });
+      await db.delete(advertisements).where(eq(advertisements.id, adId));
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Reklamani o'chirishda xatolik" });
+    }
+  });
+
+  // Reklama klikini hisoblash (ommaviy). advertisements.clicks ni oshiradi.
+  app.post("/api/advertisements/:id/click", async (req, res) => {
+    try {
+      const adId = parseInt(req.params.id as string, 10);
+      if (Number.isNaN(adId)) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Noto'g'ri ID" });
+      await db
+        .update(advertisements)
+        .set({ clicks: sql`${advertisements.clicks} + 1` })
+        .where(eq(advertisements.id, adId));
+      res.status(HTTP_STATUS.OK).json({ success: true });
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
     }
   });
 

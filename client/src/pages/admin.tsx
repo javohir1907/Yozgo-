@@ -13,35 +13,34 @@ export default function AdminPage() {
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [durationDays, setDurationDays] = useState("7");
 
   const { data: ads, isLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/advertisements"],
+    queryKey: ["/api/admin/ads/all"],
     enabled: user?.role === "admin",
   });
 
   const createAd = useMutation({
     mutationFn: async (adData: any) => {
-      await apiRequest("POST", "/api/admin/advertisements", adData);
+      await apiRequest("POST", "/api/admin/ads", adData);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/advertisements"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/ads/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/advertisements"] });
       setTitle("");
       setDescription("");
       setImageUrl("");
       setLinkUrl("");
-      setStartDate("");
-      setEndDate("");
+      setDurationDays("7");
     },
   });
 
   const toggleAd = useMutation({
-    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      await apiRequest("PUT", `/api/admin/advertisements/${id}/toggle`, { isActive });
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      await apiRequest("PUT", `/api/admin/ads/${id}/toggle`, { isActive });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/advertisements"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/ads/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/advertisements"] });
     },
   });
@@ -60,7 +59,7 @@ export default function AdminPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              createAd.mutate({ title, description, imageUrl, linkUrl, startDate, endDate });
+              createAd.mutate({ title, description, imageUrl, linkUrl, durationDays });
             }}
             className="space-y-4"
           >
@@ -85,21 +84,13 @@ export default function AdminPage() {
               <Input required value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
             </div>
             <div>
-              <Label>Boshlanish sanasi</Label>
+              <Label>Muddat (kun)</Label>
               <Input
-                type="date"
+                type="number"
+                min={1}
                 required
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label>Tugash sanasi</Label>
-              <Input
-                type="date"
-                required
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                value={durationDays}
+                onChange={(e) => setDurationDays(e.target.value)}
               />
             </div>
             <Button type="submit" disabled={createAd.isPending}>
@@ -125,11 +116,11 @@ export default function AdminPage() {
                       <p className="text-xs text-muted-foreground">{ad.description}</p>
                     )}
                     <div className="text-xs text-muted-foreground">
-                      {new Date(ad.startDate).toLocaleDateString()} -{" "}
-                      {new Date(ad.endDate).toLocaleDateString()}
+                      Tugash sanasi:{" "}
+                      {ad.expiresAt ? new Date(ad.expiresAt).toLocaleDateString() : "—"}
                     </div>
                     <div className="text-xs font-semibold text-orange-500 mt-1">
-                      Ko'rishlar/O'tishlar: {ad.clicks || 0}
+                      O'tishlar (kliklar): {ad.clicks || 0}
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 items-end">
