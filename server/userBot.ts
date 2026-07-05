@@ -283,6 +283,28 @@ export async function sendMessageToWinner(telegramId: number, text: string) {
   );
 }
 
+/**
+ * Do'stni battle'ga taklif qilish (Feature 9) — mavjud generateAndSendRoomCode'ni
+ * qayta ishlatib bir martalik kirish kodi + deep-link yuboradi. Telegram-only.
+ */
+export async function inviteFriendToBattle(
+  friendTelegramId: number,
+  battleCode: string,
+  inviterName: string,
+) {
+  if (!userBot) return;
+  const [battle] = await db.select().from(battles).where(eq(battles.code, battleCode));
+  if (!battle || battle.status === "finished") {
+    await userBot.sendMessage(friendTelegramId, "❌ Taklif qilingan jang topilmadi yoki yakunlangan.");
+    return;
+  }
+  await userBot.sendMessage(
+    friendTelegramId,
+    `🎮 ${inviterName} sizni YOZGO jangiga taklif qildi! Quyidagi kod bilan qo'shiling:`,
+  );
+  await generateAndSendRoomCode(battle.id, friendTelegramId, friendTelegramId);
+}
+
 export async function broadcastFromUserBot(text: string) {
   if (!userBot) return { success: 0, fail: 0, text: "Foydalanuvchi boti ulanmagan" };
   let success = 0,
