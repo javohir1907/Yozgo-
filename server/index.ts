@@ -160,23 +160,14 @@ app.use(express.urlencoded({ limit: '10mb', extended: false }));
 app.use((req: Request, res: Response, next: NextFunction) => {
   const startAt = Date.now();
   const requestPath = req.path;
-  let capturedBody: any = undefined;
-
-  const originalJson = res.json;
-  res.json = function (body, ...args) {
-    capturedBody = body;
-    return originalJson.apply(res, [body, ...args]);
-  };
 
   res.on("finish", () => {
     const elapsed = Date.now() - startAt;
     if (requestPath.startsWith("/api")) {
-      const logMessage = `${req.method} ${requestPath} ${res.statusCode} in ${elapsed}ms`;
-      if (capturedBody) {
-        logger.info(`${logMessage} :: ${JSON.stringify(capturedBody)}`);
-      } else {
-        logger.info(logMessage);
-      }
+      // XAVFSIZLIK: Javob tanasi (response body) LOG QILINMAYDI. Aks holda
+      // login/register qaytaradigan `token: req.sessionID`, parol hashlari va
+      // foydalanuvchi PII'si log fayllarga tushib, session o'g'irlanishiga olib keladi.
+      logger.info(`${req.method} ${requestPath} ${res.statusCode} in ${elapsed}ms`);
     }
   });
 
@@ -196,15 +187,10 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
     try {
       logger.info("Initializing database schema and migrations...", { source: "startup" });
 
-      // 1. Foydalanuvchilar jadvalini tozalash (Xavfsiz: faqat yangi _clear_users_v2 o'rnatilganda bir marta ishlaydi)
-      await pool.query(`CREATE TABLE IF NOT EXISTS _clear_users_v2 (done boolean);`);
-      const isCleared = await pool.query(`SELECT * FROM _clear_users_v2;`);
-      
-      if (isCleared.rowCount === 0) {
-        logger.info("🗑️ Jadval tozalanmoqda: users (User request)...");
-        await pool.query(`TRUNCATE TABLE users CASCADE;`);
-        await pool.query(`INSERT INTO _clear_users_v2 (done) VALUES (true);`);
-      }
+      // XAVFSIZLIK: Ilgari bu yerda `TRUNCATE TABLE users CASCADE` (`_clear_users_v2`
+      // bayrog'i bilan) turardi. Production startup'da bunday buzg'unchi bir-martalik
+      // tozalash bo'lmasligi kerak — bayroq jadvali o'chsa yoki yangi DB'da barcha
+      // foydalanuvchilar yo'qolardi. Butunlay olib tashlandi.
 
       // 2. Majburiy ustunlarni qo'shish (Migration)
       await pool.query(`
@@ -225,11 +211,17 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
       }
 
 
-      // 3. Adminlarni tayinlash (User so'roviga binoan)
-      await pool.query(`
-        UPDATE users SET role = 'admin' 
-        WHERE email IN ('xolmatovjavohir911@gmail.com', 'xolmatovjavohir812@gmail.com', 'admin@yozgo.uz')
-      `);
+      // 3. Adminlarni tayinlash (ADMIN_EMAILS env var'idan, vergul bilan ajratilgan)
+      const adminEmails = (process.env.ADMIN_EMAILS || "")
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+      if (adminEmails.length > 0) {
+        await pool.query(
+          `UPDATE users SET role = 'admin' WHERE lower(email) = ANY($1::text[])`,
+          [adminEmails],
+        );
+      }
 
       logger.info("✅ Database majburiy migratsiya va tozalash yakunlandi.", { source: "startup" });
     } catch (startupError) {
@@ -250,7 +242,12 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
 
   // API Yo'nalishlarini ro'yxatdan o'tkazish
   await registerRoutes(httpServer, app);
-  app.use("/api", debugRouter);
+
+  // XAVFSIZLIK: /api/debug-info session, cookie va env holatini oshkor qiladi.
+  // Faqat production BO'LMAGAN muhitda ro'yxatga olinadi.
+  if (process.env.NODE_ENV !== "production") {
+    app.use("/api", debugRouter);
+  }
 
   // ============ ERROR HANDLING ============
 

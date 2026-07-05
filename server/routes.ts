@@ -46,6 +46,24 @@ import {
 let leaderboardCache = { data: null as any, lastFetched: 0 };
 const CACHE_TTL = 5 * 60 * 1000; // 5 daqiqa
 
+// XAVFSIZLIK: foydalanuvchini client'ga qaytarishda ishlatiladigan ustunlar.
+// `password` (bcrypt hash) ATAYLAB chiqarilmagan — admin endpointlari ham
+// parol hashini oshkor qilmasin.
+const safeUserColumns = {
+  id: users.id,
+  email: users.email,
+  firstName: users.firstName,
+  lastName: users.lastName,
+  profileImageUrl: users.profileImageUrl,
+  telegramId: users.telegramId,
+  role: users.role,
+  gender: users.gender,
+  isBanned: users.isBanned,
+  lastNicknameChangeAt: users.lastNicknameChangeAt,
+  createdAt: users.createdAt,
+  updatedAt: users.updatedAt,
+};
+
 // ============ CONSTANTS ============
 const HTTP_STATUS = {
   OK: 200,
@@ -274,8 +292,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const [userRecord] = await db.select().from(users).where(eq(users.id, userId));
       if (!userRecord) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
 
-      const adminEmailsStr = process.env.ADMIN_EMAILS || "xolmatovjavohir911@gmail.com,xolmatovjavohir812@gmail.com";
-      const adminEmails = adminEmailsStr.split(",").map(e => e.trim().toLowerCase());
+      const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
       const isAdminEmail = userRecord.email ? adminEmails.includes(userRecord.email.toLowerCase()) : false;
 
       let finalMaxParticipants = parseInt(maxParticipants || "10");
@@ -374,7 +391,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(HTTP_STATUS.CREATED).json(createdBattle);
     } catch (error: any) {
       console.error("[API] Battle Creation Error:", error);
-      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: error?.message || ERROR_MESSAGES.INTERNAL, stack: error?.stack });
+      // XAVFSIZLIK: stack trace va ichki xato matni client'ga yuborilmaydi (yuqorida log qilingan).
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
     }
   });
 
@@ -957,7 +975,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/admin/users/top", adminAuth, async (req, res) => {
     try {
       // Eng ko'p test topshirgan yoki eng yuqori role ega 10 ta foydalanuvchini olish (namuna uchun)
-      const topUsers = await db.select().from(users).limit(10);
+      const topUsers = await db.select(safeUserColumns).from(users).limit(10);
       res.json(topUsers);
     } catch (error) {
       res.status(500).json({ error: "Foydalanuvchilarni olishda xatolik" });
@@ -969,8 +987,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
     try {
       const q = `%${req.params.query}%`;
       
-      const foundUsers = await db.select().from(users).where(
-        sql`${users.id}::text = ${req.params.query} 
+      const foundUsers = await db.select(safeUserColumns).from(users).where(
+        sql`${users.id}::text = ${req.params.query}
             OR ${users.firstName} ILIKE ${q} 
             OR ${users.lastName} ILIKE ${q} 
             OR ${users.email} ILIKE ${q} 
@@ -987,8 +1005,8 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   app.get("/api/admin/users/:id", adminAuth, async (req, res) => {
     try {
       const userId = req.params.id as string;
-      const [user] = await db.select().from(users).where(eq(users.id, userId));
-      
+      const [user] = await db.select(safeUserColumns).from(users).where(eq(users.id, userId));
+
       if (!user) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
       res.json(user);
     } catch (error) {
