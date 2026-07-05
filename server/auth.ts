@@ -550,9 +550,9 @@ export function setupAuth(app: Express): void {
         return res.status(401).json({ message: "Avtorizatsiyadan o'tilmagan" });
       }
 
-      const { newPassword } = req.body;
-      if (!newPassword) {
-        return res.status(400).json({ message: "Yangi parolni kiriting" });
+      const { currentPassword, newPassword } = req.body;
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Joriy va yangi parolni kiriting" });
       }
 
       const safeNewPassword = newPassword.trim();
@@ -564,6 +564,18 @@ export function setupAuth(app: Express): void {
       const [userMatch] = await db.select().from(users).where(eq(users.id, userId));
       if (!userMatch) {
         return res.status(404).json({ message: "Foydalanuvchi topilmadi" });
+      }
+
+      // XAVFSIZLIK (M3): joriy parolni majburiy tekshirish. Sessiya o'g'irlangan
+      // taqdirda ham parol FAQAT joriy parolni bilgan holda o'zgartiriladi.
+      if (!userMatch.password) {
+        return res.status(400).json({
+          message: "Bu hisobda parol o'rnatilmagan. Google orqali kiring yoki parolni tiklang.",
+        });
+      }
+      const isCurrentValid = await bcrypt.compare(String(currentPassword).trim(), userMatch.password);
+      if (!isCurrentValid) {
+        return res.status(403).json({ message: "Joriy parol noto'g'ri" });
       }
 
       const hashedNewPassword = await bcrypt.hash(safeNewPassword, 10);

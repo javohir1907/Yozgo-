@@ -1,11 +1,33 @@
-node_modules
-dist
-.DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
+# ---------- Dependencies ----------
+node_modules/
+
+# ---------- Build output ----------
+dist/
+build/
+server/public/
+
+# ---------- Env & secrets (NEVER commit real .env) ----------
 .env
 .env.*
 !.env.example
-.vercel
+
+# ---------- Logs ----------
 logs/
+*.log
+
+# ---------- Test / coverage ----------
+coverage/
+
+# ---------- OS / editor ----------
+.DS_Store
+
+# ---------- Misc ----------
+*.tar.gz
+*.patch
+.vercel
+vite.config.ts.*
+
+# ---------- Vaqtinchalik test/integration skriptlari ----------
+# Loyiha ildizida _ bilan boshlanadigan bir martalik skriptlar (masalan _integ*.ts)
+/_*.ts
+/_*.js
