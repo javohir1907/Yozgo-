@@ -19,6 +19,7 @@ import { db } from "./db";
 import { setupAuth, isAuthenticated } from "./auth";
 import { BattleManager } from "./battle-manager";
 import { sendAdminNotification } from "./utils/notifier";
+import { checkGenderEligibility } from "./utils/battle-access";
 import { LeaderboardService } from "./services/leaderboard.service";
 
 // Shared Schemas & Models
@@ -607,25 +608,16 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Xona topilmadi" });
       }
 
-      // 🚨 QAT'IY JINS TEKSHIRUVI (ANTI-HACK)
+      // 🚨 QAT'IY JINS TEKSHIRUVI (ANTI-HACK) — socket join bilan bir xil qoida.
       if (matchedBattle.genderRestriction !== 'all') {
         const [userRecord] = await db.select().from(users).where(eq(users.id, userId));
-        
         if (!userRecord) {
           return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
         }
-        
-        if (!userRecord.gender) {
-          return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
-            message: "Profilingizda jinsingiz ko'rsatilmagan. Xonaga kirish uchun avval profildan jinsingizni belgilang!" 
-          });
-        }
-
-        if (userRecord.gender !== matchedBattle.genderRestriction) {
-          const requiredGender = matchedBattle.genderRestriction === 'male' ? "Yigitlar 🧍‍♂️" : "Qizlar 🧍‍♀️";
-          return res.status(HTTP_STATUS.FORBIDDEN).json({ 
-            message: `🚫 Kechirasiz, qoidaga muvofiq ushbu xona faqat ${requiredGender} uchun mo'ljallangan!` 
-          });
+        const genderCheck = checkGenderEligibility(userRecord.gender, matchedBattle.genderRestriction);
+        if (!genderCheck.ok) {
+          const status = userRecord.gender ? HTTP_STATUS.FORBIDDEN : HTTP_STATUS.BAD_REQUEST;
+          return res.status(status).json({ message: genderCheck.message });
         }
       }
       // ====================================================

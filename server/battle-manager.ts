@@ -18,6 +18,7 @@ import { pool } from "./db";
 import { words } from "../shared/words";
 import { type User } from "@shared/schema";
 import { sendAdminNotification } from "./utils/notifier";
+import { checkGenderEligibility } from "./utils/battle-access";
 import { sessionMiddleware } from "./auth";
 import { 
   analyzeTyping, 
@@ -150,6 +151,24 @@ export class BattleManager {
 
     // Har 15 daqiqada tozala
     setInterval(() => this.cleanupInactiveRooms(), 15 * 60 * 1000);
+
+    // FIX (#6): Server qayta ishga tushganda xotiradagi barcha xonalar yo'qoladi,
+    // shuning uchun bazadagi 'waiting'/'playing' holatidagi janglar "yetim" qoladi
+    // (abadiy 'playing' bo'lib, faol-jang statistikasini shishiradi). Ularni yopamiz.
+    this.cleanupOrphanedBattles();
+  }
+
+  private async cleanupOrphanedBattles(): Promise<void> {
+    try {
+      const result = await pool.query(
+        "UPDATE battles SET status = 'finished' WHERE status IN ('waiting', 'playing')",
+      );
+      if (result.rowCount && result.rowCount > 0) {
+        console.log(`🧹 [BATTLE] Restart: ${result.rowCount} ta yetim jang 'finished' qilindi.`);
+      }
+    } catch (e) {
+      console.error("[BATTLE] Yetim janglarni tozalashda xatolik:", e);
+    }
   }
 
   private cleanupInactiveRooms(): void {
@@ -279,11 +298,29 @@ export class BattleManager {
         this.rooms.set(code, room);
       }
 
-      // XAVFSIZLIK: Ban qilinganmi?
-      if (user.isBanned) {
+      // XAVFSIZLIK: Ishonchli foydalanuvchi ma'lumotini bazadan yuklaymiz —
+      // client yuborgan `user` obyekti (isBanned, gender) soxta bo'lishi mumkin.
+      const dbUser = await storage.getUser(user.id);
+      if (!dbUser) {
+        socket.emit("error-message", { message: "Foydalanuvchi topilmadi" });
+        return;
+      }
+
+      // Ban qilinganmi? (ishonchli manbadan)
+      if (dbUser.isBanned) {
         socket.emit("error-message", { message: "Sizning hisobingiz bloklangan!" });
         socket.disconnect();
         return;
+      }
+
+      // JINS TEKSHIRUVI — REST /api/battles/join bilan bir xil qoida (checkGenderEligibility).
+      // Xona egasi (admin) o'z xonasiga har doim kira oladi.
+      if (user.id !== room.adminId) {
+        const genderCheck = checkGenderEligibility(dbUser.gender, room.settings.genderRestriction);
+        if (!genderCheck.ok) {
+          socket.emit("error-message", { message: genderCheck.message });
+          return;
+        }
       }
 
       // XAVFSIZLIK: VPN/Proxy tekshiruvi (Faqat musobaqa/official xonalar kabi muhim xonalar uchun)
@@ -344,7 +381,39 @@ export class BattleManager {
     });
 
     socket.join(code);
+
+    // FIX (#1): battle_participants qatorini ta'minlaymiz. Ilgari bu qator faqat
+    // POST /api/battles/join'da yaratilardi, shuning uchun xona YARATUVCHISI va
+    // socket orqali to'g'ridan kirganlarning natijasi hech qachon saqlanmasdi.
+    await this.ensureParticipant(room.id, user.id);
+
+    // FIX (#4): jang allaqachon boshlangan bo'lsa (kech qo'shilgan yangi o'yinchi),
+    // unga ham darhol battle-start yuboramiz — aks holda kutish ekranida qotib qoladi.
+    if (room.status === "playing") {
+      socket.emit("battle-start", {
+        settings: room.settings,
+        startTime: room.startTime,
+        endTime: room.endTime,
+        words: room.testWords,
+      });
+    }
+
     this.broadcastRoomUpdate(room);
+  }
+
+  /**
+   * Berilgan foydalanuvchi uchun battle_participants qatori mavjudligini ta'minlaydi
+   * (idempotent: yo'q bo'lsa yaratadi).
+   */
+  private async ensureParticipant(battleId: string, userId: string): Promise<void> {
+    try {
+      const participants = await storage.getBattleParticipants(battleId);
+      if (!participants.some((p) => p.userId === userId)) {
+        await storage.addBattleParticipant({ battleId, userId });
+      }
+    } catch (e) {
+      console.error("[BATTLE] battle_participants ta'minlashda xatolik:", e);
+    }
   }
 
   /**
@@ -354,7 +423,9 @@ export class BattleManager {
     const room = this.rooms.get(code);
     if (!room || room.adminId !== userId) return;
 
-    room.settings = settings;
+    // MERGE (overwrite emas): DB'dan yuklangan maxParticipants/genderRestriction
+    // client yuborgan sozlamalar orasida bo'lmasa ham saqlanib qolsin.
+    room.settings = { ...room.settings, ...settings };
     room.language = settings.language || room.language;
     room.testWords = this.generateTestWords(room.language, 3000);
     room.status = "playing";
@@ -539,6 +610,51 @@ export class BattleManager {
     }
 
     this.io.to(code).emit("battle-end", finalResults);
+
+    // FIX (#7): G'oliblarni (is_winner) saqlash + jang natijalarini global
+    // leaderboard'ga qo'shish. 0-bosqich qaroriga ko'ra leaderboard test_results'dan
+    // hisoblanadi, shuning uchun har bir ishtirokchining eng yaxshi natijasini
+    // test_results'ga yozamiz.
+    try {
+      const winnerIds = new Set<string>();
+      if (room.settings.winMode === "per_round") {
+        (finalResults.roundWinners || []).forEach((w: any) => winnerIds.add(w.userId));
+      } else if (finalResults.winnerId) {
+        winnerIds.add(finalResults.winnerId);
+      }
+
+      for (const player of playersArray) {
+        if (player.bestWpm <= 0) continue; // hech narsa yozmagan o'yinchini o'tkazamiz
+
+        const bestWpm = Math.round(player.bestWpm);
+        const bestAccuracy = Math.round(player.bestAccuracy);
+
+        // battle_participants: eng yaxshi natija + g'oliblik bayrog'i
+        try {
+          await pool.query(
+            "UPDATE battle_participants SET wpm = $1, accuracy = $2, is_winner = $3 WHERE battle_id = $4 AND user_id = $5",
+            [bestWpm, bestAccuracy, winnerIds.has(player.user.id), room.id, player.user.id],
+          );
+        } catch (e) {
+          console.error("[BATTLE] battle_participants g'olib yozishda xatolik:", e);
+        }
+
+        // Global leaderboard uchun test_results'ga yozamiz
+        try {
+          await storage.createTestResult({
+            userId: player.user.id,
+            wpm: bestWpm,
+            accuracy: bestAccuracy,
+            language: room.language,
+            mode: room.mode,
+          });
+        } catch (e) {
+          console.error("[BATTLE] test_results'ga jang natijasini yozishda xatolik:", e);
+        }
+      }
+    } catch (persistError) {
+      console.error("[BATTLE] Jang natijalarini saqlashda umumiy xatolik:", persistError);
+    }
 
     // Telegram Adminga natijalarni yuborish
     try {
