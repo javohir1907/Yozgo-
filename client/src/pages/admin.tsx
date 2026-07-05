@@ -10,7 +10,6 @@ export default function AdminPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [durationDays, setDurationDays] = useState("7");
@@ -28,7 +27,6 @@ export default function AdminPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/ads/all"] });
       queryClient.invalidateQueries({ queryKey: ["/api/advertisements"] });
       setTitle("");
-      setDescription("");
       setImageUrl("");
       setLinkUrl("");
       setDurationDays("7");
@@ -59,21 +57,13 @@ export default function AdminPage() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              createAd.mutate({ title, description, imageUrl, linkUrl, durationDays });
+              createAd.mutate({ title, imageUrl, linkUrl, durationDays });
             }}
             className="space-y-4"
           >
             <div>
               <Label>Sarlavha (Title)</Label>
               <Input required value={title} onChange={(e) => setTitle(e.target.value)} />
-            </div>
-            <div>
-              <Label>Qisqa tavsif (Description)</Label>
-              <Input
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Majburiy emas"
-              />
             </div>
             <div>
               <Label>Rasm URL (Upload o'rniga link)</Label>
@@ -112,15 +102,9 @@ export default function AdminPage() {
                 >
                   <div className="space-y-1">
                     <h3 className="font-bold">{ad.title}</h3>
-                    {ad.description && (
-                      <p className="text-xs text-muted-foreground">{ad.description}</p>
-                    )}
                     <div className="text-xs text-muted-foreground">
                       Tugash sanasi:{" "}
                       {ad.expiresAt ? new Date(ad.expiresAt).toLocaleDateString() : "—"}
-                    </div>
-                    <div className="text-xs font-semibold text-orange-500 mt-1">
-                      O'tishlar (kliklar): {ad.clicks || 0}
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 items-end">

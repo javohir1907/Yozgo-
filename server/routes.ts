@@ -899,7 +899,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // adminGuard ishlatiladi: brauzerdagi admin foydalanuvchi HAM, bot ham kira oladi.
   app.post("/api/admin/ads", adminGuard, async (req, res) => {
     try {
-      const { title, description, imageUrl, linkUrl, durationDays } = req.body;
+      const { title, imageUrl, linkUrl, durationDays } = req.body;
       const days = parseInt(durationDays) || 7;
 
       // Tugash vaqtini hisoblash
@@ -908,7 +908,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const [newAd] = await db.insert(advertisements).values({
         title,
-        description: description || null,
         imageUrl,
         linkUrl,
         durationDays: days,
@@ -963,21 +962,6 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Reklamani o'chirishda xatolik" });
-    }
-  });
-
-  // Reklama klikini hisoblash (ommaviy). advertisements.clicks ni oshiradi.
-  app.post("/api/advertisements/:id/click", async (req, res) => {
-    try {
-      const adId = parseInt(req.params.id as string, 10);
-      if (Number.isNaN(adId)) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Noto'g'ri ID" });
-      await db
-        .update(advertisements)
-        .set({ clicks: sql`${advertisements.clicks} + 1` })
-        .where(eq(advertisements.id, adId));
-      res.status(HTTP_STATUS.OK).json({ success: true });
-    } catch (error) {
-      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
     }
   });
 

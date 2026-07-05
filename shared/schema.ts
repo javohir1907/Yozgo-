@@ -121,13 +121,11 @@ export const notifications = pgTable("notifications", {
 export const advertisements = pgTable("advertisements", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  description: text("description"),
   imageUrl: text("image_url"),
   linkUrl: text("link_url"),
   durationDays: integer("duration_days").default(7),
   expiresAt: timestamp("expires_at").notNull(),
   isActive: boolean("is_active").default(true),
-  clicks: integer("clicks").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

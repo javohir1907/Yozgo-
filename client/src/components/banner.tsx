@@ -1,6 +1,4 @@
 import { ExternalLink, Info } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 
 export interface Ad {
   id: string;
@@ -13,16 +11,6 @@ export interface Ad {
 export function Banner({ ads }: { ads: Ad[] }) {
   if (!ads || ads.length === 0) return null;
 
-  const trackClickMutation = useMutation({
-    mutationFn: async (id: string) => {
-      await apiRequest("POST", `/api/advertisements/${id}/click`);
-    },
-  });
-
-  const handleLinkClick = (ad: Ad, e: React.MouseEvent<HTMLAnchorElement>) => {
-    trackClickMutation.mutate(ad.id);
-  };
-
   return (
     <div className="flex flex-col gap-4 items-center justify-center w-full px-4 mb-8">
       {ads.map((ad) => (
@@ -31,7 +19,6 @@ export function Banner({ ads }: { ads: Ad[] }) {
           href={ad.linkUrl || "#"}
           target="_blank"
           rel="noopener noreferrer"
-          onClick={(e) => handleLinkClick(ad, e)}
           className="group relative flex flex-col sm:flex-row items-center w-full max-w-4xl bg-[#151515] border border-orange-500/20 hover:border-orange-500/50 rounded-xl overflow-hidden transition-all duration-300 shadow-md hover:shadow-orange-500/10"
         >
           {/* Badge */}
