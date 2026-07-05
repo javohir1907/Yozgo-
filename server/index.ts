@@ -201,15 +201,10 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
         ALTER TABLE users ADD COLUMN IF NOT EXISTS last_nickname_change_at timestamp;
       `);
 
-      // 4. Barcha mavjud rasmlarni o'chirish (User so'roviga binoan)
-      const imageClearCheck = await pool.query(`CREATE TABLE IF NOT EXISTS _clear_images_v1 (done boolean);`);
-      const isImagesCleared = await pool.query(`SELECT * FROM _clear_images_v1;`);
-      if (isImagesCleared.rowCount === 0) {
-        logger.info("🛡️ Mavjud profil rasmlari o'chirilmoqda...");
-        await pool.query(`UPDATE users SET profile_image_url = NULL;`);
-        await pool.query(`INSERT INTO _clear_images_v1 (done) VALUES (true);`);
-      }
-
+      // XAVFSIZLIK: Ilgari bu yerda profil rasmlarini bir marta NULL qiladigan
+      // `_clear_images_v1` bloki turardi — TRUNCATE kabi buzg'unchi bir-martalik
+      // startup tozalash. Bayroq jadvali o'chsa yoki yangi DB'da barcha profil
+      // rasmlari yo'qolardi. Butunlay olib tashlandi.
 
       // 3. Adminlarni tayinlash (ADMIN_EMAILS env var'idan, vergul bilan ajratilgan)
       const adminEmails = (process.env.ADMIN_EMAILS || "")

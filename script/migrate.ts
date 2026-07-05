@@ -9,7 +9,10 @@ if (!process.env.DATABASE_URL) {
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  // DB_CA_CERT berilsa qat'iy tekshiruv; aks holda self-signed uchun o'chiriladi.
+  ssl: process.env.DB_CA_CERT
+    ? { ca: process.env.DB_CA_CERT, rejectUnauthorized: true }
+    : { rejectUnauthorized: false },
 });
 
 const db = drizzle(pool, { schema });
