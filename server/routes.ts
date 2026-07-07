@@ -950,15 +950,26 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
   // 👑 ADMIN BOT UCHUN XAVFSIZ REST API
   // ==========================================
   
-  // Xavfsizlik Middleware: Faqat Python botdan kelgan so'rovlarni o'tkazadi
-  const adminAuth = (req: Request, res: Response, next: NextFunction) => {
+  // Xavfsizlik Middleware: Python admin-bot (x-bot-secret) YOKI brauzer session'idagi
+  // admin foydalanuvchi (React admin panel). Ikkala yo'l ham qabul qilinadi.
+  const adminAuth = async (req: Request, res: Response, next: NextFunction) => {
+    // 1-yo'l: server-server sir tokeni (Telegram bot).
     const token = req.headers["x-admin-token"] || req.headers["x-bot-secret"];
     const secret = process.env.BOT_SECRET || process.env.ADMIN_API_TOKEN;
-    
-    if (!secret || token !== secret) {
-      return res.status(403).json({ error: "Ruxsat etilmagan! (Forbidden)" });
+    if (secret && token === secret) {
+      return next();
     }
-    next();
+
+    // 2-yo'l: brauzer sessiyasi orqali admin (role='admin') — admin panel uchun.
+    const currentUserId = req.session?.userId;
+    if (currentUserId) {
+      const currentUser = await storage.getUser(currentUserId);
+      if (currentUser && currentUser.role === "admin") {
+        return next();
+      }
+    }
+
+    return res.status(403).json({ error: "Ruxsat etilmagan! (Forbidden)" });
   };
 
   // 1. STATISTIKANI OLISH

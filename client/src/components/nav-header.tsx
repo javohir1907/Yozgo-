@@ -199,6 +199,14 @@ export function NavHeader() {
                     <span>{t.nav.profile}</span>
                   </Link>
                 </DropdownMenuItem>
+                {(user as any)?.role === "admin" && (
+                  <DropdownMenuItem asChild className="font-medium rounded-lg cursor-pointer">
+                    <Link href="/admin" className="flex items-center w-full">
+                      <Shield className="mr-2 h-4 w-4 text-primary" />
+                      <span>Admin panel</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   className="text-destructive font-medium focus:text-destructive focus:bg-destructive/10 rounded-lg cursor-pointer mt-1"
                   onClick={() => logout()}
