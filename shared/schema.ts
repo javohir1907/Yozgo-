@@ -33,10 +33,11 @@ export const testResults = pgTable("test_results", {
   xpAwarded: integer("xp_awarded").notNull().default(0),
   // Feature 8 — per-natija coin audit (battle mirror'da 0).
   coinsAwarded: integer("coins_awarded").notNull().default(0),
-  // Request-idempotency (nullable): client har test uchun BIR martalik UUID yuboradi.
-  // NULL bo'lsa idempotency yo'q (legacy client). (user_id, client_result_id) unikal —
-  // NULL'lar Postgres'da distinct, shuning uchun eski rowlar/idsiz so'rovlar to'qnashmaydi.
-  clientResultId: uuid("client_result_id"),
+  // Request-idempotency (MAJBURIY — RISK-B yopildi): client har test uchun BIR martalik
+  // UUID yuboradi, retry'da o'shani qayta yuboradi; server insert (battle mirror) ham
+  // randomUUID beradi. NOT NULL + (user_id, client_result_id) unikal => double-submit
+  // (NULL orqali idempotencyni chetlab o'tish) endi mumkin emas.
+  clientResultId: uuid("client_result_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => {
   return {
@@ -160,8 +161,9 @@ export const insertTestResultSchema = createInsertSchema(testResults, {
   // joyda `cast(mode as integer)` qilinadi (leaderboard totalSeconds, quest words) —
   // client 'custom' yuborsa butun agregat query Postgres xatosi bilan yiqiladi.
   mode: z.enum(["15", "30", "60"]),
-  // Idempotency kaliti: client yuboradi (ixtiyoriy), lekin yaroqli UUID bo'lsin.
-  clientResultId: z.string().uuid().nullish(),
+  // Idempotency kaliti: client HAR test uchun barqaror UUID yuboradi (MAJBURIY — RISK-B).
+  // Yubormasa/yaroqsiz bo'lsa 400. Retry'da o'sha uuid => server no-op (double reward yo'q).
+  clientResultId: z.string().uuid(),
 }).omit({
   id: true,
   createdAt: true,
