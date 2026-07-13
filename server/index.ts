@@ -91,9 +91,17 @@ process.on("uncaughtException", (error: Error) => {
 /**
  * Helmet: Xavfsizlik sarlavhalarini sozlash (CSP, HSTS, Frameguard)
  */
+// XAVFSIZLIK/DEV: Qat'iy CSP FAQAT production'da qo'llanadi. Development'da Vite
+// inline <script> (React "preamble" + HMR mijozi) qo'shadi; script-src'da sha256
+// hash borligi sababli 'unsafe-inline' e'tiborsiz qoladi (CSP spetsifikatsiyasi),
+// natijada inline preamble bloklanadi -> "@vitejs/plugin-react can't detect
+// preamble" xatosi va OQ EKRAN. Shuning uchun dev'da CSP butunlay o'chiriladi;
+// production CSP o'zgarishsiz qat'iy holicha qoladi.
+const isProductionEnv = process.env.NODE_ENV === "production";
+
 app.use(
   helmet({
-    contentSecurityPolicy: {
+    contentSecurityPolicy: isProductionEnv ? {
       directives: {
         defaultSrc: ["'self'", "https://yozgo.uz", "https://www.yozgo.uz", "https://*.onrender.com"],
         // XAVFSIZLIK (M2): 'unsafe-eval' va 'unsafe-inline' OLIB TASHLANDI (XSS himoyasi).
@@ -119,7 +127,7 @@ app.use(
         fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
         frameAncestors: ["'none'"],
       },
-    },
+    } : false,
     hsts: {
       maxAge: 31536000,
       includeSubDomains: true,
@@ -378,6 +386,13 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
     // Request-idempotency: client_result_id + (user_id, client_result_id) unikal (additive).
     await db.execute(sql`ALTER TABLE test_results ADD COLUMN IF NOT EXISTS client_result_id uuid;`);
     await db.execute(sql`CREATE UNIQUE INDEX IF NOT EXISTS test_results_user_client_uniq ON test_results (user_id, client_result_id);`);
+    // RISK-B tuzatish (additive, idempotent): client_result_id endi MAJBURIY. NULL bo'lsa
+    // (user_id, NULL) Postgres'da distinct edi -> double-submit idempotencyni chetlab o'tardi.
+    // Eski NULL rowlarni (legacy/battle mirror) unik uuid bilan to'ldiramiz, so'ng
+    // DEFAULT gen_random_uuid() + NOT NULL. Solo submit uuidsiz kelsa API 400 qaytaradi.
+    await db.execute(sql`UPDATE test_results SET client_result_id = gen_random_uuid() WHERE client_result_id IS NULL;`);
+    await db.execute(sql`ALTER TABLE test_results ALTER COLUMN client_result_id SET DEFAULT gen_random_uuid();`);
+    await db.execute(sql`ALTER TABLE test_results ALTER COLUMN client_result_id SET NOT NULL;`);
 
     // Gamifikatsiya Feature 3: Badge katalogi + user_badges (additive, idempotent).
     // UNIQUE(user_id,badge_id) alohida CREATE UNIQUE INDEX sifatida — mavjud jadvalda

@@ -11,6 +11,7 @@
 
 // ============ IMPORTS ============
 import { type Server } from "http";
+import { randomUUID } from "crypto";
 import { Server as SocketServer, Socket } from "socket.io";
 
 import { storage } from "./storage";
@@ -703,6 +704,9 @@ export class BattleManager {
             language: room.language,
             mode: battleMode,
             source: "battle",
+            // clientResultId endi MAJBURIY (schema NOT NULL). Battle mirror har finish'da
+            // BIR marta yoziladi — server uuid beramiz (dedupe kerak emas, replay yo'q).
+            clientResultId: randomUUID(),
           });
         } catch (e) {
           console.error("[BATTLE] test_results'ga jang natijasini yozishda xatolik:", e);
