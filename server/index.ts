@@ -108,6 +108,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
   if (host === ADMIN_ALLOWED_HOST) {
     // Admin subdomen: FAQAT admin sahifa + admin API + infra. Boshqa hammasi 404.
+    if (path === "/") return res.redirect(302, "/admin");   // ← YANGI QATOR
     if (isAdminPage || isAdminApi || isInfra) return next();
     return res.status(404).json({ message: "Not found" });
   }
