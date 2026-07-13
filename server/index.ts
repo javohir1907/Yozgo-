@@ -433,7 +433,20 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
     await db.execute(sql`CREATE INDEX IF NOT EXISTS friendship_requester_idx ON friendships (requester_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS friendship_addressee_idx ON friendships (addressee_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS friendship_status_idx ON friendships (status);`);
-    
+
+    // Admin audit log (additive, idempotent) — ban/unban/grant/edit/broadcast amallari.
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS admin_audit_log (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        admin_id VARCHAR REFERENCES users(id),
+        action TEXT NOT NULL,
+        target_user_id VARCHAR REFERENCES users(id),
+        details JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMP NOT NULL DEFAULT now()
+      );
+    `);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS admin_audit_created_idx ON admin_audit_log (created_at DESC);`);
+
     logger.info(`[DB] Bazaga barcha yangi ustunlar muvaffaqiyatli qo'shildi / tekshirildi!`);
   } catch (err: any) {
     logger.info(`[DB ERROR] Bazani avtomatik yangilashda xato: ` + err.message);

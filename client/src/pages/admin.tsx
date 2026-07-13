@@ -20,7 +20,7 @@ import {
 import {
   Users, Trophy, KeyRound, Settings as SettingsIcon, BarChart3,
   Ban, ShieldCheck, Trash2, Download, Loader2, RefreshCw, Megaphone,
-  AlertTriangle,
+  AlertTriangle, Shield, Swords, ScrollText, Coins, Star, Award, Gift,
 } from "lucide-react";
 
 /**
@@ -64,7 +64,10 @@ export default function AdminPage() {
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" /> Foydalanuvchilar</TabsTrigger>
           <TabsTrigger value="comps" className="gap-1.5"><Trophy className="w-4 h-4" /> Musobaqalar</TabsTrigger>
           <TabsTrigger value="codes" className="gap-1.5"><KeyRound className="w-4 h-4" /> Kodlar</TabsTrigger>
+          <TabsTrigger value="leagues" className="gap-1.5"><Shield className="w-4 h-4" /> Ligalar</TabsTrigger>
+          <TabsTrigger value="battles" className="gap-1.5"><Swords className="w-4 h-4" /> Janglar</TabsTrigger>
           <TabsTrigger value="broadcast" className="gap-1.5"><Megaphone className="w-4 h-4" /> Xabar</TabsTrigger>
+          <TabsTrigger value="audit" className="gap-1.5"><ScrollText className="w-4 h-4" /> Audit</TabsTrigger>
           <TabsTrigger value="settings" className="gap-1.5"><SettingsIcon className="w-4 h-4" /> Sozlamalar</TabsTrigger>
         </TabsList>
 
@@ -72,7 +75,10 @@ export default function AdminPage() {
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="comps"><CompetitionsTab /></TabsContent>
         <TabsContent value="codes"><CodesTab currentUserId={(user as any).id} /></TabsContent>
+        <TabsContent value="leagues"><LeaguesTab /></TabsContent>
+        <TabsContent value="battles"><BattlesTab /></TabsContent>
         <TabsContent value="broadcast"><BroadcastTab /></TabsContent>
+        <TabsContent value="audit"><AuditTab /></TabsContent>
         <TabsContent value="settings"><SettingsTab /></TabsContent>
       </Tabs>
     </div>
@@ -181,6 +187,7 @@ function UsersTab() {
 
   const key = query ? ["/api/admin/users/search", query] : ["/api/admin/users/top"];
   const { data: usersList, isLoading, isError, error } = useQuery<any[]>({ queryKey: key });
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   async function toggleBan(u: any) {
     try {
@@ -218,7 +225,11 @@ function UsersTab() {
               <TableBody>
                 {(usersList || []).map((u) => (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.firstName || "—"}</TableCell>
+                    <TableCell>
+                      <button className="font-medium text-left hover:text-primary hover:underline" onClick={() => setDetailId(u.id)}>
+                        {u.firstName || "—"}
+                      </button>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{u.email || "—"}</TableCell>
                     <TableCell><Badge variant={u.role === "admin" ? "default" : "secondary"}>{u.role}</Badge></TableCell>
                     <TableCell>
@@ -247,6 +258,272 @@ function UsersTab() {
                 {!isLoading && (usersList || []).length === 0 && (
                   <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Topilmadi</TableCell></TableRow>
                 )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+        {detailId && (
+          <UserDetailDialog
+            userId={detailId}
+            onClose={() => { setDetailId(null); qc.invalidateQueries({ queryKey: key }); }}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============ USER DETAIL + TAHRIR + GRANT (modal) ============
+function UserDetailDialog({ userId, onClose }: { userId: string; onClose: () => void }) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const detailKey = ["/api/admin/users", userId, "detail"];
+  const { data: d, isLoading, isError, error } = useQuery<any>({ queryKey: detailKey });
+  const { data: badgeCatalog } = useQuery<any[]>({ queryKey: ["/api/admin/badges"] });
+
+  const [xp, setXp] = useState("");
+  const [coins, setCoins] = useState("");
+  const [grantType, setGrantType] = useState<"coins" | "xp" | "badge">("coins");
+  const [grantAmount, setGrantAmount] = useState("");
+  const [grantBadgeId, setGrantBadgeId] = useState("");
+  const [reason, setReason] = useState("");
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: detailKey });
+    setXp(""); setCoins("");
+  };
+
+  async function saveEdit() {
+    const body: any = {};
+    if (xp.trim() !== "") body.xp = Number(xp);
+    if (coins.trim() !== "") body.coins = Number(coins);
+    if (Object.keys(body).length === 0) { toast({ title: "Bo'sh", description: "xp yoki coins kiriting" }); return; }
+    try {
+      await apiRequest("PATCH", `/api/admin/users/${userId}`, body);
+      toast({ title: "Saqlandi", description: `${d?.firstName || d?.email}` });
+      refresh();
+    } catch (e: any) { toast({ title: "Xatolik", description: e.message, variant: "destructive" }); }
+  }
+
+  async function doGrant() {
+    const body: any = { type: grantType, reason };
+    if (grantType === "badge") { if (!grantBadgeId) { toast({ title: "Badge tanlang" }); return; } body.badgeId = grantBadgeId; }
+    else { const a = Number(grantAmount); if (!a || a <= 0) { toast({ title: "amount > 0" }); return; } body.amount = a; }
+    try {
+      await apiRequest("POST", `/api/admin/users/${userId}/grant`, body);
+      toast({ title: "Berildi", description: `${grantType} ${grantType === "badge" ? "" : grantAmount}` });
+      setGrantAmount(""); setReason("");
+      refresh();
+    } catch (e: any) { toast({ title: "Xatolik", description: e.message, variant: "destructive" }); }
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{d?.firstName || d?.email || "Foydalanuvchi"}</DialogTitle>
+          <DialogDescription>{d?.email} · {d?.role}{d?.isBanned ? " · BLOKLANGAN" : ""}</DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? <Spinner /> : isError ? <ErrorBox error={error} /> : d && (
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-4 gap-2">
+              <Stat label="XP" value={d.xp} />
+              <Stat label="Level" value={d.level} />
+              <Stat label="Coins" value={d.coins} />
+              <Stat label="Streak" value={d.currentStreak} />
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Liga</p>
+              {d.league ? <Badge variant="secondary">{d.league.name || `tier ${d.league.tier}`} · {d.league.weeklyXp} xp</Badge>
+                : <span className="text-muted-foreground text-xs">Ligada emas</span>}
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Nishonlar ({(d.badges || []).length})</p>
+              <div className="flex flex-wrap gap-1">
+                {(d.badges || []).length === 0 ? <span className="text-muted-foreground text-xs">Yo'q</span>
+                  : d.badges.map((b: any) => <Badge key={b.key} variant="outline" className="gap-1"><Award className="w-3 h-3" />{b.key}</Badge>)}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Oxirgi 10 natija</p>
+              <div className="border rounded-md max-h-32 overflow-y-auto">
+                {(d.recentResults || []).length === 0 ? <p className="text-muted-foreground text-xs p-2">Natija yo'q</p> :
+                  d.recentResults.map((r: any, i: number) => (
+                    <div key={i} className="flex justify-between px-2 py-1 text-xs border-b last:border-0">
+                      <span>{r.wpm} wpm · {r.accuracy}%</span>
+                      <span className="text-muted-foreground">{r.mode}s · {r.source}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Tahrir */}
+            <div className="border-t pt-3">
+              <p className="font-semibold mb-2">Tahrirlash (absolut qiymat)</p>
+              <div className="flex items-end gap-2">
+                <div className="flex-1"><Label className="text-xs">XP</Label><Input type="number" min="0" placeholder={String(d.xp)} value={xp} onChange={(e) => setXp(e.target.value)} /></div>
+                <div className="flex-1"><Label className="text-xs">Coins</Label><Input type="number" min="0" placeholder={String(d.coins)} value={coins} onChange={(e) => setCoins(e.target.value)} /></div>
+                <Button size="sm" onClick={saveEdit}>Saqlash</Button>
+              </div>
+            </div>
+
+            {/* Grant */}
+            <div className="border-t pt-3">
+              <p className="font-semibold mb-2 flex items-center gap-1"><Gift className="w-4 h-4" /> Berish</p>
+              <div className="flex flex-wrap items-end gap-2">
+                <div>
+                  <Label className="text-xs">Turi</Label>
+                  <select className="block h-9 rounded-md border border-input bg-background px-2 text-sm" value={grantType} onChange={(e) => setGrantType(e.target.value as any)}>
+                    <option value="coins">Coins</option>
+                    <option value="xp">XP</option>
+                    <option value="badge">Badge</option>
+                  </select>
+                </div>
+                {grantType === "badge" ? (
+                  <div className="flex-1 min-w-[140px]">
+                    <Label className="text-xs">Nishon</Label>
+                    <select className="block w-full h-9 rounded-md border border-input bg-background px-2 text-sm" value={grantBadgeId} onChange={(e) => setGrantBadgeId(e.target.value)}>
+                      <option value="">— tanlang —</option>
+                      {(badgeCatalog || []).map((b: any) => <option key={b.id} value={b.id}>{b.key}</option>)}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="w-24"><Label className="text-xs">Miqdor</Label><Input type="number" min="1" value={grantAmount} onChange={(e) => setGrantAmount(e.target.value)} /></div>
+                )}
+                <div className="flex-1 min-w-[120px]"><Label className="text-xs">Sabab</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="ixtiyoriy" /></div>
+                <Button size="sm" onClick={doGrant}>Berish</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          <DialogClose asChild><Button variant="ghost">Yopish</Button></DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="rounded-lg border p-2 text-center">
+      <p className="text-[10px] uppercase text-muted-foreground">{label}</p>
+      <p className="text-lg font-bold text-primary">{value ?? "—"}</p>
+    </div>
+  );
+}
+
+// ============ LIGALAR ============
+function LeaguesTab() {
+  const { data: leagues, isLoading, isError, error } = useQuery<any[]>({ queryKey: ["/api/admin/leagues"] });
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-lg">Ligalar</CardTitle></CardHeader>
+      <CardContent>
+        {isLoading ? <Spinner /> : isError ? <ErrorBox error={error} /> : (leagues || []).length === 0 ? <EmptyBox text="Liga yo'q" /> : (
+          <div className="space-y-4">
+            {(leagues || []).map((lg: any) => (
+              <div key={lg.tier} className="border rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-4 h-4 text-primary" />
+                  <span className="font-semibold">{lg.name}</span>
+                  <Badge variant="outline">tier {lg.tier}</Badge>
+                  <span className="text-xs text-muted-foreground">{(lg.members || []).length} a'zo</span>
+                </div>
+                {(lg.members || []).length === 0 ? <p className="text-xs text-muted-foreground">A'zo yo'q</p> : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Nick</TableHead><TableHead>Email</TableHead><TableHead className="text-right">Haftalik XP</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                        {lg.members.map((m: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell>{i + 1}</TableCell>
+                            <TableCell className="font-medium">{m.firstName || "—"}</TableCell>
+                            <TableCell className="text-muted-foreground">{m.email || "—"}</TableCell>
+                            <TableCell className="text-right font-mono">{m.weeklyXp}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============ JANGLAR ============
+function BattlesTab() {
+  const { data: battles, isLoading, isError, error } = useQuery<any[]>({ queryKey: ["/api/admin/battles"] });
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-lg">Oxirgi janglar</CardTitle></CardHeader>
+      <CardContent>
+        {isLoading ? <Spinner /> : isError ? <ErrorBox error={error} /> : (battles || []).length === 0 ? <EmptyBox text="Jang yo'q" /> : (
+          <div className="space-y-3">
+            {(battles || []).map((b: any) => (
+              <div key={b.id} className="border rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <span className="font-mono font-bold">{b.code}</span>
+                  <Badge variant={b.status === "finished" ? "secondary" : "outline"}>{b.status}</Badge>
+                  <span className="text-xs text-muted-foreground">{b.language} · {b.mode}s · {(b.participants || []).length} ishtirokchi</span>
+                </div>
+                {(b.participants || []).length > 0 && (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader><TableRow><TableHead>Nick</TableHead><TableHead>WPM</TableHead><TableHead>Acc</TableHead><TableHead>G'olib</TableHead><TableHead className="text-right">XP/Coin</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                        {b.participants.map((p: any, i: number) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium">{p.firstName || p.email || "—"}</TableCell>
+                            <TableCell>{p.wpm ?? "—"}</TableCell>
+                            <TableCell>{p.accuracy ?? "—"}%</TableCell>
+                            <TableCell>{p.isWinner ? <Badge className="gap-1"><Trophy className="w-3 h-3" />ha</Badge> : "—"}</TableCell>
+                            <TableCell className="text-right font-mono">{p.xpAwarded}/{p.coinsAwarded}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============ AUDIT LOG ============
+function AuditTab() {
+  const { data: rows, isLoading, isError, error } = useQuery<any[]>({ queryKey: ["/api/admin/audit-log"] });
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-lg">Audit jurnali (oxirgi 100)</CardTitle></CardHeader>
+      <CardContent>
+        {isLoading ? <Spinner /> : isError ? <ErrorBox error={error} /> : (rows || []).length === 0 ? <EmptyBox text="Amal yo'q" /> : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader><TableRow><TableHead>Vaqt</TableHead><TableHead>Admin</TableHead><TableHead>Amal</TableHead><TableHead>Tafsilot</TableHead></TableRow></TableHeader>
+              <TableBody>
+                {(rows || []).map((r: any) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-xs whitespace-nowrap">{new Date(r.createdAt).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs">{r.adminEmail || "—"}</TableCell>
+                    <TableCell><Badge variant="outline">{r.action}</Badge></TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[240px] truncate">{JSON.stringify(r.details)}</TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

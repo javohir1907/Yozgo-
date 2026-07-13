@@ -156,6 +156,19 @@ export const botStates = pgTable("bot_states", {
   lastActivity: timestamp("last_activity").defaultNow(),
 });
 
+// Admin amallari auditi (ban/unban/grant/edit/broadcast). Har bir kuchli admin
+// amali shu yerga yoziladi — kim, qachon, kimга, nima qildi (details jsonb).
+export const adminAuditLog = pgTable("admin_audit_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  adminId: varchar("admin_id").references(() => users.id), // null bo'lishi mumkin (bot-secret yo'li)
+  action: text("action").notNull(), // ban|unban|grant_xp|grant_coins|grant_badge|edit_user|broadcast
+  targetUserId: varchar("target_user_id").references(() => users.id),
+  details: jsonb("details").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  createdIdx: index("admin_audit_created_idx").on(table.createdAt),
+}));
+
 export const insertTestResultSchema = createInsertSchema(testResults, {
   // XAVFSIZLIK/robustlik: mode faqat '15'|'30'|'60' bo'lishi mumkin. U bir necha
   // joyda `cast(mode as integer)` qilinadi (leaderboard totalSeconds, quest words) —

@@ -12,7 +12,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { type Server } from "http";
 import { z } from "zod";
-import { eq, sql, desc, and } from "drizzle-orm";
+import { eq, sql, desc, and, inArray } from "drizzle-orm";
 
 import { storage } from "./storage";
 import { db } from "./db";
@@ -25,7 +25,7 @@ import * as StreakService from "./services/streak.service";
 import { evaluateBadges } from "./gamification/badge-service";
 import { getStandingForUser } from "./services/league.service";
 import * as QuestService from "./services/quest.service";
-import { computeSoloXp, xpProgress } from "@shared/lib/xp";
+import { computeSoloXp, xpProgress, levelForXp } from "@shared/lib/xp";
 import { resolveRank } from "@shared/lib/rank";
 import { computeSoloCoins } from "@shared/lib/coins";
 import { cosmeticMeta } from "./gamification/cosmetic-defs";
@@ -37,6 +37,7 @@ import crypto from "crypto";
 import {
   users,
   battles,
+  battleParticipants,
   testResults,
   roomAccessCodes,
   competitions,
@@ -44,6 +45,11 @@ import {
   insertTestResultSchema,
   systemSettings,
   competitionCreationCodes,
+  badges,
+  userBadges,
+  leagues,
+  leagueMembers,
+  adminAuditLog,
 } from "@shared/schema";
 
 // Leaderboard cache — `${language}:${period}` bo'yicha kalanadi (period qo'shilgach
@@ -100,6 +106,26 @@ const ERROR_MESSAGES = {
   UNAUTHORIZED: "Ruxsat berilmagan",
   FORBIDDEN_ADMIN: "Faqat adminlar uchun ruxsat berilgan",
 };
+
+// Admin audit yozuvi — fire-and-forget (asosiy amalni bloklamaydi). adminId
+// bot-secret yo'lida null bo'lishi mumkin (session yo'q).
+async function writeAudit(
+  adminId: string | null | undefined,
+  action: string,
+  targetUserId: string | null | undefined,
+  details: Record<string, unknown> = {},
+): Promise<void> {
+  try {
+    await db.insert(adminAuditLog).values({
+      adminId: adminId ?? null,
+      action,
+      targetUserId: targetUserId ?? null,
+      details: details as any,
+    });
+  } catch (e) {
+    console.error("[AUDIT] yozishda xatolik:", e);
+  }
+}
 
 // ============ ROUTES REGISTRATION ============
 
@@ -1003,6 +1029,10 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(404).json({ error: "Bazada foydalanuvchilar topilmadi" });
       }
 
+      await writeAudit(req.session?.userId, "broadcast", null, {
+        recipients: userRows.length, text: typeof text === "string" ? text.slice(0, 200) : undefined,
+      });
+
       // API darhol javob berishi uchun "await" qilmasdan 200 OK qaytaramiz.
       res.status(200).json({ success: true, message: "Tarqatish orqa fonda boshlandi" });
 
@@ -1296,7 +1326,11 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         .set({ isBanned: !user.isBanned })
         .where(eq(users.id, userId))
         .returning();
-        
+
+      await writeAudit(req.session?.userId, user.isBanned ? "unban" : "ban", userId, {
+        email: user.email, from: user.isBanned, to: !user.isBanned,
+      });
+
       res.json({ success: true, user: updatedUser[0] });
     } catch (error) {
       res.status(500).json({ error: "Ban qilishda xatolik" });
@@ -1311,6 +1345,192 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Musobaqani o'chirishda xatolik" });
+    }
+  });
+
+  // ==========================================
+  // 👤 USER DETAIL + TAHRIR + GRANT (gamification)
+  // ==========================================
+
+  // QADAM 2: to'liq user detali — xp/level/coins/streak + badges + league + oxirgi 10 natija.
+  app.get("/api/admin/users/:id/detail", adminAuth, async (req, res) => {
+    try {
+      const uid = req.params.id as string;
+      const [u] = await db.select().from(users).where(eq(users.id, uid));
+      if (!u) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
+
+      const userBadgeRows = await db
+        .select({ key: badges.key, icon: badges.icon, earnedAt: userBadges.earnedAt })
+        .from(userBadges)
+        .innerJoin(badges, eq(userBadges.badgeId, badges.id))
+        .where(eq(userBadges.userId, uid));
+
+      const [league] = await db
+        .select({ tier: leagueMembers.leagueTier, weeklyXp: leagueMembers.weeklyXp, name: leagues.name, icon: leagues.icon })
+        .from(leagueMembers)
+        .leftJoin(leagues, eq(leagueMembers.leagueTier, leagues.tier))
+        .where(eq(leagueMembers.userId, uid));
+
+      const recentResults = await db
+        .select({ wpm: testResults.wpm, accuracy: testResults.accuracy, mode: testResults.mode, language: testResults.language, source: testResults.source, createdAt: testResults.createdAt })
+        .from(testResults)
+        .where(eq(testResults.userId, uid))
+        .orderBy(desc(testResults.createdAt))
+        .limit(10);
+
+      res.json({
+        id: u.id, email: u.email, firstName: u.firstName, role: u.role, gender: u.gender,
+        isBanned: u.isBanned, xp: u.xp, level: u.level, coins: u.coins,
+        currentStreak: u.currentStreak, longestStreak: u.longestStreak, createdAt: u.createdAt,
+        badges: userBadgeRows,
+        league: league || null,
+        recentResults,
+      });
+    } catch (error) {
+      console.error("[ADMIN] user detail xato:", error);
+      res.status(500).json({ error: "Detalni olishda xatolik" });
+    }
+  });
+
+  // QADAM 2: xp/coins ni admin qo'lda o'rnatish (absolute). Level xp'dan qayta hisoblanadi.
+  app.patch("/api/admin/users/:id", adminAuth, async (req, res) => {
+    try {
+      const uid = req.params.id as string;
+      const { xp, coins } = req.body ?? {};
+      const [before] = await db.select().from(users).where(eq(users.id, uid));
+      if (!before) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
+
+      const set: Record<string, any> = { updatedAt: new Date() };
+      if (xp !== undefined) {
+        const nx = Math.floor(Number(xp));
+        if (!Number.isFinite(nx) || nx < 0) return res.status(400).json({ error: "xp >= 0 bo'lishi kerak" });
+        set.xp = nx;
+        set.level = levelForXp(nx);
+      }
+      if (coins !== undefined) {
+        const nc = Math.floor(Number(coins));
+        if (!Number.isFinite(nc) || nc < 0) return res.status(400).json({ error: "coins >= 0 bo'lishi kerak" });
+        set.coins = nc;
+      }
+      const [after] = await db.update(users).set(set).where(eq(users.id, uid)).returning();
+
+      await writeAudit(req.session?.userId, "edit_user", uid, {
+        email: before.email,
+        before: { xp: before.xp, level: before.level, coins: before.coins },
+        after: { xp: after.xp, level: after.level, coins: after.coins },
+      });
+      res.json({ success: true, user: { id: after.id, xp: after.xp, level: after.level, coins: after.coins } });
+    } catch (error) {
+      console.error("[ADMIN] user edit xato:", error);
+      res.status(500).json({ error: "Tahrirlashda xatolik" });
+    }
+  });
+
+  // QADAM 3: coin/xp/badge berish. body: {type:'coins'|'xp'|'badge', amount?, badgeId?, reason?}
+  app.post("/api/admin/users/:id/grant", adminAuth, async (req, res) => {
+    try {
+      const uid = req.params.id as string;
+      const { type, amount, badgeId, reason } = req.body ?? {};
+      const [u] = await db.select().from(users).where(eq(users.id, uid));
+      if (!u) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
+
+      if (type === "coins") {
+        const amt = Math.floor(Number(amount));
+        if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: "amount > 0 bo'lishi kerak" });
+        await db.update(users).set({ coins: sql`${users.coins} + ${amt}`, updatedAt: new Date() }).where(eq(users.id, uid));
+        await writeAudit(req.session?.userId, "grant_coins", uid, { email: u.email, amount: amt, reason });
+        return res.json({ success: true, type, amount: amt });
+      }
+      if (type === "xp") {
+        const amt = Math.floor(Number(amount));
+        if (!Number.isFinite(amt) || amt <= 0) return res.status(400).json({ error: "amount > 0 bo'lishi kerak" });
+        const result = await storage.addUserXp(uid, amt);
+        await writeAudit(req.session?.userId, "grant_xp", uid, { email: u.email, amount: amt, newXp: result.xp, newLevel: result.level, reason });
+        return res.json({ success: true, type, amount: amt, ...result });
+      }
+      if (type === "badge") {
+        if (!badgeId) return res.status(400).json({ error: "badgeId kerak" });
+        const [badge] = await db.select().from(badges).where(eq(badges.id, badgeId));
+        if (!badge) return res.status(404).json({ error: "Badge topilmadi" });
+        await db.insert(userBadges).values({ userId: uid, badgeId }).onConflictDoNothing();
+        await writeAudit(req.session?.userId, "grant_badge", uid, { email: u.email, badgeKey: badge.key, reason });
+        return res.json({ success: true, type, badgeKey: badge.key });
+      }
+      return res.status(400).json({ error: "type: coins|xp|badge" });
+    } catch (error) {
+      console.error("[ADMIN] grant xato:", error);
+      res.status(500).json({ error: "Berishda xatolik" });
+    }
+  });
+
+  // Badge katalogi (grant UI uchun).
+  app.get("/api/admin/badges", adminAuth, async (_req, res) => {
+    try {
+      const rows = await db.select().from(badges).orderBy(badges.sortOrder);
+      res.json(rows);
+    } catch (error) {
+      res.status(500).json({ error: "Badge katalogini olishda xatolik" });
+    }
+  });
+
+  // QADAM 4: barcha ligalar + a'zolari (weekly_xp bo'yicha reyting).
+  app.get("/api/admin/leagues", adminAuth, async (_req, res) => {
+    try {
+      const leagueRows = await db.select().from(leagues).orderBy(leagues.tier);
+      const members = await db
+        .select({ tier: leagueMembers.leagueTier, weeklyXp: leagueMembers.weeklyXp, email: users.email, firstName: users.firstName })
+        .from(leagueMembers)
+        .leftJoin(users, eq(leagueMembers.userId, users.id))
+        .orderBy(desc(leagueMembers.weeklyXp));
+      const byTier = leagueRows.map((lg: any) => ({
+        ...lg,
+        members: members.filter((m: any) => m.tier === lg.tier),
+      }));
+      res.json(byTier);
+    } catch (error) {
+      console.error("[ADMIN] leagues xato:", error);
+      res.status(500).json({ error: "Ligalarni olishda xatolik" });
+    }
+  });
+
+  // QADAM 5: oxirgi janglar + natijalari.
+  app.get("/api/admin/battles", adminAuth, async (req, res) => {
+    try {
+      const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? "50"), 10) || 50, 1), 200);
+      const battleRows = await db.select().from(battles).orderBy(desc(battles.createdAt)).limit(limit);
+      const ids = battleRows.map((b: any) => b.id);
+      let parts: any[] = [];
+      if (ids.length) {
+        parts = await db
+          .select({ battleId: battleParticipants.battleId, email: users.email, firstName: users.firstName, wpm: battleParticipants.wpm, accuracy: battleParticipants.accuracy, isWinner: battleParticipants.isWinner, xpAwarded: battleParticipants.xpAwarded, coinsAwarded: battleParticipants.coinsAwarded })
+          .from(battleParticipants)
+          .leftJoin(users, eq(battleParticipants.userId, users.id))
+          .where(inArray(battleParticipants.battleId, ids));
+      }
+      const result = battleRows.map((b: any) => ({
+        id: b.id, code: b.code, status: b.status, language: b.language, mode: b.mode,
+        createdAt: b.createdAt, participants: parts.filter((p) => p.battleId === b.id),
+      }));
+      res.json(result);
+    } catch (error) {
+      console.error("[ADMIN] battles xato:", error);
+      res.status(500).json({ error: "Janglarni olishda xatolik" });
+    }
+  });
+
+  // QADAM 6: audit log — oxirgi 100 amal.
+  app.get("/api/admin/audit-log", adminAuth, async (_req, res) => {
+    try {
+      const rows = await db
+        .select({ id: adminAuditLog.id, action: adminAuditLog.action, details: adminAuditLog.details, createdAt: adminAuditLog.createdAt, adminEmail: users.email })
+        .from(adminAuditLog)
+        .leftJoin(users, eq(adminAuditLog.adminId, users.id))
+        .orderBy(desc(adminAuditLog.createdAt))
+        .limit(100);
+      res.json(rows);
+    } catch (error) {
+      console.error("[ADMIN] audit-log xato:", error);
+      res.status(500).json({ error: "Auditni olishda xatolik" });
     }
   });
 
