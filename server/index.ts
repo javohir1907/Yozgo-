@@ -76,6 +76,49 @@ app.get("/api/health", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", uptime: process.uptime() });
 });
 
+// ============ DOMEN IZOLYATSIYASI (host-based routing) ============
+// Admin panel FAQAT admin subdomenidan ochilsin; asosiy domenda YASHIRIN.
+// Bitta Docker image ikkala hostni ko'taradi — env var YO'Q, faqat Host header.
+// Coolify'da bitta app, ikkita domain (yozgo.uz + admin.yozgo.uz) bog'lanadi.
+const ADMIN_ALLOWED_HOST = "admin.yozgo.uz"; // kelajakda o'zgarishi mumkin
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const host = (req.hostname || "").toLowerCase(); // portsiz; trust proxy => X-Forwarded-Host
+  // Local dev (localhost/127.0.0.1/0.0.0.0) — izolyatsiya QO'LLANMAYDI, hammasi ochiq.
+  // Coolify ichki healthcheck ham 127.0.0.1'ga uradi — bloklanmasin.
+  if (host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0" || host.endsWith(".localhost") || host === "") {
+    return next();
+  }
+
+  const path = req.path;
+  const isAdminPage = path === "/admin" || path.startsWith("/admin/");
+  const isAdminApi = path.startsWith("/api/admin");
+  // SPA/infra: admin sahifasi yuklanishi uchun zarur (statik assetlar, auth, health,
+  // Vite dev yo'llari). Bularsiz admin sahifa bo'sh ekran bo'lardi.
+  const isInfra =
+    path === "/api/health" ||
+    path.startsWith("/api/auth") ||
+    path.startsWith("/assets") ||
+    path.startsWith("/@") ||        // Vite dev: /@vite, /@react-refresh, /@fs
+    path.startsWith("/src") ||       // Vite dev manba
+    path.startsWith("/node_modules") ||
+    path.startsWith("/favicon") ||
+    path === "/robots.txt" || path === "/manifest.json" ||
+    /\.(js|mjs|css|svg|png|jpg|jpeg|ico|webp|woff2?|ttf|json|map)$/.test(path);
+
+  if (host === ADMIN_ALLOWED_HOST) {
+    // Admin subdomen: FAQAT admin sahifa + admin API + infra. Boshqa hammasi 404.
+    if (isAdminPage || isAdminApi || isInfra) return next();
+    return res.status(404).json({ message: "Not found" });
+  }
+
+  // Asosiy domen (yozgo.uz va h.k.): admin YASHIRIN — /admin va /api/admin/* 404.
+  if (isAdminPage || isAdminApi) {
+    return res.status(404).json({ message: "Not found" });
+  }
+  return next();
+});
+
 // ============ PROCESS HANDLERS ============
 process.on("unhandledRejection", (reason: unknown, promise: Promise<unknown>) => {
   logger.error("[CRITICAL] Unhandled Rejection at:", { promise, reason });
