@@ -21,6 +21,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   telegramId: varchar("telegram_id").unique(),
+  phone: varchar("phone"), // registratsiyada Telegram kontaktidan; unique EMAS — telegramId unique'ligi asosiy to'siq
   role: varchar("role").default("user").notNull(), // added role for admin checks
   gender: varchar("gender"), // male, female (mandatory starting from today)
   isBanned: boolean("is_banned").default(false).notNull(),

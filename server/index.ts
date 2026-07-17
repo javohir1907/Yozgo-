@@ -282,6 +282,7 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
       await pool.query(`
         ALTER TABLE users ADD COLUMN IF NOT EXISTS role varchar NOT NULL DEFAULT 'user';
         ALTER TABLE users ADD COLUMN IF NOT EXISTS telegram_id varchar UNIQUE;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS phone varchar;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS gender varchar;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned boolean NOT NULL DEFAULT false;
         ALTER TABLE users ADD COLUMN IF NOT EXISTS last_nickname_change_at timestamp;
@@ -495,6 +496,29 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
       );
     `);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS admin_audit_created_idx ON admin_audit_log (created_at DESC);`);
+
+    // Tasdiqlash kodlari (register/login — email + Telegram). In-memory Map o'rniga (additive).
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS verification_codes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        channel TEXT NOT NULL,
+        identifier TEXT NOT NULL,
+        code TEXT NOT NULL,
+        token TEXT,
+        telegram_id VARCHAR,
+        phone VARCHAR,
+        verified BOOLEAN NOT NULL DEFAULT false,
+        purpose TEXT NOT NULL DEFAULT 'register',
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT now()
+      );
+    `);
+    // Oldingi boot yaratgan jadval uchun additive ustunlar (drizzle SELECT hamma
+    // ustunni sanaydi — ustun yetishmasa barcha auth so'rovlari 42703 bilan yiqiladi).
+    await db.execute(sql`ALTER TABLE verification_codes ADD COLUMN IF NOT EXISTS phone VARCHAR;`);
+    await db.execute(sql`ALTER TABLE verification_codes ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT false;`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS verification_token_idx ON verification_codes (token);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS verification_chan_id_idx ON verification_codes (channel, identifier);`);
 
     logger.info(`[DB] Bazaga barcha yangi ustunlar muvaffaqiyatli qo'shildi / tekshirildi!`);
   } catch (err: any) {

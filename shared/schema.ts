@@ -156,6 +156,28 @@ export const botStates = pgTable("bot_states", {
   lastActivity: timestamp("last_activity").defaultNow(),
 });
 
+// Ro'yxat/login tasdiqlash kodlari — email + Telegram (ikki kanal). Eski in-memory
+// Map o'rniga: multi-instance/restart'ga chidamli. TTL ~5 daqiqa (expires_at).
+//   channel='email'    -> identifier = email, code emailga yuboriladi.
+//   channel='telegram' -> identifier = token, deep-link (t.me/<bot>?start=auth_<token>);
+//     user Start bosgach bot telegram_id'ni to'ldiradi va code'ni chatда qaytaradi.
+export const verificationCodes = pgTable("verification_codes", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  channel: text("channel").notNull(),                       // 'email' | 'telegram'
+  identifier: text("identifier").notNull(),                 // email (email) yoki token (telegram)
+  code: text("code").notNull(),                             // 6 xonali
+  token: text("token"),                                     // telegram deep-link tokeni
+  telegramId: varchar("telegram_id"),                       // kontakt yuborilganda to'ldiriladi
+  phone: varchar("phone"),                                  // telegram contact'dan (faqat channel='telegram')
+  verified: boolean("verified").notNull().default(false),   // kanal alohida tasdiqlandi (verify endpoint)
+  purpose: text("purpose").notNull().default("register"),   // 'register' | 'login'
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  tokenIdx: index("verification_token_idx").on(table.token),
+  chanIdIdx: index("verification_chan_id_idx").on(table.channel, table.identifier),
+}));
+
 // Admin amallari auditi (ban/unban/grant/edit/broadcast). Har bir kuchli admin
 // amali shu yerga yoziladi — kim, qachon, kimга, nima qildi (details jsonb).
 export const adminAuditLog = pgTable("admin_audit_log", {

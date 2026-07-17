@@ -12,8 +12,7 @@ router.get("/debug-info", (req: any, res) => {
       host: req.headers.host,
     },
     sessionID: req.sessionID,
-    isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : "no passport",
-    user: req.user || null,
+    isAuthenticated: !!req.session?.userId,
     env: {
       NODE_ENV: process.env.NODE_ENV,
       SESSION_SECRET: process.env.SESSION_SECRET ? "EXISTS" : "MISSING",

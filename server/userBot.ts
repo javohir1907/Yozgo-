@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "./db";
-import { users, battles, roomAccessCodes } from "@shared/schema";
-import { sql, eq } from "drizzle-orm";
+import { users, battles, roomAccessCodes, verificationCodes } from "@shared/schema";
+import { sql, eq, and, gt } from "drizzle-orm";
 import crypto from "crypto";
 import { processInChunks } from "./utils/async-chunker";
 import { BotStateService } from "./services/bot-state.service";
@@ -9,11 +9,20 @@ import { BotStateService } from "./services/bot-state.service";
 let userBot: TelegramBot | null = null;
 const MINI_APP_URL = process.env.VITE_API_BASE_URL?.replace("/api", "") || "https://yozgo.uz";
 
+// APP_MODE=admin (admin.yozgo.uz konteyneri): Telegram bitta bot token uchun ikkita
+// getUpdates poller'ga ruxsat bermaydi (409 Conflict). Shu sababli admin konteynerda
+// bot instansiyasi UMUMAN yaratilmaydi (main konteyner yagona poller bo'lib qoladi).
+const IS_ADMIN_MODE = (process.env.APP_MODE || "").toLowerCase() === "admin";
+
 export function getUserBot() {
   return userBot;
 }
 
 export function startUserBot() {
+  if (IS_ADMIN_MODE) {
+    console.log("[userBot] APP_MODE=admin — polling skipped");
+    return;
+  }
   const token = process.env.USER_BOT_TOKEN;
   if (!token) {
     console.warn("⚠️ USER_BOT_TOKEN topilmadi — User Bot o'chirildi");
@@ -61,6 +70,25 @@ export function startUserBot() {
     const chatId = msg.chat.id;
     const param = match && match[1];
 
+    // Saytdan ro'yxat/login deep-link: /start auth_<token>
+    if (param && param.startsWith("auth_")) {
+      // XAVFSIZLIK: auth oqimi FAQAT shaxsiy chatda. Guruhda ruxsat berilsa holat
+      // guruh chatId'siga yozilib, boshqa a'zoning kontakti begona tokenga bog'lanadi
+      // va 6 xonali kod guruhga (token egasiga ko'rinadigan joyga) yuboriladi.
+      if (msg.chat.type !== "private") {
+        userBot?.sendMessage(chatId, "❌ Tasdiqlash faqat bot bilan shaxsiy chatda ishlaydi.");
+        return;
+      }
+      await handleAuthToken(chatId, param.slice(5), msg.from?.id);
+      return;
+    }
+
+    // Tashlab qo'yilgan auth jarayoni holatini tozalaymiz (room-code va oddiy /start
+    // yo'llarida) — aks holda keyingi matnlar auth branch'ga urilib, xona-kod oqimi
+    // qator eskirguncha ishlamay qoladi.
+    const st = await BotStateService.getState(chatId);
+    if (st?.type === "auth_phone") await BotStateService.clearState(chatId);
+
     if (param) {
       await handleRoomCode(chatId, param, msg.from?.id);
       return;
@@ -85,6 +113,58 @@ export function startUserBot() {
       if (!msg.text && !msg.contact && !msg.location && !msg.photo) return;
       const chatId = msg.chat.id;
       const state = await BotStateService.getState(chatId);
+
+      // Auth oqimi: telefon raqami kutilyapti (register/login deep-link'dan keyin).
+      // MUHIM: winner_data va room-code fallback'dan OLDIN — auth holatidagi contact/text
+      // boshqa branch'larga tushmasin (branch oxirida return).
+      if (state?.type === "auth_phone") {
+        // Auth oqimi faqat shaxsiy chatda (qo'shimcha himoya — /start'dagi guard bilan bir xil sabab).
+        if (msg.chat.type !== "private") return;
+        if (msg.contact) {
+          // Faqat O'ZINING kontakti qabul qilinadi. Forward qilingan begona kontakt
+          // user_id=undefined yoki boshqa id bilan keladi — ikkalasi ham rad etiladi.
+          if (msg.contact.user_id !== msg.from?.id) {
+            userBot?.sendMessage(chatId, "❌ Iltimos O'ZINGIZNING raqamingizni yuboring (tugma orqali).");
+            return;
+          }
+          const [row] = await db.select().from(verificationCodes).where(and(
+            eq(verificationCodes.id, state.rowId),
+            gt(verificationCodes.expiresAt, new Date()),
+          ));
+          if (!row) {
+            await BotStateService.clearState(chatId);
+            userBot?.sendMessage(chatId, "❌ Havola eskirgan. Iltimos saytdan qayta urinib ko'ring.", {
+              reply_markup: { remove_keyboard: true },
+            });
+            return;
+          }
+          await db.update(verificationCodes)
+            .set({ telegramId: String(msg.from!.id), phone: msg.contact.phone_number })
+            .where(eq(verificationCodes.id, row.id));
+          await BotStateService.clearState(chatId);
+          userBot?.sendMessage(
+            chatId,
+            `✅ Telegram tasdiqlandi!\n\nTasdiqlash kodingiz:\n\n\`${row.code}\`\n\n👆 Kodni saytdagi maydonga kiriting.`,
+            { parse_mode: "Markdown", reply_markup: { remove_keyboard: true } },
+          );
+        } else if (msg.text && !msg.text.startsWith("/")) {
+          // Qator eskirgan bo'lsa holatni tozalaymiz — aks holda foydalanuvchi auth'ni
+          // tashlab ketganidan keyin HAR matn (xona kodi ham) shu branch'da qolib ketadi.
+          const [row] = await db.select().from(verificationCodes).where(and(
+            eq(verificationCodes.id, state.rowId),
+            gt(verificationCodes.expiresAt, new Date()),
+          ));
+          if (!row) {
+            await BotStateService.clearState(chatId);
+            userBot?.sendMessage(chatId, "❌ Tasdiqlash havolasi eskirgan. Saytdan qayta urinib ko'ring yoki xona kodini yuboring.", {
+              reply_markup: { remove_keyboard: true },
+            });
+          } else {
+            userBot?.sendMessage(chatId, "📱 Iltimos «Raqamni yuborish» tugmasini bosing (matn emas).");
+          }
+        }
+        return;
+      }
 
       // Winner Data Collection Flow
       if (state?.type === "winner_data") {
@@ -195,6 +275,36 @@ export function startUserBot() {
       }
     }
   });
+}
+
+// Saytdagi register/login deep-link: token tekshirilgach AVVAL telefon raqami so'raladi
+// (request_contact). Kontakt kelgach (message handler'dagi auth_phone branch) telegram_id
+// + phone bog'lanadi va tasdiqlash kodi yuboriladi. Method A: bot Start bosmagan userга
+// yozolmaydi — user Start bosgani uchun endi yozа olamiz.
+async function handleAuthToken(chatId: number, token: string, tgUserId?: number) {
+  if (!tgUserId) return;
+  const [row] = await db.select().from(verificationCodes).where(and(
+    eq(verificationCodes.channel, "telegram"),
+    eq(verificationCodes.token, token),
+    gt(verificationCodes.expiresAt, new Date()),
+  ));
+  if (!row) {
+    userBot?.sendMessage(chatId, "❌ Havola eskirgan yoki yaroqsiz. Iltimos saytdan qayta urinib ko'ring.");
+    return;
+  }
+  // Qayta /start yangi token bilan kelsa setState upsert qiladi — eski jarayon bekor bo'ladi.
+  await BotStateService.setState(chatId, { type: "auth_phone", token, rowId: row.id });
+  userBot?.sendMessage(
+    chatId,
+    "📱 Tasdiqlash uchun telefon raqamingizni yuboring (quyidagi tugmani bosing):",
+    {
+      reply_markup: {
+        keyboard: [[{ text: "Raqamni yuborish 📱", request_contact: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
+    },
+  );
 }
 
 async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {

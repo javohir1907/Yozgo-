@@ -31,3 +31,6 @@ vite.config.ts.*
 # Loyiha ildizida _ bilan boshlanadigan bir martalik skriptlar (masalan _integ*.ts)
 /_*.ts
 /_*.js
+
+# Lokal dev yordamchi skript (commit qilinmaydi)
+run-local.sh
