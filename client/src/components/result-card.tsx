@@ -28,13 +28,31 @@ export function ResultCard({
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const text = `YOZGO Typing Test Result:\n🚀 Speed: ${wpm} WPM\n🎯 Accuracy: ${accuracy}%\n📊 Raw WPM: ${rawWpm || 0}\n📈 Consistency: ${consistency || 0}%\n\nJoin the arena at yozgo.uz!`;
-    navigator.clipboard.writeText(text).then(() => {
+    try {
+      // navigator.clipboard is undefined on insecure origins and rejects when
+      // permission is denied — the old .then() with no .catch() left the button
+      // silently dead. Fall back to execCommand, then surface a failure.
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (!ok) throw new Error("copy failed");
+      }
       setCopied(true);
       toast({ title: t.battle.copied, description: t.battle.copiedDesc });
       setTimeout(() => setCopied(false), 2000);
-    });
+    } catch {
+      toast({ variant: "destructive", title: t.battle.copyFailed });
+    }
   };
 
   return (
@@ -62,7 +80,7 @@ export function ResultCard({
           </div>
           <div className="text-center border-l border-border/10">
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">
-              RAW
+              {t.typing.raw}
             </p>
             <p className="text-5xl font-mono text-muted-foreground/60 transition-colors hover:text-primary">
               {rawWpm || 0}
@@ -70,7 +88,7 @@ export function ResultCard({
           </div>
           <div className="text-center border-l border-border/10">
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">
-              CONS
+              {t.typing.cons}
             </p>
             <p className="text-5xl font-mono text-muted-foreground/60 transition-colors hover:text-primary">
               {consistency || 0}%
@@ -111,7 +129,7 @@ export function ResultCard({
             data-testid="button-share"
             onClick={handleShare}
           >
-            {copied ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <Share2 className="mr-2 h-4 w-4" />}
+            {copied ? <Check className="mr-2 h-4 w-4 text-success" /> : <Share2 className="mr-2 h-4 w-4" />}
             {t.typing.share}
           </Button>
         </div>
