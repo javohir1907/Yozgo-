@@ -30,6 +30,7 @@ import SEO from "@/components/SEO";
 // Hooks & Libs
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 // ============ TYPES ============
@@ -67,8 +68,10 @@ export default function LandingPage() {
         description={t.landing.readySubtitle}
       />
 
-      {/* Hero Section - Edge-to-Edge Full Spread Style (Mobile Responsive Setup) */}
-      <section className="relative min-h-[95vh] flex flex-col items-center justify-center overflow-hidden bg-background">
+      {/* Hero. One viewport minus the header (svh so mobile URL bars don't push
+          it taller). Previously two nested min-h-[95vh] + the header pushed the
+          hero past the first screen on every load. */}
+      <section className="relative flex min-h-[calc(100svh-3.5rem)] flex-col items-center justify-center overflow-hidden bg-background sm:min-h-[calc(100svh-4rem)]">
         
         {/* CSS-only background — no images needed (saves 1.2MB!) */}
         <div className="absolute inset-0 w-full h-full z-0 pointer-events-none" aria-hidden="true">
@@ -84,18 +87,18 @@ export default function LandingPage() {
         </div>
 
         {/* 2. Content Container - Split into Top (Title) and Bottom (Subtitle & Buttons) */}
-        <div className="container relative z-10 px-4 w-full min-h-[95vh] flex flex-col items-center justify-between pt-16 pb-8 md:pt-32 md:pb-20">
+        <div className="container relative z-10 flex w-full flex-1 flex-col items-center justify-between px-4 pb-8 pt-16 md:pb-20 md:pt-32">
           
           {/* Yuqori qism: Asosiy Sarlavha (Klavishlar tepasida) */}
           <div className="text-center w-full max-w-5xl mx-auto px-4 mt-2 md:mt-4">
-            <motion.h2
-              className="text-4xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground tracking-tight drop-shadow-xl"
+            <motion.h1
+              className="font-heading text-display font-black uppercase tracking-tight text-foreground drop-shadow-xl"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
               {t.landing.heroTitle}
-            </motion.h2>
+            </motion.h1>
           </div>
 
           {/* O'rta bo'shliq (Klavishlarning aniq ko'rinishi uchun) */}
@@ -138,7 +141,7 @@ export default function LandingPage() {
             
             {/* Background Accent */}
             <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 blur-3xl rounded-full"></div>
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/10 blur-3xl rounded-full"></div>
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-info/10 blur-3xl rounded-full"></div>
 
             <div className="flex-1 text-center md:text-left z-10">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-black uppercase tracking-widest mb-6 border border-primary/20">
@@ -156,7 +159,7 @@ export default function LandingPage() {
               
               <div className="mt-10 flex items-center justify-center md:justify-start gap-4">
                 <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary border border-border">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
                   <span className="text-sm font-bold uppercase tracking-tight">{t.landing.aboutUsSystem}</span>
                 </div>
               </div>
@@ -199,7 +202,7 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-bold tracking-wide uppercase text-sm border border-primary/20 mb-4"
               >
-                <Trophy className="w-5 h-5" /> Faol Turnirlar
+                <Trophy className="w-5 h-5" /> {t.landing.compActiveTournaments}
               </motion.div>
               <h2 className="text-4xl md:text-5xl font-black mb-4">{t.landing.upcomingComps}</h2>
               <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
@@ -215,10 +218,10 @@ export default function LandingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.1 }}
-                  className="group relative p-1 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 shadow-2xl hover:shadow-primary/20 transition-all duration-300"
+                  className="group relative p-1 rounded-2xl bg-gradient-to-br from-border to-transparent shadow-2xl hover:shadow-primary/20 transition-all duration-300"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl -z-10"></div>
-                  <div className="h-full bg-card/90 backdrop-blur-xl p-8 rounded-[14px] border border-white/10 flex flex-col items-start relative overflow-hidden">
+                  <div className="h-full bg-card/90 backdrop-blur-xl p-8 rounded-[14px] border border-border flex flex-col items-start relative overflow-hidden">
                     
                     {/* Background Graphic */}
                     <div className="absolute -right-10 -top-10 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
@@ -226,21 +229,21 @@ export default function LandingPage() {
                     </div>
 
                     <div className="w-full flex justify-between items-start mb-6 z-10">
-                      <div className="p-3 bg-gradient-to-br from-orange-500/20 to-red-500/20 text-orange-500 rounded-xl">
+                      <div className="p-3 bg-primary/15 text-primary rounded-xl">
                         <Trophy className="w-8 h-8" />
                       </div>
-                      <span className="px-3 py-1 text-xs font-bold bg-green-500/20 text-green-400 rounded-full border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
-                        Qabul Ochiq
+                      <span className="px-3 py-1 text-xs font-bold bg-success/15 text-success rounded-full border border-success/30">
+                        {t.landing.compOpen}
                       </span>
                     </div>
 
                     <h3 className="text-2xl font-bold mb-3 z-10 group-hover:text-primary transition-colors">{comp.title}</h3>
                     
                     {comp.reward && (
-                      <div className="w-full p-4 mb-6 rounded-xl bg-orange-500/10 border border-orange-500/20 text-center z-10 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
-                        <p className="text-xs text-orange-300 uppercase tracking-widest font-black mb-1">Mukofot</p>
-                        <p className="text-lg text-orange-400 font-extrabold">{comp.reward}</p>
+                      <div className="w-full p-4 mb-6 rounded-xl bg-primary/10 border border-primary/20 text-center z-10 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-foreground/5 to-transparent -translate-x-full animate-shimmer"></div>
+                        <p className="text-xs text-primary/80 uppercase tracking-widest font-black mb-1">{t.landing.compReward}</p>
+                        <p className="text-lg text-primary font-extrabold">{comp.reward}</p>
                       </div>
                     )}
                     
@@ -280,37 +283,38 @@ function FeatureCard({ icon, title, description }: FeatureCardProps) {
 /**
  * Musobaqaga qo'shilish modal oynasi.
  */
-function CompetitionWaitlistModal({ competition, user, queryClient }: { competition: any, user: any, queryClient: any }) {
+function CompetitionWaitlistModal({ competition, queryClient }: { competition: any, user: any, queryClient: any }) {
   const [open, setOpen] = useState(false);
-
-  const { data: participants } = useQuery<any[]>({
-    queryKey: [`/api/competitions/${competition.id}/participants`],
-    enabled: open
-  });
+  const { t } = useI18n();
+  const { toast } = useToast();
 
   const registerMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", `/api/competitions/${competition.id}/register`);
+      const r = await apiRequest("POST", `/api/competitions/${competition.id}/register`);
+      if (!r.ok) throw new Error((await r.json()).message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
       queryClient.invalidateQueries({ queryKey: [`/api/competitions/${competition.id}/participants`] });
-      alert("Muvaffaqiyatli ro'yxatdan o'tdingiz!");
-    }
+      // Was a native alert() — bypassed the app's toast system entirely.
+      toast({ variant: "success", title: t.landing.compRegistered });
+      setOpen(false);
+    },
+    onError: (e: Error) => toast({ variant: "destructive", title: e.message }),
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full font-bold">Batafsil</Button>
+        <Button className="w-full font-bold">{t.landing.compDetails}</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{competition.title}</DialogTitle>
-          <DialogDescription>Musobaqaga tayyorlaning!</DialogDescription>
+          <DialogDescription>{t.landing.compGetReady}</DialogDescription>
         </DialogHeader>
-        <Button onClick={() => registerMutation.mutate()} disabled={registerMutation.isPending}>
-          {registerMutation.isPending ? "Yuklanmoqda..." : "Qatnashish"}
+        <Button loading={registerMutation.isPending} onClick={() => registerMutation.mutate()}>
+          {t.landing.compJoin}
         </Button>
       </DialogContent>
     </Dialog>
