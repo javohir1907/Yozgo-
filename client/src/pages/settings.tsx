@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
@@ -8,194 +7,170 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import { Settings as SettingsIcon } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { useI18n, type UILanguage } from "@/lib/i18n";
-import { useToast } from "@/hooks/use-toast";
-
-type UserSettings = {
-  fontFamily: string;
-  defaultTimer: string;
-  defaultLanguage: string;
-};
-
-const FONTS = [
-  { id: "font-sans", name: "Inter (Sans)" },
-  { id: "font-mono", name: "Menlo (Mono)" },
-  { id: "font-jetbrains", name: "JetBrains Mono" },
-  { id: "font-roboto", name: "Roboto Mono" },
-  { id: "font-fira", name: "Fira Code" },
-];
-
-const TIMERS = ["15", "30", "60"];
+import {
+  useUserSettings,
+  type TypingFontId,
+  type TypingSizeId,
+} from "@/hooks/use-user-settings";
+import { PageShell } from "@/components/layout/page-shell";
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const { t, uiLang, setUILang } = useI18n();
-  const { toast } = useToast();
+  const { settings, update } = useUserSettings();
 
-  const [settings, setSettings] = useState<UserSettings>(() => {
-    const saved = localStorage.getItem("yozgo-user-settings");
-    return saved
-      ? JSON.parse(saved)
-      : {
-          fontFamily: "font-mono",
-          defaultTimer: "30",
-          defaultLanguage: "en",
-        };
-  });
-
-  useEffect(() => {
-    localStorage.setItem("yozgo-user-settings", JSON.stringify(settings));
-
-    const root = window.document.documentElement;
-    FONTS.forEach((f) => root.classList.remove(f.id));
-    root.classList.add(settings.fontFamily);
-  }, [settings]);
-
-  const updateSetting = (key: keyof UserSettings, value: string) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
-    toast({
-      title: t.settings.updated,
-      description: t.settings.updatedDesc,
-    });
-  };
-
-  const LANGUAGES = [
-    { id: "en", name: t.settings.english },
-    { id: "ru", name: t.settings.russian },
-    { id: "uz", name: t.settings.uzbek },
-    { id: "kaa", name: t.settings.karakalpak },
+  const TYPING_FONTS: { id: TypingFontId; name: string }[] = [
+    { id: "jetbrains", name: "JetBrains Mono" },
+    { id: "roboto", name: "Roboto Mono" },
+    { id: "system", name: "System Mono" },
+    { id: "inter", name: "Inter (Sans)" },
   ];
-
-  const UI_LANGUAGES: { id: UILanguage; name: string }[] = [
-    { id: "en", name: t.settings.english },
-    { id: "ru", name: t.settings.russian },
-    { id: "uz", name: t.settings.uzbek },
-    { id: "kaa", name: t.settings.karakalpak },
+  const TYPING_SIZES: { id: TypingSizeId; name: string }[] = [
+    { id: "s", name: t.settings.sizeSmall },
+    { id: "m", name: t.settings.sizeMedium },
+    { id: "l", name: t.settings.sizeLarge },
+  ];
+  const LANGUAGES = [
+    { id: "en" as const, name: t.settings.english },
+    { id: "ru" as const, name: t.settings.russian },
+    { id: "uz" as const, name: t.settings.uzbek },
+    { id: "kaa" as const, name: t.settings.karakalpak },
+  ];
+  const UI_LANGUAGES: { id: UILanguage; name: string }[] = LANGUAGES;
+  // System mode arrives with the theme.tsx rewrite; two options until then.
+  const THEMES: { id: "light" | "dark"; name: string }[] = [
+    { id: "light", name: t.settings.themeLight },
+    { id: "dark", name: t.settings.themeDark },
   ];
 
   return (
-    <div className="container max-w-2xl py-12 px-4 pb-24">
-      <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-        {t.settings.title}
-      </h1>
-
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.settings.appearance}</CardTitle>
-            <CardDescription>{t.settings.appearanceDesc}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <Label>{t.settings.darkMode}</Label>
-                <p className="text-sm text-muted-foreground">{t.settings.darkModeDesc}</p>
-              </div>
-              <Switch
-                checked={theme === "dark"}
-                onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-                data-testid="switch-theme"
-              />
+    <PageShell
+      size="sm"
+      icon={SettingsIcon}
+      title={t.settings.title}
+      seo={{ title: t.settings.title, noindex: true }}
+    >
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.settings.appearance}</CardTitle>
+          <CardDescription>{t.settings.appearanceDesc}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="theme-mode">{t.settings.darkMode}</Label>
+              <p className="text-sm text-muted-foreground">{t.settings.darkModeDesc}</p>
             </div>
+            <Select value={theme} onValueChange={(v) => setTheme(v as typeof theme)}>
+              <SelectTrigger id="theme-mode" className="sm:w-40" data-testid="select-theme">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {THEMES.map((th) => (
+                  <SelectItem key={th.id} value={th.id}>
+                    {th.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="font-family">{t.settings.fontFamily}</Label>
-              <Select
-                value={settings.fontFamily}
-                onValueChange={(v) => updateSetting("fontFamily", v)}
-              >
-                <SelectTrigger id="font-family" data-testid="select-font-family">
-                  <SelectValue placeholder={t.settings.selectFont} />
-                </SelectTrigger>
-                <SelectContent>
-                  {FONTS.map((font) => (
-                    <SelectItem
-                      key={font.id}
-                      value={font.id}
-                      data-testid={`select-item-font-${font.id}`}
-                    >
-                      {font.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <SettingSelect
+            id="ui-language"
+            label={t.settings.interfaceLanguage}
+            description={t.settings.interfaceLanguageDesc}
+            value={uiLang}
+            onChange={(v) => setUILang(v as UILanguage)}
+            options={UI_LANGUAGES}
+            testid="select-ui-language"
+          />
+        </CardContent>
+      </Card>
 
-            <div className="space-y-2">
-              <Label htmlFor="ui-language">{t.settings.interfaceLanguage}</Label>
-              <p className="text-sm text-muted-foreground">{t.settings.interfaceLanguageDesc}</p>
-              <Select value={uiLang} onValueChange={(v) => setUILang(v as UILanguage)}>
-                <SelectTrigger id="ui-language" data-testid="select-ui-language">
-                  <SelectValue placeholder={t.settings.selectLanguage} />
-                </SelectTrigger>
-                <SelectContent>
-                  {UI_LANGUAGES.map((lang) => (
-                    <SelectItem
-                      key={lang.id}
-                      value={lang.id}
-                      data-testid={`select-item-ui-lang-${lang.id}`}
-                    >
-                      {lang.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t.settings.typingPrefs}</CardTitle>
+          <CardDescription>{t.settings.typingPrefsDesc}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <SettingSelect
+            id="typing-font"
+            label={t.settings.typingFont}
+            value={settings.typingFont}
+            onChange={(v) => update("typingFont", v as TypingFontId)}
+            options={TYPING_FONTS}
+            testid="select-typing-font"
+          />
+          <SettingSelect
+            id="typing-size"
+            label={t.settings.typingSize}
+            value={settings.typingSize}
+            onChange={(v) => update("typingSize", v as TypingSizeId)}
+            options={TYPING_SIZES}
+            testid="select-typing-size"
+          />
+          <SettingSelect
+            id="default-timer"
+            label={t.settings.defaultTimer}
+            value={String(settings.defaultTimer)}
+            onChange={(v) => update("defaultTimer", Number(v) as 15 | 30 | 60)}
+            options={[
+              { id: "15", name: "15s" },
+              { id: "30", name: "30s" },
+              { id: "60", name: "60s" },
+            ]}
+            testid="select-default-timer"
+          />
+          <SettingSelect
+            id="default-language"
+            label={t.settings.defaultLanguage}
+            value={settings.defaultLanguage}
+            onChange={(v) => update("defaultLanguage", v as typeof settings.defaultLanguage)}
+            options={LANGUAGES}
+            testid="select-default-language"
+          />
+        </CardContent>
+      </Card>
+    </PageShell>
+  );
+}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t.settings.typingPrefs}</CardTitle>
-            <CardDescription>{t.settings.typingPrefsDesc}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="default-timer">{t.settings.defaultTimer}</Label>
-              <Select
-                value={settings.defaultTimer}
-                onValueChange={(v) => updateSetting("defaultTimer", v)}
-              >
-                <SelectTrigger id="default-timer" data-testid="select-default-timer">
-                  <SelectValue placeholder={t.settings.selectTime} />
-                </SelectTrigger>
-                <SelectContent>
-                  {TIMERS.map((time) => (
-                    <SelectItem key={time} value={time} data-testid={`select-item-timer-${time}`}>
-                      {time}s
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="default-language">{t.settings.defaultLanguage}</Label>
-              <Select
-                value={settings.defaultLanguage}
-                onValueChange={(v) => updateSetting("defaultLanguage", v)}
-              >
-                <SelectTrigger id="default-language" data-testid="select-default-language">
-                  <SelectValue placeholder={t.settings.selectLanguage} />
-                </SelectTrigger>
-                <SelectContent>
-                  {LANGUAGES.map((lang) => (
-                    <SelectItem
-                      key={lang.id}
-                      value={lang.id}
-                      data-testid={`select-item-lang-${lang.id}`}
-                    >
-                      {lang.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+function SettingSelect({
+  id,
+  label,
+  description,
+  value,
+  onChange,
+  options,
+  testid,
+}: {
+  id: string;
+  label: string;
+  description?: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { id: string; name: string }[];
+  testid?: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id} data-testid={testid}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((o) => (
+            <SelectItem key={o.id} value={o.id} data-testid={`${testid}-${o.id}`}>
+              {o.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

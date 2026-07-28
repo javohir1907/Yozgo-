@@ -10,6 +10,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
+import { readUserSettings } from "@/hooks/use-user-settings";
 
 // Idempotency kaliti (v4 UUID). crypto.randomUUID zamonaviy brauzerlarda bor;
 // bo'lmasa getRandomValues bilan yaroqli v4 fallback.
@@ -38,8 +39,13 @@ export default function TypingTestPage() {
   const { toast } = useToast();
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  const [language, setLanguage] = useState<Language>("en");
-  const [mode, setMode] = useState<TimerMode>(30);
+  // Seed from saved settings so the settings page is no longer decorative.
+  const [language, setLanguage] = useState<Language>(
+    () => readUserSettings().defaultLanguage as Language,
+  );
+  const [mode, setMode] = useState<TimerMode>(
+    () => readUserSettings().defaultTimer as TimerMode,
+  );
 
   const resultMutation = useMutation({
     mutationFn: async (result: {
