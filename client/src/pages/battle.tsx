@@ -509,7 +509,7 @@ export default function BattlePage() {
       <div className="container max-w-2xl mx-auto py-12 px-4">
         <SEO title={`${t.battle.arena} | YOZGO`} description={t.battle.arenaSubtitle} />
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center mb-12">
-          <h1 className="text-6xl font-black mb-2 tracking-tighter bg-gradient-to-r from-primary to-orange-500 bg-clip-text text-transparent transform -skew-x-6">
+          <h1 className="text-6xl font-black mb-2 tracking-tighter bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent transform -skew-x-6">
             {t.battle.arena}
           </h1>
           <p className="text-muted-foreground">{t.battle.arenaSubtitle}</p>

@@ -15,7 +15,7 @@
 ## Asosiy funksiyalar
 - [Tezlik testi](https://yozgo.uz): WPM (so'z/daqiqa) o'lchash
 - [Multiplayer Battle](https://yozgo.uz/battle): Real vaqtda raqib bilan bellashuv
-- [Musobaqalar](https://yozgo.uz/competitions): Rasmiy typing turnirlar
+- [Ligalar](https://yozgo.uz/league): Haftalik liga tizimi va promotion/relegation
 - [Liderlar jadvali](https://yozgo.uz/leaderboard): O'zbekiston bo'yicha reyting
 - [Profil](https://yozgo.uz/profile): Shaxsiy statistika va tarix
 

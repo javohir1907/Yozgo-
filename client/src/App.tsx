@@ -1,13 +1,17 @@
 import React from "react";
 import { Switch, Route, useLocation } from "wouter";
 import ReactGA from "react-ga4";
-ReactGA.initialize("G-TSXDSPDL98");
+import { GA_ID } from "@/lib/env";
+// GA id comes from the environment now (was a hardcoded measurement id run at
+// module load). Absent id → analytics disabled, and the send below no-ops.
+if (GA_ID) ReactGA.initialize(GA_ID);
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme";
-import { I18nProvider } from "@/lib/i18n";
+import { I18nProvider, useI18n } from "@/lib/i18n";
+import { Helmet } from "react-helmet-async";
 import { NavHeader } from "@/components/nav-header";
 import { AppErrorBoundary } from "@/components/layout/error-boundary";
 import { SkipLink } from "@/components/layout/skip-link";
@@ -38,7 +42,7 @@ function Router() {
       setLocation(location.slice(0, -1), { replace: true });
     }
 
-    ReactGA.send({ hitType: "pageview", page: location });
+    if (GA_ID) ReactGA.send({ hitType: "pageview", page: location });
   }, [location, setLocation]);
 
   return (
@@ -85,11 +89,19 @@ function AppFooterSlot() {
   return <AppFooter />;
 }
 
+// Keeps <html lang> in sync with the UI language (index.html is statically
+// lang="en" even when the UI is Uzbek).
+function HtmlLang() {
+  const { uiLang } = useI18n();
+  return <Helmet htmlAttributes={{ lang: uiLang }} />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <I18nProvider>
+          <HtmlLang />
           <TooltipProvider>
             <div className="flex flex-col min-h-screen bg-background text-foreground">
               <SkipLink />

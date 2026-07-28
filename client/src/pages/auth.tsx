@@ -411,7 +411,7 @@ export default function AuthPage() {
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1"><Mail className="w-4 h-4 text-primary" /> Email kodi</Label>
               {emailVerified && (
-                <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Tasdiqlandi</span>
+                <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Tasdiqlandi</span>
               )}
             </div>
             <p className="text-xs text-muted-foreground">{email} manziliga yuborilgan 6 xonali kod.</p>

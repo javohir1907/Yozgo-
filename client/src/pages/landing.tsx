@@ -169,7 +169,7 @@ export default function LandingPage() {
             <div className="w-full md:w-[30%] flex justify-center z-10">
               <div className="relative group">
                 <div className="absolute inset-0 bg-primary/20 blur-3xl group-hover:bg-primary/30 transition-all rounded-full scale-110"></div>
-                <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-primary to-orange-400 flex items-center justify-center shadow-2xl border-4 border-background overflow-hidden">
+                <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-primary to-primary flex items-center justify-center shadow-2xl border-4 border-background overflow-hidden">
                    <Trophy className="w-16 h-16 md:w-24 md:h-24 text-white drop-shadow-lg" />
                 </div>
               </div>
