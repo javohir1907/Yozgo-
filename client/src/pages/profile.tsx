@@ -17,17 +17,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Target, Timer, BarChart3, History, Key, AlertCircle, User as UserIcon, Rocket, Flame, Repeat, CalendarCheck, Swords, Star, Lock, Crown, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
 import { useRoute } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { PageShell } from "@/components/layout/page-shell";
+import { QueryBoundary } from "@/components/common/query-boundary";
+import { ProfileSkeleton } from "@/components/common/skeletons";
+import { StatCard } from "@/components/common/stat-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import SEO from "@/components/SEO";
 import { cn } from "@/lib/utils";
 
 interface ProfileData {
@@ -122,7 +124,13 @@ export default function Profile() {
       
       if (res.ok) {
         toast({ title: t.profile.success, description: data.message });
-        window.location.reload(); 
+        // Was window.location.reload(), which threw away all state and scroll.
+        queryClient.invalidateQueries({
+          predicate: (q) =>
+            typeof q.queryKey[0] === "string" &&
+            (q.queryKey[0] as string).startsWith("/api/profile"),
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       } else {
         toast({ variant: "destructive", title: t.profile.error, description: data.message });
       }
@@ -133,10 +141,11 @@ export default function Profile() {
     }
   };
 
-  const { data, isLoading } = useQuery<ProfileData>({
-    queryKey: [currentUserId ? `/api/profile/${currentUserId}` : "/api/profile/me"], // Changed to actual endpoint
+  const query = useQuery<ProfileData>({
+    queryKey: [currentUserId ? `/api/profile/${currentUserId}` : "/api/profile/me"],
     enabled: !!currentUserId,
   });
+  const { data, isLoading } = query;
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,23 +194,16 @@ export default function Profile() {
     }
   };
 
-  if (isLoading || !data) {
+  // Was `if (isLoading || !data)` around the skeleton with no error branch, so
+  // a failed request rendered the skeleton forever. QueryBoundary adds the
+  // error branch; the skeleton is the extracted ProfileSkeleton.
+  if (isLoading || query.isError || !data) {
     return (
-      <div className="container mx-auto p-8 space-y-8 animate-in fade-in duration-500">
-        <div className="flex items-center gap-6 mb-8">
-          <Skeleton className="h-24 w-24 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full" />
-          ))}
-        </div>
-        <Skeleton className="h-[400px] w-full" />
-      </div>
+      <PageShell size="lg" gap="loose">
+        <QueryBoundary query={query} loading={<ProfileSkeleton />}>
+          {null}
+        </QueryBoundary>
+      </PageShell>
     );
   }
 
@@ -213,22 +215,38 @@ export default function Profile() {
     accuracy: r.accuracy,
   }));
 
+  // Server-supplied cosmetics. Only accept an HSL triple for the accent and a
+  // hex for the ring — never interpolate an arbitrary string into a style.
+  const accent =
+    typeof user.themeMeta?.accent === "string" &&
+    /^\d{1,3} \d{1,3}% \d{1,3}%$/.test(user.themeMeta.accent)
+      ? user.themeMeta.accent
+      : null;
+  const ring =
+    typeof user.frameMeta?.ring === "string" &&
+    /^#[0-9a-fA-F]{3,8}$/.test(user.frameMeta.ring)
+      ? user.frameMeta.ring
+      : null;
+
   return (
-    <div
-      className="container mx-auto p-8 space-y-8 animate-in fade-in duration-500"
-      style={user.themeMeta?.accent ? ({ ["--primary" as any]: user.themeMeta.accent } as React.CSSProperties) : undefined}
+    <PageShell
+      size="lg"
+      gap="loose"
+      className={accent ? undefined : undefined}
+      seo={{
+        title: `${user.username} | ${t.nav.profile}`,
+      }}
     >
-      <SEO
-        title={`${user.username} | ${t.nav.profile}`} 
-        description={`${user.username}нинг YOZGO platformasidagi natijalari va statistikasi.`}
-      />
-      
+      <div
+        className="space-y-8"
+        style={accent ? ({ ["--primary" as any]: accent } as React.CSSProperties) : undefined}
+      >
       <div className="flex items-center gap-6 mb-8">
         <Avatar
           className="h-24 w-24 border-2 border-primary/20"
-          style={user.frameMeta?.ring ? { boxShadow: `0 0 0 4px ${user.frameMeta.ring}` } : undefined}
+          style={ring ? { boxShadow: `0 0 0 4px ${ring}` } : undefined}
         >
-          <AvatarImage src={user.avatarUrl} />
+          <AvatarImage src={user.avatarUrl} alt={user.username} />
           <AvatarFallback className="text-4xl bg-primary/10 text-primary">
             {user.username.slice(0, 2).toUpperCase()}
           </AvatarFallback>
@@ -247,14 +265,14 @@ export default function Profile() {
             {user.gender && (
               <span className={cn(
                 "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                user.gender === 'male' ? "bg-blue-500/10 text-blue-500 border-blue-500/20" : "bg-pink-500/10 text-pink-500 border-pink-500/20"
+                user.gender === 'male' ? "bg-info/10 text-info border-info/20" : "bg-primary/10 text-primary border-primary/20"
               )}>
                 {user.gender === 'male' ? t.profile.boy : t.profile.girl}
               </span>
             )}
             {typeof user.currentStreak === "number" && user.currentStreak > 0 && (
               <span
-                className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-orange-500/10 text-orange-500 border-orange-500/20 flex items-center gap-1"
+                className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-primary/10 text-primary border-primary/20 flex items-center gap-1"
                 data-testid="badge-streak"
                 title={`${t.profile.bestStreak}: ${user.longestStreak ?? user.currentStreak}`}
               >
@@ -263,7 +281,7 @@ export default function Profile() {
             )}
             {typeof user.coins === "number" && (
               <span
-                className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-yellow-500/10 text-yellow-600 border-yellow-500/20 flex items-center gap-1"
+                className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-warning/10 text-warning border-warning/20 flex items-center gap-1"
                 data-testid="badge-coins"
               >
                 🪙 {user.coins}
@@ -278,7 +296,7 @@ export default function Profile() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-yellow-500" />
+                <Trophy className="w-4 h-4 text-warning" />
                 {t.profile.level} {user.level}
               </span>
               <span className="text-xs font-mono text-muted-foreground" data-testid="text-xp">
@@ -293,35 +311,28 @@ export default function Profile() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {[
-          { label: t.profile.totalTests, val: stats.totalTests, icon: Timer, color: "text-primary", testId: "status-total-tests" },
-          { label: t.profile.bestWpm, val: stats.bestWpm, icon: Trophy, color: "text-yellow-500", testId: "status-best-wpm" },
-          { label: t.profile.avgWpm, val: stats.avgWpm, icon: BarChart3, color: "text-blue-500", testId: "status-avg-wpm" },
-          { label: t.profile.avgAccuracy, val: `${stats.avgAccuracy}%`, icon: Target, color: "text-green-500", testId: "status-avg-accuracy" },
-        ].map((item, idx) => (
-          <Card key={idx} className="bg-card border border-border shadow-sm hover:shadow-md transition-all">
-            <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                {item.label}
-              </CardTitle>
-              <item.icon className={cn("h-4 w-4", item.color)} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-mono font-bold" data-testid={item.testId}>
-                {item.val}
-              </div>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {(
+          [
+            { label: t.profile.totalTests, val: stats.totalTests, icon: Timer, tone: "brand", testId: "status-total-tests" },
+            { label: t.profile.bestWpm, val: stats.bestWpm, icon: Trophy, tone: "warning", testId: "status-best-wpm" },
+            { label: t.profile.avgWpm, val: stats.avgWpm, icon: BarChart3, tone: "info", testId: "status-avg-wpm" },
+            { label: t.profile.avgAccuracy, val: `${stats.avgAccuracy}%`, icon: Target, tone: "success", testId: "status-avg-accuracy" },
+          ] as const
+        ).map((item, idx) => (
+          <div key={idx} data-testid={item.testId}>
+            <StatCard label={item.label} value={item.val} icon={item.icon} tone={item.tone} />
+          </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {['uz', 'ru', 'en', 'kaa'].map((lang) => (
-          <Card key={lang} className="overflow-hidden border-border bg-card/50">
+      {/* 4 languages: was md:grid-cols-3, which orphaned the 4th card. */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {(['uz', 'ru', 'en', 'kaa'] as const).map((lang) => (
+          <Card key={lang} className="overflow-hidden bg-card/50">
             <CardHeader className="bg-secondary/20 py-3">
               <CardTitle className="text-sm font-bold uppercase tracking-widest text-center flex items-center justify-center gap-2">
-                <Trophy className={cn("w-4 h-4", lang === 'uz' ? "text-blue-500" : lang === 'ru' ? "text-red-500" : lang === 'en' ? "text-green-500" : "text-orange-500")} />
+                <Trophy className="w-4 h-4 text-primary" />
                 {lang === 'uz' ? t.leaderboard.uzbekRanking : lang === 'ru' ? t.leaderboard.russianRanking : lang === 'en' ? t.leaderboard.englishRanking : t.leaderboard.karakalpakRanking}
               </CardTitle>
             </CardHeader>
@@ -345,7 +356,7 @@ export default function Profile() {
         <Card className="bg-card border border-border shadow-sm" data-testid="card-achievements">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
+              <Trophy className="w-5 h-5 text-warning" />
               {t.profile.achievements}
             </CardTitle>
           </CardHeader>
@@ -364,13 +375,13 @@ export default function Profile() {
                     className={cn(
                       "flex flex-col items-center gap-1 p-3 rounded-xl border text-center transition-all",
                       b.earned
-                        ? "bg-yellow-500/5 border-yellow-500/30"
+                        ? "bg-warning/5 border-warning/30"
                         : "bg-muted/30 border-border opacity-40 grayscale",
                     )}
                     data-testid={`badge-${b.key}`}
                   >
                     <div className="relative">
-                      <Icon className={cn("w-6 h-6", b.earned ? "text-yellow-500" : "text-muted-foreground")} />
+                      <Icon className={cn("w-6 h-6", b.earned ? "text-warning" : "text-muted-foreground")} />
                       {!b.earned && (
                         <Lock className="w-3 h-3 absolute -bottom-1 -right-1 text-muted-foreground" />
                       )}
@@ -418,9 +429,10 @@ export default function Profile() {
             {/* Nickname Section */}
             <div className="space-y-4 max-w-md pb-8 border-b border-border/50">
               <div className="space-y-2">
-                <Label>{t.profile.nickname}</Label>
+                <Label htmlFor="profile-nickname">{t.profile.nickname}</Label>
                 <div className="flex gap-2">
-                  <Input 
+                  <Input
+                    id="profile-nickname"
                     value={newNickname}
                     onChange={(e) => setNewNickname(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
                     placeholder={`${t.profile.nickname}...`}
@@ -450,8 +462,9 @@ export default function Profile() {
               </div>
               <div className="grid gap-4">
                 <div className="space-y-2">
-                  <Label>{t.profile.currentPassword}</Label>
+                  <Label htmlFor="profile-old-password">{t.profile.currentPassword}</Label>
                   <Input
+                    id="profile-old-password"
                     type="password"
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
@@ -462,8 +475,9 @@ export default function Profile() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t.profile.newPassword}</Label>
+                  <Label htmlFor="profile-new-password">{t.profile.newPassword}</Label>
                   <Input
+                    id="profile-new-password"
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -474,8 +488,9 @@ export default function Profile() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t.profile.confirmPassword}</Label>
+                  <Label htmlFor="profile-confirm-password">{t.profile.confirmPassword}</Label>
                   <Input
+                    id="profile-confirm-password"
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
@@ -501,7 +516,8 @@ export default function Profile() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+          <Table className="min-w-[480px]">
             <TableHeader className="bg-secondary/40">
               <TableRow>
                 <TableHead>WPM</TableHead>
@@ -532,8 +548,10 @@ export default function Profile() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </PageShell>
   );
 }
