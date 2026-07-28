@@ -38,7 +38,6 @@ import {
 
 // Custom Components & Hooks
 import { TypingArea } from "@/components/typing-area";
-import { BattleProgressBar } from "@/components/battle-progress-bar";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebsocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
@@ -73,7 +72,7 @@ function PlayerListItem({ p, i, room, t }: { p: any; i: number; room: any; t: an
           <div className="relative z-10 flex items-center gap-3">
             <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
             <div className="relative">
-              {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-500 fill-current" />}
+              {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-warning fill-current" />}
               <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10 flex items-center justify-center overflow-hidden">
                 {p.avatarUrl ? (
                   <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -103,7 +102,7 @@ function PlayerListItem({ p, i, room, t }: { p: any; i: number; room: any; t: an
                 <DialogTitle className="text-2xl font-black">{p.username}</DialogTitle>
                 <div className="flex gap-2 mt-1">
                    <Badge variant="secondary" className="bg-primary/5 text-primary">ID: {p.id.slice(0, 8)}</Badge>
-                   {p.gender === "male" ? <Badge className="bg-blue-500/10 text-blue-500">MALE</Badge> : <Badge className="bg-pink-500/10 text-pink-500">FEMALE</Badge>}
+                   {p.gender === "male" ? <Badge className="bg-info/10 text-info">MALE</Badge> : <Badge className="bg-primary/10 text-primary">FEMALE</Badge>}
                 </div>
              </div>
           </div>
@@ -116,17 +115,17 @@ function PlayerListItem({ p, i, room, t }: { p: any; i: number; room: any; t: an
               <div className="text-[10px] uppercase font-bold text-muted-foreground">BEST WPM</div>
            </div>
            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-center">
-              <Target className="w-5 h-5 mx-auto mb-2 text-green-500" />
+              <Target className="w-5 h-5 mx-auto mb-2 text-success" />
               <div className="text-2xl font-black">{p.bestAccuracy || 0}%</div>
               <div className="text-[10px] uppercase font-bold text-muted-foreground">ACCURACY</div>
            </div>
            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-center">
-              <Activity className="w-5 h-5 mx-auto mb-2 text-orange-500" />
+              <Activity className="w-5 h-5 mx-auto mb-2 text-primary" />
               <div className="text-2xl font-black">{p.bestConsistency || 0}%</div>
               <div className="text-[10px] uppercase font-bold text-muted-foreground">CONSISTENCY</div>
            </div>
            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-center">
-              <BarChart3 className="w-5 h-5 mx-auto mb-2 text-blue-500" />
+              <BarChart3 className="w-5 h-5 mx-auto mb-2 text-info" />
               <div className="text-2xl font-black">{p.bestRawWpm || 0}</div>
               <div className="text-[10px] uppercase font-bold text-muted-foreground">RAW WPM</div>
            </div>
@@ -157,7 +156,7 @@ function PlayerListItem({ p, i, room, t }: { p: any; i: number; room: any; t: an
               <Clock className="w-3 h-3" /> {p.attempts || 0} ta urinish qildi
            </div>
            {p.bestWpm > 200 && (
-             <div className="flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase animate-pulse">
+             <div className="flex items-center gap-1 text-[10px] font-bold text-destructive uppercase animate-pulse">
                 <ShieldAlert className="w-3 h-3" /> Yuqori tezlik ko'rsatkichi
              </div>
            )}
@@ -225,30 +224,20 @@ export default function BattlePage() {
     sendProgress,
   } = useWebsocket(battleCode, user as any);
 
-  // Focus Detection
-  useEffect(() => {
-    const handleBlur = () => {
-      if (isAttemptActive && battleCode) {
-        // Option: Send a message to server that user lost focus
-        // For now, we just slow down or mark
-      }
-    };
-    window.addEventListener("blur", handleBlur);
-    return () => window.removeEventListener("blur", handleBlur);
-  }, [isAttemptActive, battleCode]);
-
   const isAdmin = room?.adminId === user?.id;
 
   // ============ EFFECTS ============
 
   /**
-   * Xatoliklarni toast orqali xabar berish.
+   * Surface socket errors as a toast. Only a fatal error (room gone / not
+   * found) should eject the user; a transient error used to call
+   * setBattleCode(null) unconditionally and kick them out of the room.
    */
   useEffect(() => {
-    if (error) {
-      toast({ title: t.battle.error, description: error, variant: "destructive" });
-      setBattleCode(null);
-    }
+    if (!error) return;
+    toast({ title: t.battle.error, description: error, variant: "destructive" });
+    const fatal = /not found|topilmadi|tugagan|closed|yopilgan/i.test(error);
+    if (fatal) setBattleCode(null);
   }, [error, toast, t]);
 
   /**
@@ -535,15 +524,15 @@ export default function BattlePage() {
                 
                 {/* 1. Rol va Til (Yonma-yon) */}
                 <div className="space-y-1">
-                  <Label>{t.battle.role}</Label>
-                  <select value={adminParticipates ? "true" : "false"} onChange={e => setAdminParticipates(e.target.value === "true")} className="w-full bg-background border p-3 rounded-xl focus:ring-2 focus:ring-primary/50 transition-all outline-none">
+                  <Label htmlFor="battle-role">{t.battle.role}</Label>
+                  <select id="battle-role" value={adminParticipates ? "true" : "false"} onChange={e => setAdminParticipates(e.target.value === "true")} className="w-full bg-background border p-3 rounded-xl focus:ring-2 focus:ring-primary/50 transition-all outline-none">
                     <option value="true">{t.battle.participant}</option>
                     <option value="false">{t.battle.spectator}</option>
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <Label>{t.battle.language}</Label>
-                  <select value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-background border p-3 rounded-xl focus:ring-2 focus:ring-primary/50 transition-all outline-none">
+                  <Label htmlFor="battle-language">{t.battle.language}</Label>
+                  <select id="battle-language" value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-background border p-3 rounded-xl focus:ring-2 focus:ring-primary/50 transition-all outline-none">
                     <option value="uz">{t.languages.uzbek}</option>
                     <option value="kaa">{t.languages.karakalpak}</option>
                     <option value="en">{t.languages.english}</option>
@@ -553,9 +542,9 @@ export default function BattlePage() {
 
                 {/* 2. Jins Cheklovi */}
                 <div className="space-y-1 md:col-span-2">
-                  <Label>{t.battle.genderLabel}</Label>
+                  <Label htmlFor="battle-gender">{t.battle.genderLabel}</Label>
                   <select 
-                    value={genderRestriction} 
+                    id="battle-gender" value={genderRestriction} 
                     onChange={e => setGenderRestriction(e.target.value as any)} 
                     className="w-full bg-background border p-3 rounded-xl font-medium focus:ring-2 focus:ring-primary/50 transition-all outline-none"
                   >
@@ -567,9 +556,9 @@ export default function BattlePage() {
 
                 {/* 3. Musobaqa Usuli */}
                 <div className="space-y-1 md:col-span-2">
-                  <Label>{t.battle.winModeLabel}</Label>
+                  <Label htmlFor="battle-winmode">{t.battle.winModeLabel}</Label>
                   <select 
-                    value={winMode} 
+                    id="battle-winmode" value={winMode} 
                     onChange={e => setWinMode(e.target.value as "overall" | "per_round")} 
                     className="w-full bg-background border p-3 rounded-xl font-medium focus:ring-2 focus:ring-primary/50 transition-all outline-none"
                   >
@@ -585,11 +574,11 @@ export default function BattlePage() {
                   </Label>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {[
-                      { val: 10, label: t.battle.tier10, price: t.battle.free, icon: "🚀", color: "text-green-500" },
-                      { val: 20, label: t.battle.tier20, price: t.battle.tier20Price, icon: "🔥", color: "text-orange-500" },
-                      { val: 50, label: t.battle.tier50, price: t.battle.tier50Price, icon: "⚡", color: "text-yellow-500" },
-                      { val: 100, label: t.battle.tier100, price: t.battle.tier100Price, icon: "👑", color: "text-purple-500" },
-                      { val: 999, label: t.battle.tierVIP, price: t.battle.negotiable, icon: "💎", color: "text-blue-500" },
+                      { val: 10, label: t.battle.tier10, price: t.battle.free, icon: "🚀", color: "text-success" },
+                      { val: 20, label: t.battle.tier20, price: t.battle.tier20Price, icon: "🔥", color: "text-primary" },
+                      { val: 50, label: t.battle.tier50, price: t.battle.tier50Price, icon: "⚡", color: "text-warning" },
+                      { val: 100, label: t.battle.tier100, price: t.battle.tier100Price, icon: "👑", color: "text-info" },
+                      { val: 999, label: t.battle.tierVIP, price: t.battle.negotiable, icon: "💎", color: "text-info" },
                     ].map(tier => (
                       <button
                         key={tier.val}
@@ -702,7 +691,7 @@ export default function BattlePage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(battleCode || ""); toast({ title: t.battle.copied }); }}><Copy className="w-4" /></Button>
-          <Button variant="ghost" className="text-red-500 hover:bg-red-500/10" onClick={() => setLocation("/")}>{t.battle.leaveRoom}</Button>
+          <Button variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => setLocation("/")}>{t.battle.leaveRoom}</Button>
         </div>
       </div>
 
@@ -712,7 +701,7 @@ export default function BattlePage() {
           <AnimatePresence mode="wait">
             {battleEnd ? (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center py-20 bg-card/60 rounded-3xl border-2 border-primary shadow-2xl">
-                <Trophy className="w-24 h-24 text-yellow-500 mb-6 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                <Trophy className="w-24 h-24 text-warning mb-6 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
                 <h2 className="text-4xl font-black uppercase mb-4 text-center">{t.battle.battleOver}</h2>
                 
                 {/* Agar UMUMIY DAVR usuli bo'lsa */}
@@ -720,7 +709,7 @@ export default function BattlePage() {
                   <div className="text-center mb-8">
                     <p className="text-muted-foreground text-lg">{t.battle.winnerDetermined}</p>
                     <p className="font-bold text-3xl text-primary mt-2 flex items-center justify-center gap-2">
-                      <Crown className="text-yellow-500 w-8 h-8"/> 
+                      <Crown className="text-warning w-8 h-8"/> 
                       {battleEnd.winnerId ? battleEnd.overall.find((r: any) => r.id === battleEnd.winnerId)?.username || t.battle.unknown : t.battle.defeat}
                     </p>
                   </div>
@@ -742,7 +731,7 @@ export default function BattlePage() {
                         </div>
                       ))}
                       {battleEnd.roundWinners.length === 0 && (
-                        <p className="text-center text-sm text-red-500">{t.battle.noRoundWinners}</p>
+                        <p className="text-center text-sm text-destructive">{t.battle.noRoundWinners}</p>
                       )}
                     </div>
                   </div>
@@ -831,10 +820,10 @@ export default function BattlePage() {
           {room?.settings?.genderRestriction === "all" ? (
             <>
               {/* Qizlar (Chapda -> Birinchi) */}
-              <Card className="rounded-3xl border-2 border-pink-500/20 shadow-md">
+              <Card className="rounded-3xl border-2 border-primary/20 shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xl flex items-center gap-2">👩 Qizlar</CardTitle>
-                  <Badge variant="outline" className="bg-pink-500/10 text-pink-600 dark:text-pink-400">
+                  <Badge variant="outline" className="bg-primary/10 text-primary dark:text-primary">
                     {room.players.filter((p: any) => p.gender === "female").length} ta
                   </Badge>
                 </CardHeader>
@@ -846,10 +835,10 @@ export default function BattlePage() {
               </Card>
 
               {/* Yigitlar (O'ngda -> Ikkinchi) */}
-              <Card className="rounded-3xl border-2 border-blue-500/20 shadow-md">
+              <Card className="rounded-3xl border-2 border-info/20 shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-xl flex items-center gap-2">👨 Yigitlar</CardTitle>
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                  <Badge variant="outline" className="bg-info/10 text-info dark:text-info">
                     {room.players.filter((p: any) => p.gender === "male").length} ta
                   </Badge>
                 </CardHeader>
@@ -863,7 +852,7 @@ export default function BattlePage() {
           ) : (
             <Card className="rounded-3xl border-2">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xl flex items-center gap-2"><Trophy className="text-yellow-500" /> {t.battle.live}</CardTitle>
+                <CardTitle className="text-xl flex items-center gap-2"><Trophy className="text-warning" /> {t.battle.live}</CardTitle>
                 <Badge variant="outline">{room?.players.length || 0} {t.battle.players.toLowerCase()}</Badge>
               </CardHeader>
               <CardContent className="space-y-4 pt-2">
