@@ -6,6 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ProgressChart } from "@/components/progress-chart";
 import {
+  AppErrorBoundary,
+  DefaultErrorFallback,
+} from "@/components/layout/error-boundary";
+import {
   Table,
   TableBody,
   TableCell,
@@ -389,7 +393,14 @@ export default function Profile() {
         </CardHeader>
         <CardContent>
           <div className="h-[400px] w-full">
-            <ProgressChart data={chartData} />
+            <AppErrorBoundary
+              scope="chart"
+              fallback={({ error, reset }) => (
+                <DefaultErrorFallback error={error} reset={reset} compact />
+              )}
+            >
+              <ProgressChart data={chartData} />
+            </AppErrorBoundary>
           </div>
         </CardContent>
       </Card>

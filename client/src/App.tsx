@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
 import { NavHeader } from "@/components/nav-header";
+import { AppErrorBoundary } from "@/components/layout/error-boundary";
 import { Loader2 } from "lucide-react";
 
 const LandingPage = React.lazy(() => import("@/pages/landing"));
@@ -40,6 +41,7 @@ function Router() {
   }, [location, setLocation]);
 
   return (
+    <AppErrorBoundary scope="route" resetKeys={[location]}>
     <React.Suspense fallback={
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -74,6 +76,7 @@ function Router() {
         </motion.div>
       </AnimatePresence>
     </React.Suspense>
+    </AppErrorBoundary>
   );
 }
 

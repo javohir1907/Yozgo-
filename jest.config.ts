@@ -1,7 +1,3 @@
-const tsJestESM = {
-  "^.+\\.tsx?$": ["ts-jest", { useESM: true }],
-};
-
 export default {
   projects: [
     {
@@ -13,12 +9,17 @@ export default {
       moduleNameMapper: {
         "^@shared/(.*)$": "<rootDir>/shared/$1",
       },
-      transform: tsJestESM,
+      transform: {
+        "^.+\\.ts$": ["ts-jest", { useESM: true }],
+      },
       extensionsToTreatAsEsm: [".ts"],
     },
     {
       displayName: "client",
-      preset: "ts-jest",
+      // The ESM preset (not plain "ts-jest") is required: the default preset
+      // forces module=commonjs, which makes every `import.meta.env` read a
+      // TS1343 compile error, and client code uses it in DEV-only branches.
+      preset: "ts-jest/presets/default-esm",
       testEnvironment: "jsdom",
       roots: ["<rootDir>/client/src"],
       testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
@@ -31,7 +32,7 @@ export default {
       transform: {
         "^.+\\.tsx?$": [
           "ts-jest",
-          { useESM: true, tsconfig: { jsx: "react-jsx" } },
+          { useESM: true, tsconfig: "<rootDir>/tsconfig.test.json" },
         ],
       },
       extensionsToTreatAsEsm: [".ts", ".tsx"],
