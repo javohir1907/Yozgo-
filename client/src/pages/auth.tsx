@@ -4,10 +4,13 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Keyboard, AlertCircle, Eye, EyeOff, Send, CheckCircle2, Mail } from "lucide-react";
+import { Send, CheckCircle2, Mail } from "lucide-react";
 import { normalizeUrl } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
+import { AuthCard } from "@/components/layout/auth-card";
+import { PasswordField } from "@/components/common/password-field";
+import { InlineAlert } from "@/components/common/inline-alert";
+import SEO from "@/components/SEO";
 
 // apiRequest xatolari "NNN: <xabar>" ko'rinishida keladi (throwIfResNotOk) — status
 // prefiksini olib tashlab toza xabarni qaytaramiz. Xabar JSON bo'lsa .message olamiz.
@@ -21,26 +24,6 @@ function extractMsg(err: any): string {
   } catch {
     return rest;
   }
-}
-
-// MODUL darajasida — render ichida e'lon qilinsa har renderda yangi component
-// identity hosil bo'lib, ichidagi Input remount bo'ladi va fokus yo'qoladi.
-function Shell({ title, desc, children }: { title: string; desc?: string; children: React.ReactNode }) {
-  return (
-    <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Keyboard className="w-8 h-8 text-primary" />
-            <span className="font-bold text-2xl tracking-tighter">YOZGO</span>
-          </div>
-          <CardTitle>{title}</CardTitle>
-          {desc && <CardDescription>{desc}</CardDescription>}
-        </CardHeader>
-        <CardContent>{children}</CardContent>
-      </Card>
-    </div>
-  );
 }
 
 // Telegram bloki: bot ochish + kod kiritish. onVerify berilsa (register) alohida
@@ -71,11 +54,11 @@ function TelegramBlock({
   return (
     <div className="space-y-2 rounded-lg border p-3">
       <div className="flex items-center justify-between">
-        <Label className="flex items-center gap-1"><Send className="w-4 h-4 text-sky-500" /> Telegram tasdiqlash</Label>
+        <Label className="flex items-center gap-1"><Send className="w-4 h-4 text-info" /> Telegram tasdiqlash</Label>
         {verified ? (
-          <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Tasdiqlandi</span>
+          <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Tasdiqlandi</span>
         ) : tgBound ? (
-          <span className="text-xs text-green-600 flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Ulandi</span>
+          <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Ulandi</span>
         ) : null}
       </div>
       {!verified && (
@@ -125,7 +108,6 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [gender, setGender] = useState<"male" | "female">("male");
-  const [showPassword, setShowPassword] = useState(false);
 
   // Login (password) — email yoki username
   const [loginId, setLoginId] = useState("");
@@ -185,12 +167,20 @@ export default function AuthPage() {
     return () => clearInterval(iv);
   }, [tgToken, tgBound]);
 
-  if (isAuthenticated) {
+  // Was calling setLocation during render (a state update mid-render). Redirect
+  // in an effect instead.
+  useEffect(() => {
+    if (!isAuthenticated) return;
     const joinComp = sessionStorage.getItem("joinComp");
-    if (joinComp) { sessionStorage.removeItem("joinComp"); setLocation("/"); }
-    else setLocation("/typing-test");
-    return null;
-  }
+    if (joinComp) {
+      sessionStorage.removeItem("joinComp");
+      setLocation("/");
+    } else {
+      setLocation("/typing-test");
+    }
+  }, [isAuthenticated, setLocation]);
+
+  if (isAuthenticated) return null;
 
   const afterAuth = async () => {
     const joinComp = sessionStorage.getItem("joinComp");
@@ -378,23 +368,19 @@ export default function AuthPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: forgotEmail.trim() }),
       });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(d.message || "Xatolik"); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.message || "Xatolik"); return; }
       setForgotSent(true);
     } catch {
-      alert("Tarmoq xatosi");
+      setError("Tarmoq xatosi");
     }
   }
 
-  const errorLine = error ? (
-    <div className="flex items-center gap-2 text-sm text-destructive">
-      <AlertCircle className="w-4 h-4" /> <span>{error}</span>
-    </div>
-  ) : null;
+  const errorLine = error ? <InlineAlert tone="danger">{error}</InlineAlert> : null;
 
   // ---------- Forgot password ----------
   if (showForgot) {
     return (
-      <Shell title="Parolni tiklash">
+      <AuthCard title="Parolni tiklash">
         {forgotSent ? (
           <div className="text-center space-y-4">
             <Mail className="w-12 h-12 text-primary mx-auto" />
@@ -404,21 +390,22 @@ export default function AuthPage() {
         ) : (
           <form onSubmit={submitForgot} className="space-y-4">
             <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" placeholder="you@example.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
+              <Label htmlFor="forgot-email">Email</Label>
+              <Input id="forgot-email" type="email" placeholder="you@example.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
             </div>
+            {errorLine}
             <Button type="submit" className="w-full">Yuborish</Button>
             <button type="button" className="w-full text-sm text-muted-foreground hover:text-foreground" onClick={() => setShowForgot(false)}>Ortga</button>
           </form>
         )}
-      </Shell>
+      </AuthCard>
     );
   }
 
   // ---------- Register: verify step (har kanal ALOHIDA tasdiqlanadi) ----------
   if (mode === "register" && regStep === "verify") {
     return (
-      <Shell title="Ikki tasdiq" desc="Email VA Telegram — ikkalasi ham tasdiqlanishi shart">
+      <AuthCard title="Ikki tasdiq" description="Email VA Telegram — ikkalasi ham tasdiqlanishi shart">
         <form onSubmit={submitRegister} className="space-y-4">
           <div className="space-y-2 rounded-lg border p-3">
             <div className="flex items-center justify-between">
@@ -476,14 +463,14 @@ export default function AuthPage() {
           )}
           <button type="button" className="w-full text-sm text-muted-foreground hover:text-foreground" onClick={() => { setRegStep("form"); setError(""); }}>Ortga</button>
         </form>
-      </Shell>
+      </AuthCard>
     );
   }
 
   // ---------- Register: form step ----------
   if (mode === "register") {
     return (
-      <Shell title="Hisob yaratish" desc="Username, email, parol va Telegram">
+      <AuthCard title="Hisob yaratish" description="Username, email, parol va Telegram">
         <form onSubmit={submitRegisterForm} className="space-y-4">
           <div className="space-y-2">
             <Label>Username</Label>
@@ -494,37 +481,38 @@ export default function AuthPage() {
               minLength={4}
               maxLength={20}
               required
-              className={username ? (usernameFree === false ? "border-red-500" : usernameFree === true ? "border-green-500" : "") : ""}
+              aria-invalid={username && usernameFree === false ? true : undefined}
+              className={username && usernameFree === true ? "border-success" : ""}
             />
             {username && !checkingUsername && usernameFree !== null && (
-              <p className={`text-sm ${usernameFree ? "text-green-600" : "text-red-500"}`}>{usernameFree ? "✓ Mavjud" : "Bu username band"}</p>
+              <p className={`text-sm ${usernameFree ? "text-success" : "text-destructive"}`} role="status">{usernameFree ? "✓ Mavjud" : "Bu username band"}</p>
             )}
-            {username && checkingUsername && <p className="text-sm text-yellow-600">Tekshirilmoqda...</p>}
+            {username && checkingUsername && <p className="text-sm text-warning">Tekshirilmoqda...</p>}
           </div>
           <div className="space-y-2">
             <Label>Email</Label>
             <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
-          <div className="space-y-2">
-            <Label>Parol</Label>
-            <div className="relative">
-              <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required className="pr-10" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
+          <PasswordField
+            label="Parol"
+            value={password}
+            onChange={setPassword}
+            autoComplete="new-password"
+            minLength={6}
+            required
+          />
           <div className="space-y-2">
             <Label>Jinsingiz (majburiy)</Label>
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
                 onClick={() => setGender("male")}
+                aria-pressed={gender === "male"}
                 className={cn(
                   "flex items-center justify-center py-2 px-4 rounded-lg border-2 transition-all font-bold",
                   gender === "male"
-                    ? "border-blue-500 bg-blue-500/10 text-blue-500"
-                    : "border-border bg-card text-muted-foreground hover:border-blue-200"
+                    ? "border-info bg-info/10 text-info"
+                    : "border-border bg-card text-muted-foreground hover:border-info/40"
                 )}
               >
                 ♂ O'g'il bola
@@ -532,11 +520,12 @@ export default function AuthPage() {
               <button
                 type="button"
                 onClick={() => setGender("female")}
+                aria-pressed={gender === "female"}
                 className={cn(
                   "flex items-center justify-center py-2 px-4 rounded-lg border-2 transition-all font-bold",
                   gender === "female"
-                    ? "border-pink-500 bg-pink-500/10 text-pink-500"
-                    : "border-border bg-card text-muted-foreground hover:border-pink-200"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-muted-foreground hover:border-primary/40"
                 )}
               >
                 ♀ Qiz bola
@@ -550,13 +539,15 @@ export default function AuthPage() {
             <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setMode("login"); setError(""); }}>Kirish</button>
           </div>
         </form>
-      </Shell>
+      </AuthCard>
     );
   }
 
   // ---------- Login ----------
   return (
-    <Shell title="Kirish" desc="Parol yoki Telegram orqali">
+    <>
+    <SEO title="Kirish" noindex />
+    <AuthCard title="Kirish" description="Parol yoki Telegram orqali">
       <div className="flex gap-2 mb-4">
         <Button type="button" variant={loginTab === "password" ? "default" : "outline"} className="flex-1" onClick={() => { setLoginTab("password"); setError(""); }}>Parol</Button>
         <Button type="button" variant={loginTab === "telegram" ? "default" : "outline"} className="flex-1" onClick={() => { setLoginTab("telegram"); setError(""); }}><Send className="w-4 h-4 mr-1" /> Telegram</Button>
@@ -568,18 +559,16 @@ export default function AuthPage() {
             <Label>Email yoki username</Label>
             <Input placeholder="you@example.com yoki ali_99" value={loginId} onChange={(e) => setLoginId(e.target.value)} required />
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Parol</Label>
+          <PasswordField
+            label="Parol"
+            value={password}
+            onChange={setPassword}
+            autoComplete="current-password"
+            required
+            labelAction={
               <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowForgot(true)}>Parolni unutdingizmi?</button>
-            </div>
-            <div className="relative">
-              <Input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} required className="pr-10" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
+            }
+          />
           {errorLine}
           <Button type="submit" className="w-full" disabled={busy}>{busy ? "Kirilmoqda..." : "Kirish"}</Button>
         </form>
@@ -603,6 +592,7 @@ export default function AuthPage() {
         Hisobingiz yo'qmi?{" "}
         <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setMode("register"); setRegStep("form"); setError(""); }}>Ro'yxatdan o'tish</button>
       </div>
-    </Shell>
+    </AuthCard>
+    </>
   );
 }
