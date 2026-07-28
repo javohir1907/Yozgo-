@@ -10,6 +10,8 @@ import { ThemeProvider } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
 import { NavHeader } from "@/components/nav-header";
 import { AppErrorBoundary } from "@/components/layout/error-boundary";
+import { SkipLink } from "@/components/layout/skip-link";
+import { AppFooter } from "@/components/layout/app-footer";
 import { Loader2 } from "lucide-react";
 
 const LandingPage = React.lazy(() => import("@/pages/landing"));
@@ -80,6 +82,15 @@ function Router() {
   );
 }
 
+// Footer is app-wide except on the two focus surfaces, where chrome competes
+// with the typing task. It used to live inside landing.tsx, i.e. on one route.
+const FOOTERLESS = new Set(["/typing-test", "/battle"]);
+function AppFooterSlot() {
+  const [location] = useLocation();
+  if (FOOTERLESS.has(location)) return null;
+  return <AppFooter />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -87,10 +98,12 @@ function App() {
         <I18nProvider>
           <TooltipProvider>
             <div className="flex flex-col min-h-screen bg-background text-foreground">
+              <SkipLink />
               <NavHeader />
-              <main className="flex-1 pt-14 sm:pt-16">
+              <main id="main" className="flex flex-1 flex-col pt-14 sm:pt-16">
                 <Router />
               </main>
+              <AppFooterSlot />
             </div>
             <Toaster />
           </TooltipProvider>

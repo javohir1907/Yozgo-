@@ -13,7 +13,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           // text-base at every width: with maximum-scale=1 removed and a 16px
           // root, 16px is exactly what stops iOS zooming a focused input.
           "text-base placeholder:text-muted-foreground",
-          "transition-[border-color,box-shadow] duration-[var(--dur-fast)]",
+          "transition-[border-color,box-shadow] [transition-duration:var(--dur-fast)]",
           // The underline style shipped with focus-visible:outline-none and no
           // replacement ring at all — a WCAG 2.4.7 failure. Keep the underline
           // aesthetic AND give focus a visible ring.

@@ -7,7 +7,7 @@ const badgeVariants = cva(
   // Badges should never wrap.
   [
     "whitespace-nowrap inline-flex items-center gap-1 rounded-md border px-2.5 py-0.5",
-    "text-xs font-semibold transition-colors duration-[var(--dur-fast)]",
+    "text-xs font-semibold transition-colors [transition-duration:var(--dur-fast)]",
     "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
     "[&_svg]:size-3 [&_svg]:shrink-0",
   ].join(" "),

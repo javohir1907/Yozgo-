@@ -20,7 +20,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         // layer to blur an opaque --background behind it, i.e. nothing. Depth
         // comes from the --surface-1/2/3 scale instead.
         "rounded-xl border border-card-border bg-card text-card-foreground shadow-sm",
-        "transition-[border-color,box-shadow] duration-[var(--dur-fast)]",
+        "transition-[border-color,box-shadow] [transition-duration:var(--dur-fast)]",
         interactive && "hover:border-primary/40 hover:shadow-md",
         className,
       )}
