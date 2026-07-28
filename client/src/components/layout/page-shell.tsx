@@ -58,7 +58,7 @@ export function PageShell({
   return (
     <div className="flex-1 py-6 sm:py-8 lg:py-10 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300">
       {seo && (
-        <SEO title={seo.title} description={seo.description} />
+        <SEO title={seo.title} description={seo.description} noindex={seo.noindex} />
       )}
       <div className={cn("container mx-auto px-4", MAX_WIDTH[size], GAP[gap], className)}>
         {title && (

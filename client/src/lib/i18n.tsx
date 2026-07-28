@@ -4,6 +4,11 @@ export type UILanguage = "en" | "ru" | "uz" | "kaa";
 
 const translations = {
   en: {
+    notFound: {
+      title: "Page not found",
+      description: "The page you are looking for does not exist or has moved.",
+      home: "Go home",
+    },
     nav: {
       test: "Test",
       leaderboard: "Leaderboard",
@@ -353,6 +358,11 @@ const translations = {
     },
   },
   ru: {
+    notFound: {
+      title: "Страница не найдена",
+      description: "Запрашиваемая страница не существует или была перемещена.",
+      home: "На главную",
+    },
     nav: {
       test: "Тест",
       leaderboard: "Рейтинг",
@@ -705,6 +715,11 @@ const translations = {
     },
   },
   uz: {
+    notFound: {
+      title: "Sahifa topilmadi",
+      description: "Siz qidirayotgan sahifa mavjud emas yoki ko'chirilgan.",
+      home: "Bosh sahifa",
+    },
     nav: {
       test: "Test",
       leaderboard: "Reyting",
@@ -1057,6 +1072,11 @@ const translations = {
     },
   },
   kaa: {
+    notFound: {
+      title: "Bet tabılmadı",
+      description: "Siz izlep atırǵan bet joq yamasa kóshirilgen.",
+      home: "Bas bet",
+    },
     nav: {
       test: "Test",
       leaderboard: "Reyting",
