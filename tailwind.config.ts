@@ -6,7 +6,13 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      // Was a flat "2rem" at every breakpoint, i.e. 32px of gutter on each
+      // side of a 375px phone, leaving 311px of content.
+      padding: {
+        DEFAULT: "1rem",
+        sm: "1.5rem",
+        lg: "2rem",
+      },
       screens: {
         "2xl": "1400px",
       },

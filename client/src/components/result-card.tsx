@@ -98,7 +98,7 @@ export function ResultCard({
             size="lg"
             variant="ghost"
             onClick={onRestart}
-            className="hover-elevate active-elevate-2 font-mono"
+            className="font-mono"
             data-testid="button-restart"
           >
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -107,7 +107,7 @@ export function ResultCard({
           <Button
             size="lg"
             variant="ghost"
-            className="hover-elevate active-elevate-2 font-mono"
+            className="font-mono"
             data-testid="button-share"
             onClick={handleShare}
           >
