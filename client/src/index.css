@@ -205,78 +205,15 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading tracking-tight;
   }
-  
-  /* Shared Button 3D Utility */
-  .btn-3d {
-    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.1s;
-  }
-  .btn-3d:active {
-    transform: translateY(6px);
-  }
-  
-  /* Keyboard Key 3D CSS */
-  .keyboard-key-3d {
-    background-color: #242424;
-    border-radius: 12px;
-    box-shadow: 
-      inset 0 2px 2px rgba(255,255,255,0.1),
-      inset 0 -8px 10px rgba(0,0,0,0.6),
-      0 10px 0 #0a0a0a,
-      0 10px 2px rgba(0,0,0,0.8),
-      0 15px 20px rgba(0,0,0,0.5);
-    position: relative;
-    border: 1px solid #111;
-    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-    transform: translateY(0);
-  }
-  .keyboard-key-3d::after {
-    content: '';
-    position: absolute;
-    top: 6%; left: 8%; right: 8%; bottom: 18%;
-    border-radius: 8px;
-    background: linear-gradient(180deg, #383838 0%, #282828 100%);
-    box-shadow: 
-      inset 0 2px 3px rgba(255,255,255,0.1), 
-      inset 0 -2px 3px rgba(0,0,0,0.3),
-      0 2px 5px rgba(0,0,0,0.6);
-    border: 1px solid #1a1a1a;
-    z-index: 1;
-  }
-  
-  .keyboard-key-text {
-    position: relative;
-    z-index: 10;
-    color: #fcfcfc;
-    font-weight: 800;
-    font-family: 'Inter', sans-serif;
-    letter-spacing: -0.02em;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
-    display: inline-block;
-    transform: translateY(-4px);
-  }
-
-  /* Hover state */
-  .keyboard-key-3d:hover {
-    transform: translateY(3px);
-    box-shadow: 
-      inset 0 2px 2px rgba(255,255,255,0.08),
-      inset 0 -8px 10px rgba(0,0,0,0.6),
-      0 7px 0 #0a0a0a,
-      0 7px 2px rgba(0,0,0,0.8),
-      0 12px 15px rgba(0,0,0,0.5);
-  }
-
-  /* Active state */
-  .keyboard-key-3d:active {
-    transform: translateY(10px) !important;
-    box-shadow: 
-      inset 0 2px 2px rgba(255,255,255,0.08),
-      inset 0 -4px 6px rgba(0,0,0,0.7),
-      0 0px 0 #0a0a0a,
-      0 0px 0 rgba(0,0,0,0.8),
-      0 5px 8px rgba(0,0,0,0.5) !important;
-  }
 }
+
+/*
+ * Removed: .btn-3d (its translateY(6px) on :active fought button.tsx's
+ * active:scale, both writing transform) and the 60-line .keyboard-key-3d /
+ * .keyboard-key-text skeuomorphic keycap (hardcoded hex, referenced an
+ * 'Inter' that was never loaded, zero consumers). The keycap wordmark is now
+ * the tokenised KeycapLogo component.
+ */
 
 /*
  * The ~90-line "elevate" utility system that used to live here was removed.

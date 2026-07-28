@@ -4,6 +4,7 @@ import { Keyboard, Trophy, Users, Settings, User as UserIcon, LogOut, Globe, Moo
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/lib/theme";
 import { useI18n, type UILanguage } from "@/lib/i18n";
+import { KeycapLogo } from "@/components/brand/keycap-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -41,23 +42,9 @@ export function NavHeader() {
     <header className="fixed top-0 left-0 z-[100] w-full bg-background/95 backdrop-blur-md border-b-[3px] border-primary shadow-[0_4px_10px_rgba(249,115,22,0.15)] transition-all">
       <div className="container flex h-14 sm:h-16 items-center justify-between px-2 sm:px-4">
         <div className="flex items-center gap-2 sm:gap-8">
-          <Link href="/" className="flex items-center group mr-1 sm:mr-6">
-            <div className="flex items-center gap-1 sm:gap-2">
-              {["Y", "O", "Z", "G", "O"].map((letter, i) => (
-                <div
-                  key={i}
-                  className="relative w-6 h-6 sm:w-10 sm:h-10 flex items-center justify-center cursor-pointer select-none rounded-[6px] sm:rounded-lg border transition-all duration-75 font-sans font-extrabold text-[11px] sm:text-base
-                             bg-white border-gray-200 text-gray-800 shadow-[0_3px_0_rgb(209,213,219)] hover:-translate-y-0.5 hover:shadow-[0_4px_0_rgb(209,213,219)] active:translate-y-0.5 active:shadow-[0_0px_0_rgb(209,213,219)]
-                             dark:bg-[#28282b] dark:border-[#111] dark:text-[#fcfcfc] dark:shadow-[0_3px_0_rgb(10,10,10)] dark:hover:-translate-y-0.5 dark:hover:shadow-[0_4px_0_rgb(10,10,10)] dark:active:translate-y-0.5 dark:active:shadow-[0_0px_0_rgb(10,10,10)]"
-                >
-                  <span>{letter}</span>
-                  {/* Klaviaturalardagi F va J harflariga o'xshash orientir do'mboqchalar (O va G harflariga) */}
-                  {(i === 1 || i === 3) && (
-                    <div className="absolute bottom-[15%] w-[30%] h-[2px] bg-gray-400 dark:bg-[#555] rounded-full" />
-                  )}
-                </div>
-              ))}
-            </div>
+          <Link href="/" aria-label="YOZGO" className="flex items-center mr-1 sm:mr-6">
+            <KeycapLogo size="sm" className="sm:hidden" />
+            <KeycapLogo size="lg" className="hidden sm:flex" />
           </Link>
 
           <nav className="hidden md:flex items-center gap-1 lg:gap-2">

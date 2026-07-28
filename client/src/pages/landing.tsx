@@ -114,12 +114,12 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center w-full sm:w-auto px-2 md:px-4 relative z-10">
               <Link href="/typing-test" className="w-full sm:w-auto">
-                <Button size="lg" className="btn-3d w-full px-8 py-6 font-bold uppercase text-base md:text-lg shadow-lg">
+                <Button size="lg" className="w-full px-8 py-6 font-bold uppercase text-base md:text-lg shadow-lg">
                   {t.landing.startTyping}
                 </Button>
               </Link>
               <Link href="/leaderboard" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="btn-3d w-full px-8 py-6 font-bold uppercase text-base md:text-lg bg-background/90 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground shadow-lg">
+                <Button size="lg" variant="outline" className="w-full px-8 py-6 font-bold uppercase text-base md:text-lg bg-background/90 backdrop-blur-sm shadow-lg">
                   {t.landing.viewLeaderboard}
                 </Button>
               </Link>

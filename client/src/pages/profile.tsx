@@ -430,7 +430,7 @@ export default function Profile() {
                   <Button 
                     onClick={handleUpdateNickname} 
                     disabled={isUpdatingNick || newNickname === authUser?.firstName}
-                    className="btn-3d font-bold"
+                    className="font-bold"
                   >
                     {isUpdatingNick ? "..." : t.profile.save}
                   </Button>
