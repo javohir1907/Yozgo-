@@ -110,6 +110,31 @@ export default {
         sans: ["var(--font-sans)"],
         heading: ["var(--font-heading)"],
         mono: ["var(--font-mono)"],
+        typing: ["var(--font-typing)"],
+      },
+      // Assumes a 16px root (index.css). `display` and `stat` are the two that
+      // matter most: `display` replaces the ad-hoc text-4xl/md:text-5xl/
+      // lg:text-7xl ladders, and `stat` becomes the single value typography for
+      // all six stat-card implementations, which is most of why the app reads
+      // as one product rather than six.
+      fontSize: {
+        "2xs": ["0.6875rem", { lineHeight: "1rem", letterSpacing: "0.02em" }],
+        xs: ["0.75rem", { lineHeight: "1.125rem" }],
+        sm: ["0.875rem", { lineHeight: "1.375rem" }],
+        base: ["1rem", { lineHeight: "1.5rem" }],
+        lg: ["1.125rem", { lineHeight: "1.75rem" }],
+        xl: ["1.25rem", { lineHeight: "1.75rem", letterSpacing: "-0.01em" }],
+        "2xl": ["1.5rem", { lineHeight: "2rem", letterSpacing: "-0.015em" }],
+        "3xl": ["1.875rem", { lineHeight: "2.25rem", letterSpacing: "-0.02em" }],
+        "4xl": ["2.25rem", { lineHeight: "2.5rem", letterSpacing: "-0.025em" }],
+        "5xl": ["3rem", { lineHeight: "1.1", letterSpacing: "-0.03em" }],
+        "6xl": ["3.75rem", { lineHeight: "1.05", letterSpacing: "-0.032em" }],
+        "7xl": ["4.5rem", { lineHeight: "1.02", letterSpacing: "-0.035em" }],
+        display: [
+          "clamp(2.5rem, 7vw, 4.5rem)",
+          { lineHeight: "1.02", letterSpacing: "-0.035em" },
+        ],
+        stat: ["clamp(2rem, 5vw, 3rem)", { lineHeight: "1" }],
       },
       keyframes: {
         "accordion-down": {

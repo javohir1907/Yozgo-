@@ -29,6 +29,16 @@
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
 
+    <!--
+      Only the two Latin subsets that paint above the fold on every route are
+      preloaded. The Cyrillic and Latin-Ext subsets are fetched on demand by
+      unicode-range, and JetBrains Mono is preloaded from /typing-test and
+      /battle instead — both are lazy routes, so preloading it here would cost
+      every visitor 40 KB they usually do not need.
+    -->
+    <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/manrope-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+
   </head>
   <body>
     <script type="application/ld+json">
