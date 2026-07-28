@@ -136,6 +136,7 @@ const translations = {
       outgoingLabel: "Sent requests",
       addFriendPlaceholder: "Friend's user ID",
       sendRequest: "Add",
+      pendingShort: "Pending",
       acceptFriend: "Accept",
       noFriends: "No friends yet",
       cosmeticNames: {
@@ -492,6 +493,7 @@ const translations = {
       outgoingLabel: "Отправленные",
       addFriendPlaceholder: "ID друга",
       sendRequest: "Добавить",
+      pendingShort: "Ожидание",
       acceptFriend: "Принять",
       noFriends: "Пока нет друзей",
       cosmeticNames: {
@@ -849,6 +851,7 @@ const translations = {
       outgoingLabel: "Yuborilgan",
       addFriendPlaceholder: "Do'st ID'si",
       sendRequest: "Qo'shish",
+      pendingShort: "Kutilmoqda",
       acceptFriend: "Qabul",
       noFriends: "Hali do'st yo'q",
       cosmeticNames: {
@@ -1206,6 +1209,7 @@ const translations = {
       outgoingLabel: "Yuborilgan",
       addFriendPlaceholder: "Do'st ID'si",
       sendRequest: "Qo'shish",
+      pendingShort: "Kútiw",
       acceptFriend: "Qabul",
       noFriends: "Hali do'st yo'q",
       cosmeticNames: {

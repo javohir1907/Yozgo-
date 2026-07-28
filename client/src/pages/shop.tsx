@@ -5,9 +5,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Coins, Snowflake, Palette, Square, Loader2, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
-import SEO from "@/components/SEO";
+import { Badge } from "@/components/ui/badge";
+import { Coins, Snowflake, Palette, Square, Check, ShoppingBag } from "lucide-react";
+import { PageShell } from "@/components/layout/page-shell";
+import { AuthGate } from "@/components/common/auth-gate";
+import { QueryBoundary } from "@/components/common/query-boundary";
+import { EmptyState } from "@/components/common/empty-state";
+import { CardGridSkeleton } from "@/components/common/skeletons";
 
 interface ShopItem {
   key: string;
@@ -30,21 +34,27 @@ const TYPE_ICONS: Record<string, typeof Coins> = {
   streak_freeze: Snowflake,
 };
 
+// Server sends an HSL triple like "25 95% 53%". Reject anything else rather
+// than interpolate an arbitrary string into a style attribute.
+const HSL_TRIPLE = /^\d{1,3} \d{1,3}% \d{1,3}%$/;
+
 export default function ShopPage() {
   const { t } = useI18n();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
 
-  const { data, isLoading } = useQuery<ShopData>({
+  const query = useQuery<ShopData>({
     queryKey: ["/api/shop"],
     enabled: isAuthenticated,
   });
+  const data = query.data;
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/shop"] });
     queryClient.invalidateQueries({
       predicate: (q) =>
-        typeof q.queryKey[0] === "string" && (q.queryKey[0] as string).startsWith("/api/profile"),
+        typeof q.queryKey[0] === "string" &&
+        (q.queryKey[0] as string).startsWith("/api/profile"),
     });
   };
 
@@ -67,86 +77,108 @@ export default function ShopPage() {
     onError: (e: Error) => toast({ variant: "destructive", title: e.message }),
   });
 
-  if (!isAuthenticated) {
-    return (
-      <div className="container mx-auto p-8 text-center">
-        <h1 className="text-2xl font-bold mb-2">{t.leaderboard.shopTitle}</h1>
-        <p className="text-muted-foreground">{t.leaderboard.leagueEmpty}</p>
-      </div>
-    );
-  }
-  if (isLoading || !data) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto p-4 sm:p-8 max-w-3xl space-y-6 animate-in fade-in duration-500">
-      <SEO title={`${t.leaderboard.shopTitle} | YOZGO`} description={t.leaderboard.shopTitle} />
+    <PageShell
+      size="md"
+      icon={ShoppingBag}
+      title={t.leaderboard.shopTitle}
+      seo={{ title: t.leaderboard.shopTitle }}
+      headerActions={
+        data && (
+          <Badge variant="soft-warning" data-testid="text-coins">
+            <Coins className="h-3 w-3" aria-hidden="true" />
+            {data.coins} {t.leaderboard.coinsLabel}
+          </Badge>
+        )
+      }
+    >
+      <AuthGate title={t.leaderboard.shopTitle}>
+        <QueryBoundary
+          query={query}
+          loading={<CardGridSkeleton count={4} />}
+          isEmpty={!!data && data.items.length === 0}
+          empty={<EmptyState icon={ShoppingBag} title={t.leaderboard.shopTitle} compact />}
+        >
+          {data && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {data.items.map((it) => {
+                const Icon = TYPE_ICONS[it.type] ?? Coins;
+                const name =
+                  (t.leaderboard.cosmeticNames as Record<string, string>)[it.key] ?? it.key;
+                const isEquipped =
+                  (it.type === "theme" && data.equippedThemeKey === it.key) ||
+                  (it.type === "frame" && data.equippedFrameKey === it.key);
+                const canAfford = data.coins >= it.price;
+                const busy = buyMut.isPending || equipMut.isPending;
+                const swatch =
+                  it.type === "theme" &&
+                  typeof it.meta?.accent === "string" &&
+                  HSL_TRIPLE.test(it.meta.accent)
+                    ? it.meta.accent
+                    : null;
 
-      <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">{t.leaderboard.shopTitle}</h1>
-        <div className="flex items-center gap-2 font-mono font-bold text-yellow-500" data-testid="text-coins">
-          <Coins className="w-5 h-5" />
-          {data.coins} {t.leaderboard.coinsLabel}
-        </div>
-      </header>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {data.items.map((it) => {
-          const Icon = TYPE_ICONS[it.type] ?? Coins;
-          const name = (t.leaderboard.cosmeticNames as Record<string, string>)[it.key] ?? it.key;
-          const isEquipped =
-            (it.type === "theme" && data.equippedThemeKey === it.key) ||
-            (it.type === "frame" && data.equippedFrameKey === it.key);
-          const canAfford = data.coins >= it.price;
-          const busy = buyMut.isPending || equipMut.isPending;
-
-          return (
-            <Card key={it.key} className="bg-card border border-border" data-testid={`shop-${it.key}`}>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  {it.type === "theme" && it.meta?.accent ? (
-                    <span
-                      className="w-5 h-5 rounded-full border border-border"
-                      style={{ background: `hsl(${it.meta.accent})` }}
-                    />
-                  ) : (
-                    <Icon className="w-5 h-5 text-primary" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{name}</div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Coins className="w-3 h-3" /> {it.price}
-                    {it.type === "streak_freeze" && ` · ${data.streakFreezes}`}
-                  </div>
-                </div>
-                {it.type === "streak_freeze" ? (
-                  <Button size="sm" disabled={!canAfford || busy} onClick={() => buyMut.mutate(it.key)}>
-                    {t.leaderboard.buy}
-                  </Button>
-                ) : isEquipped ? (
-                  <span className="text-green-600 text-sm font-bold flex items-center gap-1">
-                    <Check className="w-4 h-4" /> {t.leaderboard.equipped}
-                  </span>
-                ) : it.owned ? (
-                  <Button size="sm" variant="secondary" disabled={busy} onClick={() => equipMut.mutate(it.key)}>
-                    {t.leaderboard.equip}
-                  </Button>
-                ) : (
-                  <Button size="sm" disabled={!canAfford || busy} onClick={() => buyMut.mutate(it.key)}>
-                    {t.leaderboard.buy}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
+                return (
+                  <Card key={it.key} data-testid={`shop-${it.key}`}>
+                    <CardContent className="flex items-center gap-3 p-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        {swatch ? (
+                          <span
+                            className="h-5 w-5 rounded-full border border-border"
+                            style={{ background: `hsl(${swatch})` }}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">{name}</div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Coins className="h-3 w-3" aria-hidden="true" /> {it.price}
+                          {it.type === "streak_freeze" && ` · ${data.streakFreezes}`}
+                        </div>
+                      </div>
+                      {it.type === "streak_freeze" ? (
+                        <Button
+                          size="sm"
+                          loading={busy}
+                          disabled={!canAfford}
+                          onClick={() => buyMut.mutate(it.key)}
+                        >
+                          {t.leaderboard.buy}
+                        </Button>
+                      ) : isEquipped ? (
+                        <span className="flex items-center gap-1 text-sm font-bold text-success">
+                          <Check className="h-4 w-4" aria-hidden="true" />{" "}
+                          {t.leaderboard.equipped}
+                        </span>
+                      ) : it.owned ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          loading={busy}
+                          onClick={() => equipMut.mutate(it.key)}
+                        >
+                          {t.leaderboard.equip}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          loading={busy}
+                          disabled={!canAfford}
+                          onClick={() => buyMut.mutate(it.key)}
+                        >
+                          {t.leaderboard.buy}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </QueryBoundary>
+      </AuthGate>
+    </PageShell>
   );
 }
