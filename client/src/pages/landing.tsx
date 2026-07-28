@@ -13,7 +13,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Zap, Globe, Users, Trophy, Star, Clock } from "lucide-react";
+import { Zap, Globe, Users, Trophy, ChevronDown } from "lucide-react";
 
 // Components & UI
 import { Button } from "@/components/ui/button";
@@ -68,67 +68,68 @@ export default function LandingPage() {
         description={t.landing.readySubtitle}
       />
 
-      {/* Hero. One viewport minus the header (svh so mobile URL bars don't push
-          it taller). Previously two nested min-h-[95vh] + the header pushed the
-          hero past the first screen on every load. */}
-      <section className="relative flex min-h-[calc(100svh-3.5rem)] flex-col items-center justify-center overflow-hidden bg-background sm:min-h-[calc(100svh-4rem)]">
-        
-        {/* CSS-only background — no images needed (saves 1.2MB!) */}
-        <div className="absolute inset-0 w-full h-full z-0 pointer-events-none" aria-hidden="true">
-          {/* Gradient base */}
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-background to-orange-100/30 dark:from-orange-950/30 dark:via-background dark:to-orange-900/10" />
-          {/* Keyboard key grid pattern */}
-          <div className="absolute inset-0 opacity-[0.07] dark:opacity-[0.12]" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='8' y='8' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3Crect x='44' y='8' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3Crect x='8' y='44' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3Crect x='44' y='44' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3C/svg%3E")`,
-            backgroundSize: '80px 80px'
-          }} />
-          {/* Central glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+      {/* Hero — one viewport minus the header (svh for mobile URL bars). */}
+      <section className="relative flex min-h-[calc(100svh-3.5rem)] flex-col items-center justify-center overflow-hidden bg-background px-4 sm:min-h-[calc(100svh-4rem)]">
+        {/* Background: a soft brand glow up top and a keycap grid that fades out
+            toward the edges via a radial mask — no more uniform, busy grid. */}
+        <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
+          <div
+            className="absolute inset-0 opacity-[0.5] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_35%,black,transparent)]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='72' height='72' viewBox='0 0 72 72' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='6' y='6' width='26' height='26' rx='6' fill='none' stroke='%23f97316' stroke-opacity='0.18' stroke-width='1.5'/%3E%3Crect x='40' y='6' width='26' height='26' rx='6' fill='none' stroke='%23f97316' stroke-opacity='0.18' stroke-width='1.5'/%3E%3Crect x='6' y='40' width='26' height='26' rx='6' fill='none' stroke='%23f97316' stroke-opacity='0.18' stroke-width='1.5'/%3E%3Crect x='40' y='40' width='26' height='26' rx='6' fill='none' stroke='%23f97316' stroke-opacity='0.18' stroke-width='1.5'/%3E%3C/svg%3E")`,
+              backgroundSize: "72px 72px",
+            }}
+          />
+          <div className="absolute left-1/2 top-[22%] h-[420px] w-[min(90vw,720px)] -translate-x-1/2 rounded-full bg-brand/20 blur-[120px]" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
         </div>
 
-        {/* 2. Content Container - Split into Top (Title) and Bottom (Subtitle & Buttons) */}
-        <div className="container relative z-10 flex w-full flex-1 flex-col items-center justify-between px-4 pb-8 pt-16 md:pb-20 md:pt-32">
-          
-          {/* Yuqori qism: Asosiy Sarlavha (Klavishlar tepasida) */}
-          <div className="text-center w-full max-w-5xl mx-auto px-4 mt-2 md:mt-4">
-            <motion.h1
-              className="font-heading text-display font-black uppercase tracking-tight text-foreground drop-shadow-xl"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              {t.landing.heroTitle}
-            </motion.h1>
+        {/* CSS animate-in, not a JS opacity tween: if the animation never runs
+            (reduced motion, a throttled tab) the content stays visible rather
+            than stuck at opacity 0. */}
+        <div className="relative z-10 flex w-full max-w-3xl flex-col items-center text-center motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-700">
+          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
+            <Trophy className="h-3.5 w-3.5" aria-hidden="true" />
+            {t.landing.aboutUsTitle}
+          </span>
+
+          <h1 className="font-heading text-display font-extrabold leading-[1.02] tracking-tight text-foreground">
+            {t.landing.heroTitle}
+          </h1>
+
+          <p className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
+            {t.landing.heroSubtitle}
+          </p>
+
+          <div className="mt-9 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+            <Button asChild size="lg" className="w-full px-8 font-bold sm:w-auto">
+              <Link href="/typing-test">{t.landing.startTyping}</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="w-full px-8 font-bold sm:w-auto">
+              <Link href="/leaderboard">{t.landing.viewLeaderboard}</Link>
+            </Button>
           </div>
 
-          {/* O'rta bo'shliq (Klavishlarning aniq ko'rinishi uchun) */}
-          <div className="flex-1 min-h-[20vh] md:min-h-0" />
-
-          {/* Pastki qism: Subtitle va Tugmalar (Klavishlar tagida) */}
-          <div className="text-center w-full max-w-4xl mx-auto flex flex-col items-center bg-background/80 backdrop-blur-lg p-6 md:p-10 rounded-3xl shadow-xl border border-border">
-            <motion.div
-              className="text-base sm:text-lg md:text-2xl text-foreground font-medium mb-6 md:mb-8 bg-card px-6 py-3 md:px-8 md:py-4 rounded-full shadow-sm border border-border"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              {t.landing.heroSubtitle}
-            </motion.div>
-
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center w-full sm:w-auto px-2 md:px-4 relative z-10">
-              <Link href="/typing-test" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full px-8 py-6 font-bold uppercase text-base md:text-lg shadow-lg">
-                  {t.landing.startTyping}
-                </Button>
-              </Link>
-              <Link href="/leaderboard" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="w-full px-8 py-6 font-bold uppercase text-base md:text-lg bg-background/90 backdrop-blur-sm shadow-lg">
-                  {t.landing.viewLeaderboard}
-                </Button>
-              </Link>
-            </div>
+          {/* Feature chips — quiet social proof under the fold-line. */}
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" aria-hidden="true" />
+              {t.landing.featureSpeed}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Globe className="h-4 w-4 text-primary" aria-hidden="true" />
+              {t.landing.featureMultilingual}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" aria-hidden="true" />
+              {t.landing.featureBattles}
+            </span>
           </div>
+        </div>
 
+        {/* Scroll cue */}
+        <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-muted-foreground/40">
+          <ChevronDown className="h-5 w-5 animate-bounce" aria-hidden="true" />
         </div>
       </section>
 
