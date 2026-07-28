@@ -2,7 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <script>(function(){var d=document.documentElement;try{var K="yozgo-theme",s=localStorage.getItem(K);if(s===null){var o=localStorage.getItem("yozgo-ui-theme");if(o==="light"||o==="dark"){s=o;localStorage.setItem(K,s);}}if(s==="system"||s===null){s=matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";}if(s!=="light"&&s!=="dark")s="dark";d.classList.add(s);d.style.colorScheme=s;}catch(e){d.classList.add("dark");d.style.colorScheme="dark";}})();</script>
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fbfaf9" media="(prefers-color-scheme: light)" />
+    <!-- maximum-scale removed: it disabled pinch-zoom (WCAG 1.4.4). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="author" content="YOZGO" />
     <title>YOZGO | O'zbekiston tez yozish platformasi</title>
     <!-- SEO Meta Teglar -->

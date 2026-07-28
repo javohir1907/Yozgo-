@@ -40,10 +40,10 @@ export default function SettingsPage() {
     { id: "kaa" as const, name: t.settings.karakalpak },
   ];
   const UI_LANGUAGES: { id: UILanguage; name: string }[] = LANGUAGES;
-  // System mode arrives with the theme.tsx rewrite; two options until then.
-  const THEMES: { id: "light" | "dark"; name: string }[] = [
+  const THEMES: { id: "light" | "dark" | "system"; name: string }[] = [
     { id: "light", name: t.settings.themeLight },
     { id: "dark", name: t.settings.themeDark },
+    { id: "system", name: t.settings.themeSystem },
   ];
 
   return (

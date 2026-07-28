@@ -29,7 +29,6 @@ const AuthPage = React.lazy(() => import("@/pages/auth"));
 const ResetPasswordPage = React.lazy(() => import("@/pages/reset-password"));
 const AdminPage = React.lazy(() => import("@/pages/admin"));
 
-import { motion, AnimatePresence } from "framer-motion";
 
 function Router() {
   const [location, setLocation] = useLocation();
@@ -49,34 +48,29 @@ function Router() {
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     }>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={location}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -5 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-          className="h-full w-full"
-        >
-          <Switch>
-            <Route path="/" component={LandingPage} />
-            <Route path="/auth" component={AuthPage} />
-            <Route path="/settings" component={SettingsPage} />
-            <Route path="/leaderboard" component={LeaderboardPage} />
-            <Route path="/league" component={LeaguePage} />
-            <Route path="/quests" component={QuestsPage} />
-            <Route path="/shop" component={ShopPage} />
-            <Route path="/friends" component={FriendsPage} />
-            <Route path="/battle" component={BattlePage} />
-            <Route path="/typing-test" component={TypingTestPage} />
-            <Route path="/profile" component={ProfilePage} />
-            <Route path="/profile/:userId" component={ProfilePage} />
-            <Route path="/reset-password" component={ResetPasswordPage} />
-            <Route path="/admin" component={AdminPage} />
-            <Route component={NotFound} />
-          </Switch>
-        </motion.div>
-      </AnimatePresence>
+      {/* A CSS fade keyed on location — replaces AnimatePresence mode="wait",
+          which gated the new page's mount on the old page's exit animation
+          (stacked on top of the lazy-chunk fetch) and could freeze a page at
+          opacity 0 in a throttled tab. CSS animate-in degrades to "visible". */}
+      <div key={location} className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
+        <Switch>
+          <Route path="/" component={LandingPage} />
+          <Route path="/auth" component={AuthPage} />
+          <Route path="/settings" component={SettingsPage} />
+          <Route path="/leaderboard" component={LeaderboardPage} />
+          <Route path="/league" component={LeaguePage} />
+          <Route path="/quests" component={QuestsPage} />
+          <Route path="/shop" component={ShopPage} />
+          <Route path="/friends" component={FriendsPage} />
+          <Route path="/battle" component={BattlePage} />
+          <Route path="/typing-test" component={TypingTestPage} />
+          <Route path="/profile" component={ProfilePage} />
+          <Route path="/profile/:userId" component={ProfilePage} />
+          <Route path="/reset-password" component={ResetPasswordPage} />
+          <Route path="/admin" component={AdminPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </div>
     </React.Suspense>
     </AppErrorBoundary>
   );
@@ -94,7 +88,7 @@ function AppFooterSlot() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider>
         <I18nProvider>
           <TooltipProvider>
             <div className="flex flex-col min-h-screen bg-background text-foreground">

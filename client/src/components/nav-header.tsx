@@ -19,7 +19,7 @@ export function NavHeader() {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { t, uiLang, setUILang } = useI18n();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
 
   const navItems = [
     { label: t.nav.test, href: "/typing-test", icon: Keyboard },
@@ -132,11 +132,11 @@ export function NavHeader() {
             variant="ghost"
             size="icon"
             className="text-muted-foreground hover:text-foreground hover:bg-muted h-8 w-8 sm:h-10 sm:w-10"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
             data-testid="button-theme-toggle"
           >
-            {theme === "dark" ? <Sun className="w-[18px] h-[18px] sm:w-5 sm:h-5" /> : <Moon className="w-[18px] h-[18px] sm:w-5 sm:h-5" />}
-            <span className="sr-only">Toggle theme</span>
+            {resolvedTheme === "dark" ? <Sun className="w-[18px] h-[18px] sm:w-5 sm:h-5" /> : <Moon className="w-[18px] h-[18px] sm:w-5 sm:h-5" />}
+            <span className="sr-only">{t.settings.darkMode}</span>
           </Button>
 
           <Link href="/settings">
