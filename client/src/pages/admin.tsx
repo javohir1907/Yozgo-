@@ -15,8 +15,11 @@ import {
 } from "@/components/ui/table";
 import {
   Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle,
-  DialogDescription, DialogClose,
+  DialogDescription, DialogClose, DialogTrigger,
 } from "@/components/ui/dialog";
+import { LoadingState } from "@/components/common/loading-state";
+import { ErrorState } from "@/components/common/error-state";
+import { EmptyState } from "@/components/common/empty-state";
 import {
   Users, Trophy, KeyRound, Settings as SettingsIcon, BarChart3,
   Ban, ShieldCheck, Trash2, Download, Loader2, RefreshCw, Megaphone,
@@ -85,21 +88,16 @@ export default function AdminPage() {
   );
 }
 
-// ============ UMUMIY HOLAT KOMPONENTLARI ============
+// These now delegate to the app-wide primitives (promoted from this file), so
+// admin and the rest of the app share one loading/error/empty treatment.
 function Spinner() {
-  return <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
+  return <LoadingState size="sm" minHeight="min-h-[80px]" />;
 }
 function ErrorBox({ error }: { error: any }) {
-  return (
-    <div className="py-6 flex flex-col items-center gap-2 text-center">
-      <AlertTriangle className="w-6 h-6 text-destructive" />
-      <p className="text-sm text-destructive font-medium">Yuklashda xatolik</p>
-      <p className="text-xs text-muted-foreground">{error?.message || "Noma'lum xato"}</p>
-    </div>
-  );
+  return <ErrorState error={error} compact />;
 }
 function EmptyBox({ text }: { text: string }) {
-  return <p className="text-muted-foreground text-center py-6">{text}</p>;
+  return <EmptyState title={text} compact />;
 }
 
 // Buzuvchi amal uchun tasdiqlash dialogi (Radix Dialog).
@@ -114,9 +112,13 @@ function ConfirmButton({
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button size={size} variant={triggerVariant} className="gap-1.5" onClick={() => setOpen(true)}>
-        {triggerIcon}{triggerLabel}
-      </Button>
+      {/* Trigger inside DialogTrigger so Radix returns focus to it on close —
+          the manual setOpen(true) on a bare Button bypassed that. */}
+      <DialogTrigger asChild>
+        <Button size={size} variant={triggerVariant} className="gap-1.5">
+          {triggerIcon}{triggerLabel}
+        </Button>
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -235,7 +237,7 @@ function UsersTab() {
                     <TableCell>
                       {u.isBanned
                         ? <Badge variant="destructive">Bloklangan</Badge>
-                        : <Badge variant="outline" className="text-green-600 border-green-600">Aktiv</Badge>}
+                        : <Badge variant="outline" className="text-success border-success">Aktiv</Badge>}
                     </TableCell>
                     <TableCell className="text-right">
                       {u.isBanned ? (
@@ -715,7 +717,7 @@ function CodesTab({ currentUserId }: { currentUserId: string }) {
                 <span className="font-mono font-bold">{status.code}</span>
                 {status.isUsed
                   ? <Badge variant="secondary">Ishlatilgan/o'chirilgan</Badge>
-                  : <Badge variant="outline" className="text-green-600 border-green-600">Aktiv</Badge>}
+                  : <Badge variant="outline" className="text-success border-success">Aktiv</Badge>}
                 {status.isExpired && <Badge variant="destructive">Muddati o'tgan</Badge>}
               </div>
               <p className="text-xs text-muted-foreground">Xona holati: {status.roomStatus} · maks: {status.maxParticipants}</p>
@@ -759,10 +761,10 @@ function BroadcastTab() {
     <Card>
       <CardHeader><CardTitle className="text-lg">Ommaviy xabar (Telegram)</CardTitle></CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
-          <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+        <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+          <AlertTriangle className="w-4 h-4 text-warning mt-0.5 shrink-0" />
           <div>
-            <p className="font-medium text-amber-600 dark:text-amber-400">Telegram bot tokeni kerak</p>
+            <p className="font-medium text-warning dark:text-warning">Telegram bot tokeni kerak</p>
             <p className="text-xs text-muted-foreground">
               Xabar foydalanuvchilarga faqat <code>USER_BOT_TOKEN</code>/<code>ADMIN_BOT_TOKEN</code> sozlangan va
               userlarda <code>telegram_id</code> bo'lganda yetib boradi. Local'da o'chiq — yuborish 0 userga ketadi.

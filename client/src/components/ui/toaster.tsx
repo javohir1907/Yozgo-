@@ -15,7 +15,13 @@ export function Toaster() {
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
         return (
-          <Toast key={id} {...props}>
+          // Errors get longer on screen than confirmations — they usually carry
+          // something the user has to read and act on.
+          <Toast
+            key={id}
+            duration={props.variant === "destructive" ? 8000 : 5000}
+            {...props}
+          >
             <div className="grid gap-1">
               {title && <ToastTitle>{title}</ToastTitle>}
               {description && <ToastDescription>{description}</ToastDescription>}

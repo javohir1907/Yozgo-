@@ -1,14 +1,21 @@
 import React from "react";
 import { Switch, Route, useLocation } from "wouter";
 import ReactGA from "react-ga4";
-ReactGA.initialize("G-TSXDSPDL98");
+import { GA_ID } from "@/lib/env";
+// GA id comes from the environment now (was a hardcoded measurement id run at
+// module load). Absent id → analytics disabled, and the send below no-ops.
+if (GA_ID) ReactGA.initialize(GA_ID);
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme";
-import { I18nProvider } from "@/lib/i18n";
+import { I18nProvider, useI18n } from "@/lib/i18n";
+import { Helmet } from "react-helmet-async";
 import { NavHeader } from "@/components/nav-header";
+import { AppErrorBoundary } from "@/components/layout/error-boundary";
+import { SkipLink } from "@/components/layout/skip-link";
+import { AppFooter } from "@/components/layout/app-footer";
 import { Loader2 } from "lucide-react";
 
 const LandingPage = React.lazy(() => import("@/pages/landing"));
@@ -26,7 +33,6 @@ const AuthPage = React.lazy(() => import("@/pages/auth"));
 const ResetPasswordPage = React.lazy(() => import("@/pages/reset-password"));
 const AdminPage = React.lazy(() => import("@/pages/admin"));
 
-import { motion, AnimatePresence } from "framer-motion";
 
 function Router() {
   const [location, setLocation] = useLocation();
@@ -36,58 +42,74 @@ function Router() {
       setLocation(location.slice(0, -1), { replace: true });
     }
 
-    ReactGA.send({ hitType: "pageview", page: location });
+    if (GA_ID) ReactGA.send({ hitType: "pageview", page: location });
   }, [location, setLocation]);
 
   return (
+    <AppErrorBoundary scope="route" resetKeys={[location]}>
     <React.Suspense fallback={
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     }>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={location}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -5 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-          className="h-full w-full"
-        >
-          <Switch>
-            <Route path="/" component={LandingPage} />
-            <Route path="/auth" component={AuthPage} />
-            <Route path="/settings" component={SettingsPage} />
-            <Route path="/leaderboard" component={LeaderboardPage} />
-            <Route path="/league" component={LeaguePage} />
-            <Route path="/quests" component={QuestsPage} />
-            <Route path="/shop" component={ShopPage} />
-            <Route path="/friends" component={FriendsPage} />
-            <Route path="/battle" component={BattlePage} />
-            <Route path="/typing-test" component={TypingTestPage} />
-            <Route path="/profile" component={ProfilePage} />
-            <Route path="/profile/:userId" component={ProfilePage} />
-            <Route path="/reset-password" component={ResetPasswordPage} />
-            <Route path="/admin" component={AdminPage} />
-            <Route component={NotFound} />
-          </Switch>
-        </motion.div>
-      </AnimatePresence>
+      {/* A CSS fade keyed on location — replaces AnimatePresence mode="wait",
+          which gated the new page's mount on the old page's exit animation
+          (stacked on top of the lazy-chunk fetch) and could freeze a page at
+          opacity 0 in a throttled tab. CSS animate-in degrades to "visible". */}
+      <div key={location} className="motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200">
+        <Switch>
+          <Route path="/" component={LandingPage} />
+          <Route path="/auth" component={AuthPage} />
+          <Route path="/settings" component={SettingsPage} />
+          <Route path="/leaderboard" component={LeaderboardPage} />
+          <Route path="/league" component={LeaguePage} />
+          <Route path="/quests" component={QuestsPage} />
+          <Route path="/shop" component={ShopPage} />
+          <Route path="/friends" component={FriendsPage} />
+          <Route path="/battle" component={BattlePage} />
+          <Route path="/typing-test" component={TypingTestPage} />
+          <Route path="/profile" component={ProfilePage} />
+          <Route path="/profile/:userId" component={ProfilePage} />
+          <Route path="/reset-password" component={ResetPasswordPage} />
+          <Route path="/admin" component={AdminPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </div>
     </React.Suspense>
+    </AppErrorBoundary>
   );
+}
+
+// Footer is app-wide except on the two focus surfaces, where chrome competes
+// with the typing task. It used to live inside landing.tsx, i.e. on one route.
+const FOOTERLESS = new Set(["/typing-test", "/battle"]);
+function AppFooterSlot() {
+  const [location] = useLocation();
+  if (FOOTERLESS.has(location)) return null;
+  return <AppFooter />;
+}
+
+// Keeps <html lang> in sync with the UI language (index.html is statically
+// lang="en" even when the UI is Uzbek).
+function HtmlLang() {
+  const { uiLang } = useI18n();
+  return <Helmet htmlAttributes={{ lang: uiLang }} />;
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider>
         <I18nProvider>
+          <HtmlLang />
           <TooltipProvider>
             <div className="flex flex-col min-h-screen bg-background text-foreground">
+              <SkipLink />
               <NavHeader />
-              <main className="flex-1 pt-14 sm:pt-16">
+              <main id="main" className="flex flex-1 flex-col pt-14 sm:pt-16">
                 <Router />
               </main>
+              <AppFooterSlot />
             </div>
             <Toaster />
           </TooltipProvider>

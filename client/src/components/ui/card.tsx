@@ -2,17 +2,31 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  /**
+   * Opts into the hover treatment. It used to be on the base class, so every
+   * card in the app — including static stat tiles — highlighted on hover and
+   * therefore looked clickable.
+   */
+  interactive?: boolean;
+}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, interactive, ...props }, ref) => (
     <div
       ref={ref}
       className={cn(
-        "rounded-2xl border bg-card text-card-foreground shadow-sm transition-all hover:border-primary/20 dark:bg-card/60 dark:backdrop-blur-xl",
-        className
+        // Opaque bg. `dark:bg-card/60 dark:backdrop-blur-xl` cost a compositing
+        // layer to blur an opaque --background behind it, i.e. nothing. Depth
+        // comes from the --surface-1/2/3 scale instead.
+        "rounded-xl border border-card-border bg-card text-card-foreground shadow-sm",
+        "transition-[border-color,box-shadow] [transition-duration:var(--dur-fast)]",
+        interactive && "hover:border-primary/40 hover:shadow-md",
+        className,
       )}
       {...props}
     />
-  )
+  ),
 );
 Card.displayName = "Card";
 
@@ -27,7 +41,12 @@ const CardTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivE
   ({ className, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("text-2xl font-semibold leading-none tracking-tight", className)}
+      // text-2xl is a page-heading size, too loud inside a card — settings.tsx
+      // and admin.tsx were both already overriding it back down to text-lg.
+      className={cn(
+        "font-heading text-lg font-bold leading-tight tracking-tight",
+        className,
+      )}
       {...props}
     />
   )

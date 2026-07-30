@@ -1,36 +1,33 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Keyboard, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { AuthCard } from "@/components/layout/auth-card";
+import { PasswordField } from "@/components/common/password-field";
+import { InlineAlert } from "@/components/common/inline-alert";
 
 export default function ResetPasswordPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get("token");
+  const token = new URLSearchParams(window.location.search).get("token");
 
   if (!token) {
     return (
-      <div className="container mx-auto flex items-center justify-center min-h-[calc(100vh-8rem)]">
-        <Card className="w-full max-w-md text-center p-8">
-          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <CardTitle className="mb-2">Yaroqsiz havola</CardTitle>
-          <CardDescription className="mb-6">
-            Parolni tiklash havolasi yaroqsiz yoki muddati tugagan.
-          </CardDescription>
-          <Button onClick={() => setLocation("/auth")}>Tizimga kirishga qaytish</Button>
-        </Card>
-      </div>
+      <AuthCard title="Yaroqsiz havola" description="Parolni tiklash havolasi yaroqsiz yoki muddati tugagan.">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <AlertCircle className="h-10 w-10 text-destructive" aria-hidden="true" />
+          <Button className="w-full" onClick={() => setLocation("/auth")}>
+            Tizimga kirishga qaytish
+          </Button>
+        </div>
+      </AuthCard>
     );
   }
 
@@ -44,95 +41,53 @@ export default function ResetPasswordPage() {
       setError("Parol kamida 8 ta belgidan iborat bo'lishi kerak");
       return;
     }
-
     setIsSubmitting(true);
     setError("");
-
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || "";
-      const res = await fetch(`${baseUrl}/api/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, newPassword: password }),
+      // Was a bare fetch on import.meta.env.VITE_API_URL; apiRequest is the
+      // shared client every other page uses (base URL + error handling).
+      await apiRequest("POST", "/api/auth/reset-password", {
+        token,
+        newPassword: password,
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || "Xatolik yuz berdi");
-      }
-
       toast({
         title: "Muvaffaqiyatli",
         description: "Parolingiz o'zgartirildi! Endi yangi parol bilan tizimga kirishingiz mumkin.",
       });
       setLocation("/auth");
     } catch (err: any) {
-      setError(err.message || "Ulanishda xatolik. Keyinroq urinib ko'ring.");
+      setError(err?.message?.replace(/^\d{3}:\s*/, "") || "Ulanishda xatolik. Keyinroq urinib ko'ring.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-[calc(100vh-8rem)]">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <Keyboard className="w-8 h-8 text-primary" />
-            <span className="font-bold text-2xl tracking-tighter">YOZGO</span>
-          </div>
-          <CardTitle>Yangi parol o'rnatish</CardTitle>
-          <CardDescription>Hisobingiz uchun yangi va mustahkam parol kiriting.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-password">Yangi parol</Label>
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Yangi parol (kamida 8 ta belgi)"
-                  required
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Parolni tasdiqlang</Label>
-              <Input
-                id="confirm-password"
-                type={showPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Yangi parolni takrorlang"
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="p-3 rounded bg-destructive/10 text-destructive text-sm flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Saqlanmoqda..." : "Parolni saqlash"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthCard title="Yangi parol o'rnatish" description="Hisobingiz uchun yangi va mustahkam parol kiriting.">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <PasswordField
+          label="Yangi parol"
+          value={password}
+          onChange={setPassword}
+          autoComplete="new-password"
+          minLength={8}
+          required
+          placeholder="Kamida 8 ta belgi"
+        />
+        <PasswordField
+          label="Parolni tasdiqlang"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+          autoComplete="new-password"
+          minLength={8}
+          required
+          placeholder="Yangi parolni takrorlang"
+        />
+        {error && <InlineAlert tone="danger">{error}</InlineAlert>}
+        <Button type="submit" className="w-full" loading={isSubmitting}>
+          Parolni saqlash
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

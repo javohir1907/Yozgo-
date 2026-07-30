@@ -6,6 +6,8 @@ interface SEOProps {
   image?: string;
   url?: string;
   type?: string;
+  /** Emits robots noindex — for utility pages like 404. */
+  noindex?: boolean;
 }
 
 export const SEO = ({
@@ -14,6 +16,7 @@ export const SEO = ({
   image = "https://yozgo.uz/og-image.png",
   url = "https://yozgo.uz",
   type = "website",
+  noindex = false,
 }: SEOProps) => {
   const siteTitle = title.includes("YOZGO") ? title : `${title} | YOZGO`;
 
@@ -22,6 +25,7 @@ export const SEO = ({
       {/* Standart Meta Teglar */}
       <title>{siteTitle}</title>
       <meta name="description" content={description} />
+      {noindex && <meta name="robots" content="noindex, nofollow" />}
       <link rel="canonical" href={url} />
 
       {/* Facebook Meta Teglar (Open Graph) */}

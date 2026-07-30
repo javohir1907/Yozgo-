@@ -18,6 +18,8 @@ interface UseTypingTestProps {
 
 export type WordStatus = "correct" | "incorrect" | "pending";
 
+const WORD_COUNT = 240;
+
 export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps) {
   const [words, setWords] = useState<string[]>([]);
   const [userInput, setUserInput] = useState("");
@@ -48,10 +50,9 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
     const pool = wordLists[language];
     const generated: string[] = [];
 
-    // Yengil va takrorlanmas tizim: har 500 ta so'z kerak bo'lsa
-    // hamma lug'atni aralashtirib qo'shamiz, lug'at tugasa yana aralashtirib qo'shamiz.
-    // Shunda bitta ekranda ayni bir so'z yaqin o'rinlarda umuman qaytarilmaydi!
-    while (generated.length < 500) {
+    // 240 covers a 60s test at 240 WPM with headroom — the old 500 rendered
+    // ~3,000 span nodes for a test that reaches ~100 words.
+    while (generated.length < WORD_COUNT) {
       const shuffled = [...pool].sort(() => Math.random() - 0.5);
 
       // Ikkita ketma-ket bir xil so'z tushib qolmasligi uchun kichik tekshiruv (ikki blok orasida)
@@ -64,8 +65,7 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       generated.push(...shuffled);
     }
 
-    // Faqat oxirgi 500 tasini olamiz
-    setWords(generated.slice(0, 500));
+    setWords(generated.slice(0, WORD_COUNT));
     setHistory([]);
   }, [language]);
 
@@ -166,9 +166,12 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       });
     }, 1000);
 
+    // Was 100ms = 10 full-page re-renders/second, independent of typing. WPM is
+    // a per-minute figure, so 1Hz is plenty — a 10x cut, and it makes the
+    // aria-live readout usable instead of spamming a screen reader.
     statsIntervalRef.current = setInterval(() => {
       updateLiveStats();
-    }, 100);
+    }, 1000);
   }, [finishTest, updateLiveStats]);
 
   const handleInputChange = useCallback(

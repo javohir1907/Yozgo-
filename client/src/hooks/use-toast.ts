@@ -2,8 +2,14 @@ import * as React from "react";
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
-const TOAST_LIMIT = 1;
-const TOAST_REMOVE_DELAY = 1000000;
+// Was 1: rapid errors (e.g. two mutations rejecting back to back) silently
+// replaced each other, so the user only ever saw the last one.
+const TOAST_LIMIT = 3;
+
+// Was 1000000 (~16.7 minutes). This is the delay between a toast being
+// dismissed and being dropped from state — it only needs to outlast the exit
+// animation, not linger for a quarter of an hour holding React nodes alive.
+const TOAST_REMOVE_DELAY = 1000;
 
 type ToasterToast = ToastProps & {
   id: string;

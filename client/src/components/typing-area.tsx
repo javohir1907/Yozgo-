@@ -1,6 +1,13 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { cn } from "@/lib/utils";
-import type { WordStatus } from "@/hooks/use-typing-test";
+import { useI18n } from "@/lib/i18n";
 
 interface TypingAreaProps {
   words: string[];
@@ -13,90 +20,76 @@ interface TypingAreaProps {
   history?: string[];
 }
 
-interface WordBoxProps {
-  word: string;
-  wordIdx: number;
-  isActive: boolean;
-  isPast: boolean;
-  typedWord: string; // The word the user actually typed (past or current)
+type CharState = "pending" | "correct" | "wrong" | "extra" | "missed";
+
+/** Renders one word. All layout-affecting styles are state-invariant; only the
+ * data-state attribute changes, and CSS colours from it. */
+function renderChars(word: string, typed: string, past: boolean) {
+  const out: React.ReactNode[] = [];
+  for (let i = 0; i < word.length; i++) {
+    let state: CharState = "pending";
+    if (i < typed.length) state = typed[i] === word[i] ? "correct" : "wrong";
+    else if (past) state = "missed";
+    out.push(
+      <span key={i} data-char data-state={state === "pending" ? undefined : state}>
+        {word[i]}
+      </span>,
+    );
+  }
+  // Overflow characters typed past the word length.
+  for (let i = word.length; i < typed.length; i++) {
+    out.push(
+      <span key={`x${i}`} data-char data-state="extra">
+        {typed[i]}
+      </span>,
+    );
+  }
+  return out;
 }
 
-const WordBox = React.memo(
-  React.forwardRef<HTMLSpanElement, WordBoxProps>(
-    ({ word, wordIdx, isActive, isPast, typedWord }, ref) => {
-      if (!isActive && !isPast) {
-        return (
-          <span
-            ref={ref}
-            className="inline-block whitespace-nowrap text-muted-foreground/80 transition-colors word-box"
-            data-testid={`word-${wordIdx}`}
-          >
-            {word.split("").map((char, charIdx) => (
-              <span key={charIdx} className="char-span">
-                {char}
-              </span>
-            ))}
-          </span>
-        );
-      }
+// Past and future words never depend on userInput, so they memoise on
+// currentIndex/history and re-render once per word boundary — not per keystroke.
+const PastWords = React.memo(function PastWords({
+  words,
+  from,
+  to,
+  history,
+}: {
+  words: string[];
+  from: number;
+  to: number;
+  history: string[];
+}) {
+  const out: React.ReactNode[] = [];
+  for (let i = from; i < to; i++) {
+    out.push(
+      <span key={i} className="whitespace-nowrap" data-word="past" data-testid={`word-${i}`}>
+        {renderChars(words[i], history[i] ?? "", true)}
+      </span>,
+    );
+  }
+  return <>{out}</>;
+});
 
-      const renderChar = (char: string, charIdx: number) => {
-        let colorClass = "text-muted-foreground/80";
-
-        if (charIdx < typedWord.length) {
-          const typedChar = typedWord[charIdx];
-          if (typedChar === char) {
-            colorClass = "text-green-600 dark:text-green-400 font-bold";
-          } else {
-            colorClass = "text-white bg-red-600 dark:text-red-400 dark:bg-red-500/10 font-bold rounded-sm px-[1px]";
-          }
-        } else if (isPast) {
-          colorClass =
-            "text-red-700 dark:text-red-500 underline decoration-red-600/60 decoration-2 font-bold opacity-90";
-        }
-
-        return (
-          <span
-            key={`${wordIdx}-${charIdx}`}
-            className={cn("char-span inline-block", colorClass)}
-          >
-            {char}
-          </span>
-        );
-      };
-
-      return (
-        <span
-          ref={ref}
-          className={cn(
-            "inline-block whitespace-nowrap word-box",
-            isActive && "bg-primary/5 rounded-md px-1 -mx-1"
-          )}
-          data-testid={`word-${wordIdx}`}
-        >
-          {/* Word Characters */}
-          {word.split("").map((char, charIdx) => renderChar(char, charIdx))}
-
-          {/* Extra characters typed beyond word length */}
-          {typedWord.length > word.length &&
-            typedWord
-              .slice(word.length)
-              .split("")
-              .map((char, charIdx) => (
-                <span
-                  key={`extra-${charIdx}`}
-                  className="text-white bg-red-600 dark:text-red-500 dark:bg-transparent underline decoration-red-500/50 font-bold opacity-90 char-span inline-block px-[1px] rounded-sm"
-                >
-                  {char}
-                </span>
-              ))}
-        </span>
-      );
-    }
-  )
-);
-
-WordBox.displayName = "WordBox";
+const FutureWords = React.memo(function FutureWords({
+  words,
+  from,
+  to,
+}: {
+  words: string[];
+  from: number;
+  to: number;
+}) {
+  const out: React.ReactNode[] = [];
+  for (let i = from; i < to; i++) {
+    out.push(
+      <span key={i} className="whitespace-nowrap" data-word="future" data-testid={`word-${i}`}>
+        {renderChars(words[i], "", false)}
+      </span>,
+    );
+  }
+  return <>{out}</>;
+});
 
 export function TypingArea({
   words,
@@ -108,183 +101,220 @@ export function TypingArea({
   currentIndex,
   history = [],
 }: TypingAreaProps) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const wordsRef = useRef<HTMLDivElement>(null);
   const activeWordRef = useRef<HTMLSpanElement>(null);
 
   const [offsetY, setOffsetY] = useState(0);
-  const [caretPos, setCaretPos] = useState({ top: 0, left: 0 });
+  const [isFocused, setIsFocused] = useState(false);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const isTouch =
+    typeof window !== "undefined" && "ontouchstart" in window;
+
+  // Grows in blocks of 40 so the memo is stable: ~480 nodes instead of the full
+  // set, and renderLimit only changes once every 40 words.
+  const renderLimit = useMemo(
+    () => Math.min(words.length, (Math.floor(currentIndex / 40) + 2) * 40),
+    [words.length, currentIndex],
+  );
+
+  // Track container width so caret offsets and line height can be recomputed on
+  // reflow (a resize changes where words wrap).
+  useEffect(() => {
+    const el = wordsRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      setContainerWidth(entries[0].contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Measure the active word's character offsets ONCE per word / reflow, not per
+  // keystroke — the old code did querySelectorAll + offset reads on every key,
+  // forcing a synchronous layout inside every commit.
+  // Offsets live in state, not a ref: a ref mutation would not re-run the caret
+  // memo, so the caret would lag one word behind on every word boundary.
+  const [charOffsets, setCharOffsets] = useState<
+    { top: number; left: number; w: number }[]
+  >([]);
   const lineHeightRef = useRef(0);
-  const lastLineRef = useRef(0);
+  useLayoutEffect(() => {
+    const el = activeWordRef.current;
+    if (!el) return;
+    setCharOffsets(
+      Array.from(el.querySelectorAll<HTMLElement>("[data-char]")).map((c) => ({
+        top: c.offsetTop,
+        left: c.offsetLeft,
+        w: c.offsetWidth,
+      })),
+    );
 
-  useEffect(() => {
-    if (isActive) {
-      inputRef.current?.focus();
-    }
-  }, [isActive]);
-
-  // Handle caret positioning
-  useEffect(() => {
-    if (!wordsRef.current || !activeWordRef.current) return;
-
-    const wordEl = activeWordRef.current;
-    const chars = wordEl.querySelectorAll(".char-span");
-    const inputLen = userInput.length;
-
-    let top = 0;
-    let left = 0;
-
-    if (inputLen < chars.length) {
-      const el = chars[inputLen] as HTMLElement;
-      top = el.offsetTop;
-      left = el.offsetLeft;
-    } else if (chars.length > 0) {
-      const el = chars[chars.length - 1] as HTMLElement;
-      top = el.offsetTop;
-      left = el.offsetLeft + el.offsetWidth;
-    } else {
-      top = wordEl.offsetTop;
-      left = wordEl.offsetLeft;
-    }
-
-    setCaretPos({ top, left });
-  }, [currentIndex, userInput]);
-
-  useEffect(() => {
-    if (!activeWordRef.current || !containerRef.current || !wordsRef.current) return;
-
-    const activeWord = activeWordRef.current;
-
-    if (lineHeightRef.current === 0) {
-      const firstWord = wordsRef.current.querySelector(".word-box") as HTMLElement;
-      const allWords = wordsRef.current.querySelectorAll(".word-box");
-
-      if (firstWord && allWords.length > 0) {
-        const top0 = firstWord.offsetTop;
-
-        // Find the first word that wrapped to the second line
-        for (let i = 1; i < allWords.length; i++) {
-          const el = allWords[i] as HTMLElement;
-          if (el.offsetTop > top0 + 10) {
-            lineHeightRef.current = el.offsetTop - top0;
+    // Line height: probe the words container for the first wrapped word.
+    const container = wordsRef.current;
+    if (container) {
+      const all = container.querySelectorAll<HTMLElement>("[data-word]");
+      if (all.length) {
+        const top0 = all[0].offsetTop;
+        let lh = 0;
+        for (let i = 1; i < all.length; i++) {
+          if (all[i].offsetTop > top0 + 10) {
+            lh = all[i].offsetTop - top0;
             break;
           }
         }
-
-        // Fallback agar baribir topilmasa (misol bir qatordan iborat holatda)
-        if (lineHeightRef.current === 0) {
-          lineHeightRef.current = firstWord.getBoundingClientRect().height + 12; // gap-y-3
-        }
+        lineHeightRef.current = lh || all[0].getBoundingClientRect().height;
+      }
+      // Keep the active line pinned as the second visible line.
+      if (lineHeightRef.current > 0 && el) {
+        const line = Math.round(el.offsetTop / lineHeightRef.current);
+        setOffsetY(line >= 2 ? -(line - 1) * lineHeightRef.current : 0);
       }
     }
+  }, [currentIndex, words, containerWidth]);
 
-    if (lineHeightRef.current > 0) {
-      const wordTop = activeWord.offsetTop;
-      const currentLine = Math.round(wordTop / lineHeightRef.current);
+  // Caret position is pure arithmetic over the cached offsets.
+  const caret = useMemo(() => {
+    const o = charOffsets;
+    if (!o.length) return { top: 0, left: 0 };
+    const i = Math.min(userInput.length, o.length - 1);
+    if (userInput.length < o.length) return { top: o[i].top, left: o[i].left };
+    return { top: o[i].top, left: o[i].left + o[i].w };
+  }, [userInput.length, charOffsets]);
 
-      if (currentLine >= 2) {
-        setOffsetY(-(currentLine - 1) * lineHeightRef.current);
-      } else {
-        setOffsetY(0);
-      }
-    }
-  }, [currentIndex]);
+  // Solid caret while typing; clear the "typing" flag after a short idle.
+  const [typing, setTyping] = useState(false);
+  const typingTimer = useRef<ReturnType<typeof setTimeout>>();
+  const markTyping = useCallback(() => {
+    setTyping(true);
+    clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => setTyping(false), 700);
+  }, []);
 
+  // Only steal focus on non-touch; autoFocus does not raise the mobile keyboard
+  // anyway, and doing so scrolls the page around on load.
   useEffect(() => {
-    setOffsetY(0);
-    lastLineRef.current = 0;
-    lineHeightRef.current = 0;
-  }, [words]);
+    if (isActive && !isTouch) inputRef.current?.focus();
+  }, [isActive, isTouch]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Tab") {
         e.preventDefault();
-        if (onRestart) onRestart();
-      }
-      if (e.key === "Backspace" && userInput.length === 0 && onGoBack) {
+        onRestart?.();
+      } else if (e.key === "Backspace" && userInput.length === 0 && onGoBack) {
         e.preventDefault();
         onGoBack();
       }
     },
-    [userInput.length, onRestart, onGoBack]
+    [userInput.length, onRestart, onGoBack],
   );
 
-  const renderedWords = React.useMemo(() => {
-    return words.map((word, wordIdx) => {
-      let typedWord = "";
-      if (wordIdx < currentIndex) {
-        typedWord = history[wordIdx] || "";
-      } else if (wordIdx === currentIndex) {
-        typedWord = userInput;
-      }
+  const focusInput = useCallback(() => inputRef.current?.focus(), []);
 
-      return (
-        <WordBox
-          key={wordIdx}
-          ref={wordIdx === currentIndex ? activeWordRef : null}
-          word={word}
-          wordIdx={wordIdx}
-          isActive={wordIdx === currentIndex}
-          isPast={wordIdx < currentIndex}
-          typedWord={typedWord}
-        />
-      );
-    });
-  }, [words, currentIndex, history, userInput]);
+  // Three-line viewport, sized in em so it tracks the clamp() font size and the
+  // user's S/M/L scale — the old fixed h-[15rem] clipped the 3rd line when
+  // narrow screens wrapped more.
+  const viewportHeight = "calc(3 * 1.55em + 2 * 0.6em)";
+  const showRecovery = isActive && !isFocused;
+  const currentWord = words[currentIndex] ?? "";
 
   return (
-    <div
-      className="relative w-full max-w-5xl mx-auto h-[15rem] overflow-hidden cursor-text"
-      onClick={() => inputRef.current?.focus()}
-      ref={containerRef}
-      data-testid="typing-area"
-    >
-      <div className="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-background to-transparent z-10 pointer-events-none" />
-      <div className="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-background to-transparent z-10 pointer-events-none" />
-
-      <input
-        ref={inputRef}
-        type="text"
-        className="absolute inset-0 opacity-0 cursor-default z-20"
-        value={userInput}
-        onChange={(e) => onInputChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        autoFocus
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck="false"
-        data-testid="input-typing"
-      />
-
-      <div
-        ref={wordsRef}
-        className="flex flex-wrap gap-x-4 gap-y-4 text-[1.8rem] md:text-[2.2rem] font-mono leading-relaxed select-none px-2 relative"
-        style={{
-          transform: `translateY(${offsetY}px)`,
-          transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        }}
+    <div className="relative mx-auto w-full max-w-5xl">
+      {/* A <label> makes the click-to-focus native — no div-with-onClick. */}
+      <label
+        className="typing-surface relative block cursor-text overflow-hidden select-none"
+        style={{ height: viewportHeight }}
+        data-testid="typing-area"
       >
-        {/* New precise caret */}
-        {isActive && (
-          <div
-            className="absolute rounded-full z-10 transition-all duration-75 ease-out shadow-[0_0_8px_var(--primary)] bg-primary"
-            style={{
-              top: `${caretPos.top}px`,
-              left: `${caretPos.left}px`,
-              width: "3px",
-              height: "1.4em", // Match character height roughly
-              animation: "blink 1s step-end infinite",
-              marginTop: "0.1em", // tiny tweak to align vertically with text
-            }}
-            data-testid="typing-caret"
-          />
+        <span className="sr-only">{t.typing.inputLabel ?? "Typing input"}</span>
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-[0.8em] bg-gradient-to-b from-background to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[0.8em] bg-gradient-to-t from-background to-transparent" />
+
+        <input
+          ref={inputRef}
+          type="text"
+          className="absolute inset-0 z-20 cursor-text opacity-0"
+          value={userInput}
+          onChange={(e) => {
+            markTyping();
+            onInputChange(e.target.value);
+          }}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          autoFocus={!isTouch}
+          inputMode="text"
+          enterKeyHint="next"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          data-gramm="false"
+          data-lpignore="true"
+          aria-label={t.typing.inputLabel ?? "Typing input"}
+          data-testid="input-typing"
+        />
+
+        {/* The visual word list duplicates the input; hide it from AT and expose
+            only the current word through a polite live region below. */}
+        <div
+          ref={wordsRef}
+          aria-hidden="true"
+          className="relative flex flex-wrap gap-x-4 gap-y-[0.6em] px-2"
+          style={{
+            transform: `translateY(${offsetY}px)`,
+            transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
+          }}
+        >
+          {isActive && (
+            <span
+              className="typing-caret"
+              data-typing={typing || undefined}
+              style={{ top: caret.top, left: caret.left }}
+              data-testid="typing-caret"
+            />
+          )}
+
+          <PastWords words={words} from={0} to={currentIndex} history={history} />
+
+          <span
+            ref={activeWordRef}
+            className="whitespace-nowrap"
+            data-word="active"
+            data-testid={`word-${currentIndex}`}
+          >
+            {renderChars(currentWord, userInput, false)}
+          </span>
+
+          <FutureWords words={words} from={currentIndex + 1} to={renderLimit} />
+        </div>
+
+        {showRecovery && (
+          <button
+            type="button"
+            onClick={focusInput}
+            className="absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-background/50 text-sm font-medium text-foreground backdrop-blur-sm"
+          >
+            {t.typing.clickToContinue ?? "Click to continue"}
+          </button>
         )}
 
-        {renderedWords}
-      </div>
+        {isTouch && !isActive && (
+          <button
+            type="button"
+            onClick={focusInput}
+            className="absolute inset-0 z-30 flex items-center justify-center text-sm font-medium text-muted-foreground"
+          >
+            {t.typing.tapToType ?? "Tap to start typing"}
+          </button>
+        )}
+      </label>
+
+      <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {currentWord}
+      </p>
     </div>
   );
 }

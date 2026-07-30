@@ -13,7 +13,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Zap, Globe, Users, Trophy, Star, Clock } from "lucide-react";
+import { Zap, Globe, Users, Trophy, ChevronDown, CheckCircle2 } from "lucide-react";
 
 // Components & UI
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import SEO from "@/components/SEO";
 // Hooks & Libs
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 // ============ TYPES ============
@@ -67,122 +68,131 @@ export default function LandingPage() {
         description={t.landing.readySubtitle}
       />
 
-      {/* Hero Section - Edge-to-Edge Full Spread Style (Mobile Responsive Setup) */}
-      <section className="relative min-h-[95vh] flex flex-col items-center justify-center overflow-hidden bg-background">
-        
-        {/* CSS-only background — no images needed (saves 1.2MB!) */}
-        <div className="absolute inset-0 w-full h-full z-0 pointer-events-none" aria-hidden="true">
-          {/* Gradient base */}
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-background to-orange-100/30 dark:from-orange-950/30 dark:via-background dark:to-orange-900/10" />
-          {/* Keyboard key grid pattern */}
-          <div className="absolute inset-0 opacity-[0.07] dark:opacity-[0.12]" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='8' y='8' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3Crect x='44' y='8' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3Crect x='8' y='44' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3Crect x='44' y='44' width='28' height='28' rx='5' ry='5' fill='none' stroke='%23f97316' stroke-width='2'/%3E%3C/svg%3E")`,
-            backgroundSize: '80px 80px'
-          }} />
-          {/* Central glow */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl" />
+      {/* Hero — one viewport minus the header (svh for mobile URL bars). */}
+      <section className="relative flex min-h-[calc(100svh-3.5rem)] flex-col items-center justify-center overflow-hidden bg-background px-4 sm:min-h-[calc(100svh-4rem)]">
+        {/* Background: a soft brand glow up top and a keycap grid that fades out
+            toward the edges via a radial mask — no more uniform, busy grid. */}
+        <div className="pointer-events-none absolute inset-0 z-0" aria-hidden="true">
+          <div
+            className="absolute inset-0 opacity-[0.5] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_35%,black,transparent)]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='72' height='72' viewBox='0 0 72 72' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='6' y='6' width='26' height='26' rx='6' fill='none' stroke='%23f97316' stroke-opacity='0.18' stroke-width='1.5'/%3E%3Crect x='40' y='6' width='26' height='26' rx='6' fill='none' stroke='%23f97316' stroke-opacity='0.18' stroke-width='1.5'/%3E%3Crect x='6' y='40' width='26' height='26' rx='6' fill='none' stroke='%23f97316' stroke-opacity='0.18' stroke-width='1.5'/%3E%3Crect x='40' y='40' width='26' height='26' rx='6' fill='none' stroke='%23f97316' stroke-opacity='0.18' stroke-width='1.5'/%3E%3C/svg%3E")`,
+              backgroundSize: "72px 72px",
+            }}
+          />
+          <div className="absolute left-1/2 top-[22%] h-[420px] w-[min(90vw,720px)] -translate-x-1/2 rounded-full bg-brand/20 blur-[120px]" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
         </div>
 
-        {/* 2. Content Container - Split into Top (Title) and Bottom (Subtitle & Buttons) */}
-        <div className="container relative z-10 px-4 w-full min-h-[95vh] flex flex-col items-center justify-between pt-16 pb-8 md:pt-32 md:pb-20">
-          
-          {/* Yuqori qism: Asosiy Sarlavha (Klavishlar tepasida) */}
-          <div className="text-center w-full max-w-5xl mx-auto px-4 mt-2 md:mt-4">
-            <motion.h2
-              className="text-4xl md:text-5xl lg:text-7xl font-sans font-black uppercase text-foreground tracking-tight drop-shadow-xl"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-            >
-              {t.landing.heroTitle}
-            </motion.h2>
+        {/* CSS animate-in, not a JS opacity tween: if the animation never runs
+            (reduced motion, a throttled tab) the content stays visible rather
+            than stuck at opacity 0. */}
+        <div className="relative z-10 flex w-full max-w-3xl flex-col items-center text-center motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4 motion-safe:duration-700">
+          <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
+            <Trophy className="h-3.5 w-3.5" aria-hidden="true" />
+            {t.landing.aboutUsTitle}
+          </span>
+
+          <h1 className="font-heading text-display font-extrabold leading-[1.02] tracking-tight text-foreground">
+            {t.landing.heroTitle}
+          </h1>
+
+          <p className="mt-6 max-w-xl text-base text-muted-foreground sm:text-lg">
+            {t.landing.heroSubtitle}
+          </p>
+
+          <div className="mt-9 flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+            <Button asChild size="lg" className="w-full px-8 font-bold sm:w-auto">
+              <Link href="/typing-test">{t.landing.startTyping}</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="w-full px-8 font-bold sm:w-auto">
+              <Link href="/leaderboard">{t.landing.viewLeaderboard}</Link>
+            </Button>
           </div>
 
-          {/* O'rta bo'shliq (Klavishlarning aniq ko'rinishi uchun) */}
-          <div className="flex-1 min-h-[20vh] md:min-h-0" />
-
-          {/* Pastki qism: Subtitle va Tugmalar (Klavishlar tagida) */}
-          <div className="text-center w-full max-w-4xl mx-auto flex flex-col items-center bg-background/80 backdrop-blur-lg p-6 md:p-10 rounded-3xl shadow-xl border border-border">
-            <motion.div
-              className="text-base sm:text-lg md:text-2xl text-foreground font-medium mb-6 md:mb-8 bg-card px-6 py-3 md:px-8 md:py-4 rounded-full shadow-sm border border-border"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              {t.landing.heroSubtitle}
-            </motion.div>
-
-            <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center w-full sm:w-auto px-2 md:px-4 relative z-10">
-              <Link href="/typing-test" className="w-full sm:w-auto">
-                <Button size="lg" className="btn-3d w-full px-8 py-6 font-bold uppercase text-base md:text-lg shadow-lg">
-                  {t.landing.startTyping}
-                </Button>
-              </Link>
-              <Link href="/leaderboard" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="btn-3d w-full px-8 py-6 font-bold uppercase text-base md:text-lg bg-background/90 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground shadow-lg">
-                  {t.landing.viewLeaderboard}
-                </Button>
-              </Link>
-            </div>
+          {/* Feature chips — quiet social proof under the fold-line. */}
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-2">
+              <Zap className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              {t.landing.featureSpeed}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Globe className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              {t.landing.featureMultilingual}
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              {t.landing.featureBattles}
+            </span>
           </div>
+        </div>
 
+        {/* Scroll cue */}
+        <div className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-muted-foreground/40">
+          <ChevronDown className="h-5 w-5 animate-bounce" aria-hidden="true" />
         </div>
       </section>
 
-      {/* About Section - Competitive Branding */}
-      <section className="py-32 relative overflow-hidden bg-background">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
-        
-        <div className="container px-4">
-          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-20 p-8 md:p-16 rounded-[2.5rem] bg-card border border-border shadow-2xl relative">
-            
-            {/* Background Accent */}
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 blur-3xl rounded-full"></div>
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-blue-500/10 blur-3xl rounded-full"></div>
-
-            <div className="flex-1 text-center md:text-left z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-black uppercase tracking-widest mb-6 border border-primary/20">
-                <Users className="w-3.5 h-3.5" /> {t.landing.aboutUsTitle}
-              </div>
-              <h2 className="text-4xl md:text-5xl font-black mb-8 leading-tight">
+      {/* About Section */}
+      <section className="border-t border-border bg-background py-20 md:py-28">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto grid max-w-5xl items-center gap-8 rounded-2xl border border-border bg-card p-6 shadow-sm md:grid-cols-2 md:gap-12 md:p-10">
+            {/* Left: story */}
+            <div>
+              <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-2xs font-bold uppercase tracking-widest text-primary">
+                <Users className="h-3.5 w-3.5" aria-hidden="true" /> {t.landing.aboutUsTitle}
+              </span>
+              <h2 className="mb-5 font-heading text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
                 {t.nav.platformTitle}
               </h2>
-              <p className="text-foreground md:text-xl font-medium leading-relaxed mb-6 italic border-l-4 border-primary pl-6">
-                "{t.landing.aboutUsP1}"
-              </p>
-              <p className="text-muted-foreground md:text-lg leading-relaxed">
-                {t.landing.aboutUsP2}
-              </p>
-              
-              <div className="mt-10 flex items-center justify-center md:justify-start gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary border border-border">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-sm font-bold uppercase tracking-tight">{t.landing.aboutUsSystem}</span>
-                </div>
+              <blockquote className="mb-5 rounded-xl border-l-2 border-primary bg-muted/50 py-3 pl-4 pr-3 text-base italic leading-relaxed text-foreground/90">
+                {t.landing.aboutUsP1}
+              </blockquote>
+              <p className="leading-relaxed text-muted-foreground">{t.landing.aboutUsP2}</p>
+              <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1.5">
+                <span className="h-2 w-2 rounded-full bg-success" />
+                <span className="text-2xs font-bold uppercase tracking-widest">
+                  {t.landing.aboutUsSystem}
+                </span>
               </div>
             </div>
 
-            <div className="w-full md:w-[30%] flex justify-center z-10">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-primary/20 blur-3xl group-hover:bg-primary/30 transition-all rounded-full scale-110"></div>
-                <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-primary to-orange-400 flex items-center justify-center shadow-2xl border-4 border-background overflow-hidden">
-                   <Trophy className="w-16 h-16 md:w-24 md:h-24 text-white drop-shadow-lg" />
-                </div>
+            {/* Right: a branded panel with the trophy + highlight rows */}
+            <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/[0.07] to-transparent p-6 md:p-8">
+              <div className="mb-6 flex justify-center">
+                <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/12 text-primary md:h-24 md:w-24">
+                  <Trophy className="h-10 w-10 md:h-12 md:w-12" aria-hidden="true" />
+                </span>
               </div>
+              <ul className="space-y-3">
+                {[t.landing.featureSpeed, t.landing.featureMultilingual, t.landing.featureBattles, t.landing.featureRankings].map(
+                  (label) => (
+                    <li key={label} className="flex items-center gap-3 text-sm font-medium">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                      {label}
+                    </li>
+                  ),
+                )}
+              </ul>
             </div>
           </div>
         </div>
-
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
       </section>
 
       {/* Features Grid */}
-      <section className="py-24 bg-secondary/50">
-        <div className="container px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <FeatureCard icon={<Zap />} title={t.landing.featureSpeed} description={t.landing.featureSpeedDesc} />
-          <FeatureCard icon={<Globe />} title={t.landing.featureMultilingual} description={t.landing.featureMultilingualDesc} />
-          <FeatureCard icon={<Users />} title={t.landing.featureBattles} description={t.landing.featureBattlesDesc} />
-          <FeatureCard icon={<Trophy />} title={t.landing.featureRankings} description={t.landing.featureRankingsDesc} />
+      <section className="border-y border-border bg-secondary/30 py-20 md:py-28">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <h2 className="font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
+              {t.landing.featuresTitle}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <FeatureCard icon={<Zap />} title={t.landing.featureSpeed} description={t.landing.featureSpeedDesc} />
+            <FeatureCard icon={<Globe />} title={t.landing.featureMultilingual} description={t.landing.featureMultilingualDesc} />
+            <FeatureCard icon={<Users />} title={t.landing.featureBattles} description={t.landing.featureBattlesDesc} />
+            <FeatureCard icon={<Trophy />} title={t.landing.featureRankings} description={t.landing.featureRankingsDesc} />
+          </div>
         </div>
       </section>
 
@@ -199,7 +209,7 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary font-bold tracking-wide uppercase text-sm border border-primary/20 mb-4"
               >
-                <Trophy className="w-5 h-5" /> Faol Turnirlar
+                <Trophy className="w-5 h-5" /> {t.landing.compActiveTournaments}
               </motion.div>
               <h2 className="text-4xl md:text-5xl font-black mb-4">{t.landing.upcomingComps}</h2>
               <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
@@ -211,42 +221,34 @@ export default function LandingPage() {
               {competitions.map((comp, idx) => (
                 <motion.div
                   key={comp.id}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="group relative p-1 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 shadow-2xl hover:shadow-primary/20 transition-all duration-300"
+                  transition={{ delay: idx * 0.08 }}
+                  className="group flex flex-col rounded-xl border border-card-border bg-card p-6 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl -z-10"></div>
-                  <div className="h-full bg-card/90 backdrop-blur-xl p-8 rounded-[14px] border border-white/10 flex flex-col items-start relative overflow-hidden">
-                    
-                    {/* Background Graphic */}
-                    <div className="absolute -right-10 -top-10 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
-                      <Zap className="w-48 h-48" />
-                    </div>
+                  <div className="mb-5 flex items-start justify-between">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-foreground">
+                      <Trophy className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-2xs font-bold uppercase tracking-widest text-success">
+                      {t.landing.compOpen}
+                    </span>
+                  </div>
 
-                    <div className="w-full flex justify-between items-start mb-6 z-10">
-                      <div className="p-3 bg-gradient-to-br from-orange-500/20 to-red-500/20 text-orange-500 rounded-xl">
-                        <Trophy className="w-8 h-8" />
-                      </div>
-                      <span className="px-3 py-1 text-xs font-bold bg-green-500/20 text-green-400 rounded-full border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
-                        Qabul Ochiq
+                  <h3 className="mb-4 font-heading text-xl font-bold">{comp.title}</h3>
+
+                  {comp.reward && (
+                    <div className="mb-5 flex items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3">
+                      <span className="text-2xs font-bold uppercase tracking-widest text-muted-foreground">
+                        {t.landing.compReward}
                       </span>
+                      <span className="font-mono text-lg font-extrabold text-primary">{comp.reward}</span>
                     </div>
+                  )}
 
-                    <h3 className="text-2xl font-bold mb-3 z-10 group-hover:text-primary transition-colors">{comp.title}</h3>
-                    
-                    {comp.reward && (
-                      <div className="w-full p-4 mb-6 rounded-xl bg-orange-500/10 border border-orange-500/20 text-center z-10 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full animate-[shimmer_2s_infinite]"></div>
-                        <p className="text-xs text-orange-300 uppercase tracking-widest font-black mb-1">Mukofot</p>
-                        <p className="text-lg text-orange-400 font-extrabold">{comp.reward}</p>
-                      </div>
-                    )}
-                    
-                    <div className="mt-auto w-full z-10">
-                      <CompetitionWaitlistModal competition={comp} user={user} queryClient={queryClient} />
-                    </div>
+                  <div className="mt-auto">
+                    <CompetitionWaitlistModal competition={comp} user={user} queryClient={queryClient} />
                   </div>
                 </motion.div>
               ))}
@@ -255,34 +257,7 @@ export default function LandingPage() {
         </section>
       )}
 
-      {/* Footer */}
-      <footer className="py-12 border-t mt-auto bg-muted/30">
-        <div className="container px-4 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex flex-col gap-2">
-            <span className="font-bold text-3xl tracking-tighter">YOZGO</span>
-            <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} YOZGO. {t.footer.rights}</p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
-            <div className="flex flex-col gap-2">
-              <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">{t.footer.community}</span>
-              <a href="https://t.me/yozgo_uz" target="_blank" rel="noreferrer" className="text-primary font-bold hover:underline">@yozgo_uz</a>
-            </div>
-            <div className="flex flex-col gap-2">
-              <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">{t.footer.support}</span>
-              <a href="https://t.me/yozgo_support_bot" target="_blank" rel="noreferrer" className="text-primary font-bold hover:underline">@yozgo_support_bot</a>
-            </div>
-            <div className="flex flex-col gap-2">
-              <span className="text-xs uppercase tracking-widest font-bold text-muted-foreground/60">{t.footer.platform}</span>
-              <div className="flex flex-col gap-1">
-                <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">{t.footer.rankings}</Link>
-                <a href="https://javohir1907.com" target="_blank" rel="noreferrer" className="text-primary font-bold hover:underline">
-                  {t.footer.founder}: javohir1907
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Footer is now app-wide (AppFooter, mounted in App.tsx). */}
     </div>
   );
 }
@@ -294,12 +269,12 @@ export default function LandingPage() {
  */
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
-    <div className="p-6 bg-card rounded-2xl hover:shadow-lg transition-all group">
-      <div className="mb-6 inline-block p-4 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+    <div className="group rounded-xl border border-card-border bg-card p-6 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
+      <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground [&_svg]:h-6 [&_svg]:w-6">
         {icon}
       </div>
-      <h3 className="text-xl font-black uppercase mb-2">{title}</h3>
-      <p className="text-muted-foreground text-sm">{description}</p>
+      <h3 className="mb-2 font-heading text-lg font-bold">{title}</h3>
+      <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
     </div>
   );
 }
@@ -307,37 +282,38 @@ function FeatureCard({ icon, title, description }: FeatureCardProps) {
 /**
  * Musobaqaga qo'shilish modal oynasi.
  */
-function CompetitionWaitlistModal({ competition, user, queryClient }: { competition: any, user: any, queryClient: any }) {
+function CompetitionWaitlistModal({ competition, queryClient }: { competition: any, user: any, queryClient: any }) {
   const [open, setOpen] = useState(false);
-
-  const { data: participants } = useQuery<any[]>({
-    queryKey: [`/api/competitions/${competition.id}/participants`],
-    enabled: open
-  });
+  const { t } = useI18n();
+  const { toast } = useToast();
 
   const registerMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", `/api/competitions/${competition.id}/register`);
+      const r = await apiRequest("POST", `/api/competitions/${competition.id}/register`);
+      if (!r.ok) throw new Error((await r.json()).message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
       queryClient.invalidateQueries({ queryKey: [`/api/competitions/${competition.id}/participants`] });
-      alert("Muvaffaqiyatli ro'yxatdan o'tdingiz!");
-    }
+      // Was a native alert() — bypassed the app's toast system entirely.
+      toast({ variant: "success", title: t.landing.compRegistered });
+      setOpen(false);
+    },
+    onError: (e: Error) => toast({ variant: "destructive", title: e.message }),
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="w-full font-bold">Batafsil</Button>
+        <Button className="w-full font-bold">{t.landing.compDetails}</Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{competition.title}</DialogTitle>
-          <DialogDescription>Musobaqaga tayyorlaning!</DialogDescription>
+          <DialogDescription>{t.landing.compGetReady}</DialogDescription>
         </DialogHeader>
-        <Button onClick={() => registerMutation.mutate()} disabled={registerMutation.isPending}>
-          {registerMutation.isPending ? "Yuklanmoqda..." : "Qatnashish"}
+        <Button loading={registerMutation.isPending} onClick={() => registerMutation.mutate()}>
+          {t.landing.compJoin}
         </Button>
       </DialogContent>
     </Dialog>

@@ -1,0 +1,138 @@
+/*
+ * Self-hosted variable fonts.
+ *
+ * The woff2 files are vendored into client/public/fonts/ from the
+ * @fontsource-variable/* devDependencies (refresh with scripts/sync-fonts.sh)
+ * rather than imported from node_modules, for two reasons:
+ *   1. Fontsource's own CSS pulls 6-7 subsets per family; we ship 3, so a
+ *      Latin-script reader never downloads the Cyrillic file and vice versa.
+ *   2. Vite content-hashes anything it processes into dist/assets/, which makes
+ *      a stable <link rel="preload" href="/fonts/..."> in index.html impossible.
+ *      Files under client/public/ are copied verbatim.
+ *
+ * One variable file per family covers weights 100-900, replacing what would
+ * otherwise be five static weights each.
+ *
+ * CSP: server/index.ts and client/public/_headers both already allow
+ * font-src 'self', so no policy change is needed.
+ */
+
+/* InterVariable — cyrillic */
+@font-face {
+  font-family: "InterVariable";
+  src: url("/fonts/inter-cyrillic-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/* InterVariable — latin-ext */
+@font-face {
+  font-family: "InterVariable";
+  src: url("/fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* InterVariable — latin */
+@font-face {
+  font-family: "InterVariable";
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+/* ManropeVariable — cyrillic */
+@font-face {
+  font-family: "ManropeVariable";
+  src: url("/fonts/manrope-cyrillic-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/* ManropeVariable — latin-ext */
+@font-face {
+  font-family: "ManropeVariable";
+  src: url("/fonts/manrope-latin-ext-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* ManropeVariable — latin */
+@font-face {
+  font-family: "ManropeVariable";
+  src: url("/fonts/manrope-latin-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+/* JetBrainsMonoVariable — cyrillic */
+@font-face {
+  font-family: "JetBrainsMonoVariable";
+  src: url("/fonts/jetbrains-mono-cyrillic-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/* JetBrainsMonoVariable — latin-ext */
+@font-face {
+  font-family: "JetBrainsMonoVariable";
+  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* JetBrainsMonoVariable — latin */
+@font-face {
+  font-family: "JetBrainsMonoVariable";
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+/* RobotoMonoVariable — cyrillic */
+@font-face {
+  font-family: "RobotoMonoVariable";
+  src: url("/fonts/roboto-mono-cyrillic-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/* RobotoMonoVariable — latin-ext */
+@font-face {
+  font-family: "RobotoMonoVariable";
+  src: url("/fonts/roboto-mono-latin-ext-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+/* RobotoMonoVariable — latin */
+@font-face {
+  font-family: "RobotoMonoVariable";
+  src: url("/fonts/roboto-mono-latin-wght-normal.woff2") format("woff2-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}

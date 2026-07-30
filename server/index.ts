@@ -160,6 +160,10 @@ app.use(
         scriptSrc: [
           "'self'",
           "'sha256-rocP6WQ/X2Mh36w13yTIMoY1xtx72YZ2f//23z44QvI='",
+          // Anti-FOUC theme script in index.html <head>. Hash is static — if
+          // that inline script changes, recompute (sha256, base64) or dark mode
+          // silently breaks in production only (dev disables CSP entirely).
+          "'sha256-MXb613QzJ1YqAP2Oy3Mwz32Fr7TMBqYLW9SmwptcVVU='",
           "https://yozgo.uz", "https://www.yozgo.uz",
           "https://www.googletagmanager.com", "https://www.google-analytics.com",
         ],
