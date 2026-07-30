@@ -113,15 +113,15 @@ export default function LandingPage() {
           {/* Feature chips — quiet social proof under the fold-line. */}
           <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-2">
-              <Zap className="h-4 w-4 text-primary" aria-hidden="true" />
+              <Zap className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               {t.landing.featureSpeed}
             </span>
             <span className="inline-flex items-center gap-2">
-              <Globe className="h-4 w-4 text-primary" aria-hidden="true" />
+              <Globe className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               {t.landing.featureMultilingual}
             </span>
             <span className="inline-flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary" aria-hidden="true" />
+              <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               {t.landing.featureBattles}
             </span>
           </div>
@@ -166,9 +166,9 @@ export default function LandingPage() {
 
             <div className="w-full md:w-[30%] flex justify-center z-10">
               <div className="relative group">
-                <div className="absolute inset-0 bg-primary/20 blur-3xl group-hover:bg-primary/30 transition-all rounded-full scale-110"></div>
-                <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-primary to-primary/60 flex items-center justify-center shadow-2xl border-4 border-background overflow-hidden">
-                   <Trophy className="w-16 h-16 md:w-24 md:h-24 text-primary-foreground drop-shadow-lg" />
+                <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full scale-110"></div>
+                <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-secondary flex items-center justify-center shadow-xl border border-border overflow-hidden">
+                   <Trophy className="w-16 h-16 md:w-24 md:h-24 text-primary drop-shadow-sm" />
                 </div>
               </div>
             </div>
@@ -277,7 +277,7 @@ export default function LandingPage() {
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
     <div className="group rounded-xl border border-card-border bg-card p-6 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
-      <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground [&_svg]:h-6 [&_svg]:w-6">
+      <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground [&_svg]:h-6 [&_svg]:w-6">
         {icon}
       </div>
       <h3 className="mb-2 font-heading text-lg font-bold">{title}</h3>

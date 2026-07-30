@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils";
 type Tone = "default" | "brand" | "success" | "warning" | "danger" | "info";
 type Size = "sm" | "md" | "lg";
 
-// Tone tints ONLY the icon tile — never the value. The value is always
-// foreground so the numbers stay in the orange/black/white brand instead of
-// turning into a rainbow of blues and greens.
+// Tone tints ONLY the icon tile — never the value. Default is a NEUTRAL tile;
+// orange is reserved for `brand` (used sparingly), so a grid of stat cards
+// isn't a wall of orange. The value is always foreground.
 const TILE: Record<Tone, string> = {
-  default: "bg-primary/12 text-primary",
+  default: "bg-muted text-muted-foreground",
   brand: "bg-primary/12 text-primary",
   success: "bg-success/12 text-success",
   warning: "bg-warning/12 text-warning",

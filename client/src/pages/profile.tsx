@@ -279,8 +279,7 @@ export default function Profile() {
             {typeof user.coins === "number" && (
               <span
                 className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-primary/10 text-primary border-primary/20 flex items-center gap-1"
-                data-testid="badge-coins"
-              >
+                >
                 🪙 {user.coins}
               </span>
             )}
@@ -329,7 +328,7 @@ export default function Profile() {
           <Card key={lang} className="overflow-hidden bg-card/50">
             <CardHeader className="bg-secondary/20 py-3">
               <CardTitle className="text-sm font-bold uppercase tracking-widest text-center flex items-center justify-center gap-2">
-                <Trophy className="w-4 h-4 text-primary" />
+                <Trophy className="w-4 h-4 text-muted-foreground" />
                 {lang === 'uz' ? t.leaderboard.uzbekRanking : lang === 'ru' ? t.leaderboard.russianRanking : lang === 'en' ? t.leaderboard.englishRanking : t.leaderboard.karakalpakRanking}
               </CardTitle>
             </CardHeader>
@@ -338,7 +337,7 @@ export default function Profile() {
                 {[15, 30, 60].map((mode) => (
                   <div key={mode} className="p-4 text-center">
                     <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">{mode} {t.typing.time.toLowerCase()}</div>
-                    <div className="text-2xl font-mono font-bold text-primary">
+                    <div className="text-2xl font-mono font-bold text-foreground">
                       {data.detailedStats?.[lang as 'uz'|'ru'|'en'|'kaa']?.[mode.toString()] || 0}
                     </div>
                   </div>
@@ -395,7 +394,7 @@ export default function Profile() {
       <Card className="bg-card border border-border shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-primary" />
+            <BarChart3 className="w-5 h-5 text-muted-foreground" />
             {t.profile.performanceHistory}
           </CardTitle>
         </CardHeader>
@@ -417,7 +416,7 @@ export default function Profile() {
         <Card className="bg-card border border-border shadow-md">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <UserIcon className="w-5 h-5 text-primary" />
+              <UserIcon className="w-5 h-5 text-muted-foreground" />
               {t.profile.profileSettings}
             </CardTitle>
             <CardDescription>{t.profile.manageProfile}</CardDescription>
@@ -508,7 +507,7 @@ export default function Profile() {
       <Card className="bg-card border border-border shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <History className="w-5 h-5 text-primary" />
+            <History className="w-5 h-5 text-muted-foreground" />
             {t.profile.recentTests}
           </CardTitle>
         </CardHeader>
@@ -527,7 +526,7 @@ export default function Profile() {
             <TableBody>
               {recentResults.map((result) => (
                 <TableRow key={result.id} data-testid={`row-test-${result.id}`}>
-                  <TableCell className="font-mono font-bold text-primary">{result.wpm}</TableCell>
+                  <TableCell className="font-mono font-bold text-foreground">{result.wpm}</TableCell>
                   <TableCell className="font-mono">{result.accuracy}%</TableCell>
                   <TableCell className="uppercase">{result.language}</TableCell>
                   <TableCell>{result.mode}s</TableCell>

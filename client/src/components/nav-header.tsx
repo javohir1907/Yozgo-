@@ -90,7 +90,7 @@ export function NavHeader() {
                 {navItems.map((item) => (
                   <DropdownMenuItem key={item.href} asChild className="cursor-pointer py-3">
                     <Link href={item.href} className="flex items-center w-full gap-3">
-                      <item.icon className="w-5 h-5 text-primary" />
+                      <item.icon className="w-5 h-5 text-muted-foreground" />
                       <span>{item.label}</span>
                     </Link>
                   </DropdownMenuItem>
