@@ -47,10 +47,10 @@
    */
   :root,
   .light {
-    --background: 30 20% 98%;
+    --background: 30 16% 96%;
     --foreground: 240 8% 10%;
 
-    --surface-1: 0 0% 100%;
+    --surface-1: 0 0% 99%;
     --surface-2: 30 14% 96%;
     --surface-3: 30 12% 92%;
 
@@ -62,7 +62,7 @@
     --popover-foreground: 240 8% 10%;
     --popover-border: 30 10% 89%;
 
-    --primary: 21 90% 40%;
+    --primary: 22 80% 42%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 30 12% 93%;
@@ -85,7 +85,7 @@
 
     --border: 30 10% 89%;
     --input: 30 10% 82%;
-    --ring: 21 90% 40%;
+    --ring: 22 80% 42%;
 
     --correct: 240 8% 10%;
     --error: 0 72% 45%;
@@ -127,7 +127,7 @@
     /* Orange lightens to 61% here: a mid-lightness orange on near-black loses
      * perceived saturation. Paired with --brand-ink this is 7.6:1, against the
      * 2.9:1 that white-on-#F97316 scored. */
-    --primary: 27 96% 61%;
+    --primary: 24 85% 58%;
     --primary-foreground: 24 60% 8%;
 
     --secondary: 240 6% 13%;
@@ -153,14 +153,14 @@
 
     --border: 240 5% 16%;
     --input: 240 5% 20%;
-    --ring: 27 96% 61%;
+    --ring: 24 85% 58%;
 
     /* Typing surface. Correct text is plain foreground — the WRONG characters
      * are what should stand out, not the right ones. */
     --correct: 0 0% 98%;
     --error: 0 78% 62%;
     --pending: 240 5% 44%;
-    --caret: 27 96% 61%;
+    --caret: 24 85% 58%;
 
     /* A real categorical ramp; these used to be five aliases of primary. */
     --chart-1: 27 96% 61%;
