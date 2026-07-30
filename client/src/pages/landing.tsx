@@ -134,9 +134,7 @@ export default function LandingPage() {
       </section>
 
       {/* About Section - Competitive Branding */}
-      <section className="py-32 relative overflow-hidden bg-background">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
-        
+      <section className="py-20 md:py-28 relative overflow-hidden bg-background">
         <div className="container px-4">
           <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-20 p-8 md:p-16 rounded-[2.5rem] bg-card border border-border shadow-2xl relative">
             
@@ -169,8 +167,8 @@ export default function LandingPage() {
             <div className="w-full md:w-[30%] flex justify-center z-10">
               <div className="relative group">
                 <div className="absolute inset-0 bg-primary/20 blur-3xl group-hover:bg-primary/30 transition-all rounded-full scale-110"></div>
-                <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-primary to-primary flex items-center justify-center shadow-2xl border-4 border-background overflow-hidden">
-                   <Trophy className="w-16 h-16 md:w-24 md:h-24 text-white drop-shadow-lg" />
+                <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-gradient-to-tr from-primary to-primary/60 flex items-center justify-center shadow-2xl border-4 border-background overflow-hidden">
+                   <Trophy className="w-16 h-16 md:w-24 md:h-24 text-primary-foreground drop-shadow-lg" />
                 </div>
               </div>
             </div>
@@ -181,12 +179,19 @@ export default function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section className="py-24 bg-secondary/50">
-        <div className="container px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <FeatureCard icon={<Zap />} title={t.landing.featureSpeed} description={t.landing.featureSpeedDesc} />
-          <FeatureCard icon={<Globe />} title={t.landing.featureMultilingual} description={t.landing.featureMultilingualDesc} />
-          <FeatureCard icon={<Users />} title={t.landing.featureBattles} description={t.landing.featureBattlesDesc} />
-          <FeatureCard icon={<Trophy />} title={t.landing.featureRankings} description={t.landing.featureRankingsDesc} />
+      <section className="border-y border-border bg-secondary/30 py-20 md:py-28">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <h2 className="font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
+              {t.landing.featuresTitle}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <FeatureCard icon={<Zap />} title={t.landing.featureSpeed} description={t.landing.featureSpeedDesc} />
+            <FeatureCard icon={<Globe />} title={t.landing.featureMultilingual} description={t.landing.featureMultilingualDesc} />
+            <FeatureCard icon={<Users />} title={t.landing.featureBattles} description={t.landing.featureBattlesDesc} />
+            <FeatureCard icon={<Trophy />} title={t.landing.featureRankings} description={t.landing.featureRankingsDesc} />
+          </div>
         </div>
       </section>
 
@@ -271,12 +276,12 @@ export default function LandingPage() {
  */
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
-    <div className="p-6 bg-card rounded-2xl hover:shadow-lg transition-all group">
-      <div className="mb-6 inline-block p-4 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+    <div className="group rounded-xl border border-card-border bg-card p-6 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
+      <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground [&_svg]:h-6 [&_svg]:w-6">
         {icon}
       </div>
-      <h3 className="text-xl font-black uppercase mb-2">{title}</h3>
-      <p className="text-muted-foreground text-sm">{description}</p>
+      <h3 className="mb-2 font-heading text-lg font-bold">{title}</h3>
+      <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
     </div>
   );
 }

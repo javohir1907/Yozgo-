@@ -49,6 +49,7 @@ const translations = {
       readySubtitle:
         "YOZGO is where the world's fastest typers compete for glory. Join the elite.",
       getStarted: "Enter the Arena",
+      featuresTitle: "Why YOZGO?",
       featureSpeed: "Real Competitions",
       featureSpeedDesc:
         "Organized typing competitions where speed and accuracy determine the champion.",
@@ -426,6 +427,7 @@ const translations = {
       readySubtitle:
         "YOZGO — это место, где лучшие печатники мира борются за славу. Стань элитой.",
       getStarted: "Войти на Арену",
+      featuresTitle: "Почему YOZGO?",
       featureSpeed: "Настоящие соревнования",
       featureSpeedDesc:
         "Организованные соревнования по скоростной печати, где победитель определяется скоростью и точностью.",
@@ -806,6 +808,7 @@ const translations = {
       readySubtitle:
         "YOZGO — dunyoning eng tezkor yozuvchilari shon-sharaf uchun kurashadigan joy. Elitaga qo'shiling.",
       getStarted: "Arenaga Kirish",
+      featuresTitle: "Nega YOZGO?",
       featureSpeed: "Haqiqiy musobaqalar",
       featureSpeedDesc:
         "Tezlik va aniqlik asosida g'olib aniqlanadigan uyushtirilgan yozish musobaqalari.",
@@ -1186,6 +1189,7 @@ const translations = {
       readySubtitle:
         "YOZGO — dúnyanıń eń tezkor jazıwshıları shon-sharaf ushın gúresetuǵın jay. Elitaga qosılıń.",
       getStarted: "Arenaga Kirisiw",
+      featuresTitle: "Nege YOZGO?",
       featureSpeed: "Haqıyqıy jarıslar",
       featureSpeedDesc:
         "Tezlik hám anıqlıq tiykarında g'olib anıqlanatuǵın uyushtirilgan jazıw jarısları.",
