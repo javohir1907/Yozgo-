@@ -263,10 +263,7 @@ export default function Profile() {
                 : t.profile.typingEnthusiast}
             </p>
             {user.gender && (
-              <span className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                user.gender === 'male' ? "bg-info/10 text-info border-info/20" : "bg-primary/10 text-primary border-primary/20"
-              )}>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border border-border bg-secondary text-secondary-foreground">
                 {user.gender === 'male' ? t.profile.boy : t.profile.girl}
               </span>
             )}
@@ -281,7 +278,7 @@ export default function Profile() {
             )}
             {typeof user.coins === "number" && (
               <span
-                className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-warning/10 text-warning border-warning/20 flex items-center gap-1"
+                className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-primary/10 text-primary border-primary/20 flex items-center gap-1"
                 data-testid="badge-coins"
               >
                 🪙 {user.coins}
@@ -314,14 +311,14 @@ export default function Profile() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {(
           [
-            { label: t.profile.totalTests, val: stats.totalTests, icon: Timer, tone: "brand", testId: "status-total-tests" },
-            { label: t.profile.bestWpm, val: stats.bestWpm, icon: Trophy, tone: "warning", testId: "status-best-wpm" },
-            { label: t.profile.avgWpm, val: stats.avgWpm, icon: BarChart3, tone: "info", testId: "status-avg-wpm" },
-            { label: t.profile.avgAccuracy, val: `${stats.avgAccuracy}%`, icon: Target, tone: "success", testId: "status-avg-accuracy" },
+            { label: t.profile.totalTests, val: stats.totalTests, icon: Timer, testId: "status-total-tests" },
+            { label: t.profile.bestWpm, val: stats.bestWpm, icon: Trophy, testId: "status-best-wpm" },
+            { label: t.profile.avgWpm, val: stats.avgWpm, icon: BarChart3, testId: "status-avg-wpm" },
+            { label: t.profile.avgAccuracy, val: `${stats.avgAccuracy}%`, icon: Target, testId: "status-avg-accuracy" },
           ] as const
         ).map((item, idx) => (
           <div key={idx} data-testid={item.testId}>
-            <StatCard label={item.label} value={item.val} icon={item.icon} tone={item.tone} />
+            <StatCard label={item.label} value={item.val} icon={item.icon} size="lg" />
           </div>
         ))}
       </div>
