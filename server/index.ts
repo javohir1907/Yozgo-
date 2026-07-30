@@ -531,7 +531,9 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
 
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
-  } else {
+  } else if (!isTestEnvironment) {
+    // In test we mount the API only — importing ./vite here pulls in
+    // import.meta, which jest's VM-module runtime can't evaluate.
     logger.info("Setting up development environment with Vite...", { source: "startup" });
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);

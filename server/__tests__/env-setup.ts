@@ -32,3 +32,7 @@ if (!process.env.DATABASE_URL) {
 if (!process.env.SESSION_SECRET) {
   process.env.SESSION_SECRET = "test-secret";
 }
+
+// Force test mode so server/index.ts mounts the API only (no Vite import,
+// which jest's VM-module runtime can't evaluate, and no port listen).
+process.env.NODE_ENV = "test";
