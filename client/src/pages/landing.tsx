@@ -221,42 +221,34 @@ export default function LandingPage() {
               {competitions.map((comp, idx) => (
                 <motion.div
                   key={comp.id}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="group relative p-1 rounded-2xl bg-gradient-to-br from-border to-transparent shadow-2xl hover:shadow-primary/20 transition-all duration-300"
+                  transition={{ delay: idx * 0.08 }}
+                  className="group flex flex-col rounded-xl border border-card-border bg-card p-6 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl blur-xl -z-10"></div>
-                  <div className="h-full bg-card/90 backdrop-blur-xl p-8 rounded-[14px] border border-border flex flex-col items-start relative overflow-hidden">
-                    
-                    {/* Background Graphic */}
-                    <div className="absolute -right-10 -top-10 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
-                      <Zap className="w-48 h-48" />
-                    </div>
+                  <div className="mb-5 flex items-start justify-between">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-foreground">
+                      <Trophy className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span className="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-2xs font-bold uppercase tracking-widest text-success">
+                      {t.landing.compOpen}
+                    </span>
+                  </div>
 
-                    <div className="w-full flex justify-between items-start mb-6 z-10">
-                      <div className="p-3 bg-primary/15 text-primary rounded-xl">
-                        <Trophy className="w-8 h-8" />
-                      </div>
-                      <span className="px-3 py-1 text-xs font-bold bg-success/15 text-success rounded-full border border-success/30">
-                        {t.landing.compOpen}
+                  <h3 className="mb-4 font-heading text-xl font-bold">{comp.title}</h3>
+
+                  {comp.reward && (
+                    <div className="mb-5 flex items-center justify-between rounded-lg border border-border bg-muted/40 px-4 py-3">
+                      <span className="text-2xs font-bold uppercase tracking-widest text-muted-foreground">
+                        {t.landing.compReward}
                       </span>
+                      <span className="font-mono text-lg font-extrabold text-primary">{comp.reward}</span>
                     </div>
+                  )}
 
-                    <h3 className="text-2xl font-bold mb-3 z-10 group-hover:text-primary transition-colors">{comp.title}</h3>
-                    
-                    {comp.reward && (
-                      <div className="w-full p-4 mb-6 rounded-xl bg-primary/10 border border-primary/20 text-center z-10 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-foreground/5 to-transparent -translate-x-full animate-shimmer"></div>
-                        <p className="text-xs text-primary/80 uppercase tracking-widest font-black mb-1">{t.landing.compReward}</p>
-                        <p className="text-lg text-primary font-extrabold">{comp.reward}</p>
-                      </div>
-                    )}
-                    
-                    <div className="mt-auto w-full z-10">
-                      <CompetitionWaitlistModal competition={comp} user={user} queryClient={queryClient} />
-                    </div>
+                  <div className="mt-auto">
+                    <CompetitionWaitlistModal competition={comp} user={user} queryClient={queryClient} />
                   </div>
                 </motion.div>
               ))}

@@ -5,6 +5,7 @@ export default {
       preset: "ts-jest",
       testEnvironment: "node",
       roots: ["<rootDir>/server"],
+      setupFiles: ["<rootDir>/server/__tests__/env-setup.ts"],
       testMatch: ["**/__tests__/**/*.test.ts"],
       moduleNameMapper: {
         "^@shared/(.*)$": "<rootDir>/shared/$1",

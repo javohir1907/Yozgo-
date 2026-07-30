@@ -110,7 +110,7 @@ function PlayerListItem({ p, i, room, t }: { p: any; i: number; room: any; t: an
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-center">
-              <Zap className="w-5 h-5 mx-auto mb-2 text-primary" />
+              <Zap className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
               <div className="text-2xl font-black">{p.bestWpm || 0}</div>
               <div className="text-[10px] uppercase font-bold text-muted-foreground">BEST WPM</div>
            </div>
@@ -120,7 +120,7 @@ function PlayerListItem({ p, i, room, t }: { p: any; i: number; room: any; t: an
               <div className="text-[10px] uppercase font-bold text-muted-foreground">ACCURACY</div>
            </div>
            <div className="p-4 rounded-2xl bg-secondary/50 border border-border/50 text-center">
-              <Activity className="w-5 h-5 mx-auto mb-2 text-primary" />
+              <Activity className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
               <div className="text-2xl font-black">{p.bestConsistency || 0}%</div>
               <div className="text-[10px] uppercase font-bold text-muted-foreground">CONSISTENCY</div>
            </div>
@@ -509,7 +509,7 @@ export default function BattlePage() {
       <div className="container max-w-2xl mx-auto py-12 px-4">
         <SEO title={`${t.battle.arena} | YOZGO`} description={t.battle.arenaSubtitle} />
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center mb-12">
-          <h1 className="text-6xl font-black mb-2 tracking-tighter bg-gradient-to-r from-primary to-primary bg-clip-text text-transparent transform -skew-x-6">
+          <h1 className="text-6xl font-black mb-2 tracking-tighter text-primary">
             {t.battle.arena}
           </h1>
           <p className="text-muted-foreground">{t.battle.arenaSubtitle}</p>
@@ -518,7 +518,7 @@ export default function BattlePage() {
         <div className="grid gap-6">
           {/* Create Room */}
           <Card className="border-2 hover:border-primary/40 transition-all bg-card/60 backdrop-blur-md">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Play className="text-primary" /> {t.battle.newBattle}</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Play className="text-muted-foreground" /> {t.battle.newBattle}</CardTitle></CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 
@@ -646,7 +646,7 @@ export default function BattlePage() {
 
           {/* Join Room */}
           <Card className="border-2 hover:border-primary/40 transition-all bg-card/60 backdrop-blur-md">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Users className="text-primary" /> {t.battle.joinBattle}</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Users className="text-muted-foreground" /> {t.battle.joinBattle}</CardTitle></CardHeader>
             <CardContent className="flex gap-2">
               <Input placeholder={t.battle.enterCode} value={inputCode} onChange={e => setInputCode(e.target.value)} className="text-center font-mono uppercase" />
               <Button onClick={handleJoinBattle} disabled={isJoining} className="font-bold">{t.battle.joinBtn}</Button>
@@ -743,7 +743,7 @@ export default function BattlePage() {
               </motion.div>
             ) : !battleStart ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center py-20 bg-card/60 rounded-3xl border-2 border-dashed border-primary/20">
-                <Users className="w-20 h-20 text-primary/20 mb-6" />
+                <Users className="w-20 h-20 text-muted-foreground/30 mb-6" />
                 <h2 className="text-3xl font-black uppercase mb-2">{t.battle.waiting}</h2>
                 <p className="text-muted-foreground mb-8">{t.battle.playersCount} {room?.players.length || 0}</p>
                 {isAdmin && (
