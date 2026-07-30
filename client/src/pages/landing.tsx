@@ -13,7 +13,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Zap, Globe, Users, Trophy, ChevronDown } from "lucide-react";
+import { Zap, Globe, Users, Trophy, ChevronDown, CheckCircle2 } from "lucide-react";
 
 // Components & UI
 import { Button } from "@/components/ui/button";
@@ -133,49 +133,50 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* About Section - Competitive Branding */}
-      <section className="py-20 md:py-28 relative overflow-hidden bg-background">
-        <div className="container px-4">
-          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-20 p-8 md:p-16 rounded-[2.5rem] bg-card border border-border shadow-2xl relative">
-            
-            {/* Background Accent */}
-            <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 blur-3xl rounded-full"></div>
-            <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-info/10 blur-3xl rounded-full"></div>
-
-            <div className="flex-1 text-center md:text-left z-10">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-black uppercase tracking-widest mb-6 border border-primary/20">
-                <Users className="w-3.5 h-3.5" /> {t.landing.aboutUsTitle}
-              </div>
-              <h2 className="text-4xl md:text-5xl font-black mb-8 leading-tight">
+      {/* About Section */}
+      <section className="border-t border-border bg-background py-20 md:py-28">
+        <div className="container mx-auto px-4">
+          <div className="mx-auto grid max-w-5xl items-center gap-8 rounded-2xl border border-border bg-card p-6 shadow-sm md:grid-cols-2 md:gap-12 md:p-10">
+            {/* Left: story */}
+            <div>
+              <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-2xs font-bold uppercase tracking-widest text-primary">
+                <Users className="h-3.5 w-3.5" aria-hidden="true" /> {t.landing.aboutUsTitle}
+              </span>
+              <h2 className="mb-5 font-heading text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">
                 {t.nav.platformTitle}
               </h2>
-              <p className="text-foreground md:text-xl font-medium leading-relaxed mb-6 italic border-l-4 border-primary pl-6">
-                "{t.landing.aboutUsP1}"
-              </p>
-              <p className="text-muted-foreground md:text-lg leading-relaxed">
-                {t.landing.aboutUsP2}
-              </p>
-              
-              <div className="mt-10 flex items-center justify-center md:justify-start gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary border border-border">
-                  <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
-                  <span className="text-sm font-bold uppercase tracking-tight">{t.landing.aboutUsSystem}</span>
-                </div>
+              <blockquote className="mb-5 rounded-xl border-l-2 border-primary bg-muted/50 py-3 pl-4 pr-3 text-base italic leading-relaxed text-foreground/90">
+                {t.landing.aboutUsP1}
+              </blockquote>
+              <p className="leading-relaxed text-muted-foreground">{t.landing.aboutUsP2}</p>
+              <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-3 py-1.5">
+                <span className="h-2 w-2 rounded-full bg-success" />
+                <span className="text-2xs font-bold uppercase tracking-widest">
+                  {t.landing.aboutUsSystem}
+                </span>
               </div>
             </div>
 
-            <div className="w-full md:w-[30%] flex justify-center z-10">
-              <div className="relative group">
-                <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full scale-110"></div>
-                <div className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-secondary flex items-center justify-center shadow-xl border border-border overflow-hidden">
-                   <Trophy className="w-16 h-16 md:w-24 md:h-24 text-primary drop-shadow-sm" />
-                </div>
+            {/* Right: a branded panel with the trophy + highlight rows */}
+            <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/[0.07] to-transparent p-6 md:p-8">
+              <div className="mb-6 flex justify-center">
+                <span className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/12 text-primary md:h-24 md:w-24">
+                  <Trophy className="h-10 w-10 md:h-12 md:w-12" aria-hidden="true" />
+                </span>
               </div>
+              <ul className="space-y-3">
+                {[t.landing.featureSpeed, t.landing.featureMultilingual, t.landing.featureBattles, t.landing.featureRankings].map(
+                  (label) => (
+                    <li key={label} className="flex items-center gap-3 text-sm font-medium">
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                      {label}
+                    </li>
+                  ),
+                )}
+              </ul>
             </div>
           </div>
         </div>
-
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-border to-transparent"></div>
       </section>
 
       {/* Features Grid */}
