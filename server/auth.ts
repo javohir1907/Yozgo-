@@ -23,6 +23,7 @@ import { verificationCodes } from "@shared/schema";
 import { sendEmail } from "./mailer";
 import { sendAdminNotification } from "./utils/notifier";
 import rateLimit from "express-rate-limit";
+import { cosmeticMeta } from "./gamification/cosmetic-defs";
 
 // ============ CONSTANTS ============
 const SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 kun
@@ -525,7 +526,11 @@ export function setupAuth(app: Express): void {
       }
 
       const { password: _pw, ...userSummary } = foundUser;
-      res.json({ ...userSummary, token: req.sessionID });
+      res.json({
+        ...userSummary,
+        themeMeta: cosmeticMeta(foundUser.equippedThemeKey ?? null),
+        token: req.sessionID,
+      });
     } catch (error) {
       res.status(500).json({ message: "Internal error" });
     }

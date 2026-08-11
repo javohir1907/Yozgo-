@@ -2,7 +2,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 import { apiRequest, normalizeUrl } from "@/lib/queryClient";
 
-type SafeUser = Omit<User, "password">;
+type SafeUser = Omit<User, "password"> & {
+  themeMeta?: { accent?: string } | null;
+};
 
 async function fetchUser(): Promise<SafeUser | null> {
   const headers: Record<string, string> = {};

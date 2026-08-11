@@ -415,6 +415,20 @@ export async function inviteFriendToBattle(
   await generateAndSendRoomCode(battle.id, friendTelegramId, friendTelegramId);
 }
 
+/**
+ * Har qanday muayyan foydalanuvchiga bitta erkin matnli xabar (best-effort) —
+ * do'st so'rovi/qabul qilinishi kabi past-hajmli hodisalar uchun. Xato bo'lsa
+ * jim o'tkaziladi — sayt oqimini to'xtatmasin.
+ */
+export async function notifyUser(telegramId: number, text: string) {
+  if (!userBot) return;
+  try {
+    await userBot.sendMessage(telegramId, text);
+  } catch {
+    /* jim o'tkazamiz */
+  }
+}
+
 export async function broadcastFromUserBot(text: string) {
   if (!userBot) return { success: 0, fail: 0, text: "Foydalanuvchi boti ulanmagan" };
   let success = 0,

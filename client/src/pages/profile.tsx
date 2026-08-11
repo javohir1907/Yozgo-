@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trophy, Target, Timer, BarChart3, History, Key, AlertCircle, User as UserIcon, Rocket, Flame, Repeat, CalendarCheck, Swords, Star, Lock, Crown, type LucideIcon } from "lucide-react";
+import { Trophy, Target, Timer, BarChart3, History, Key, AlertCircle, User as UserIcon, Rocket, Flame, Repeat, CalendarCheck, Swords, Star, Lock, Crown, Copy, Check, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
@@ -76,6 +76,12 @@ interface ProfileData {
     mode: string;
     createdAt: string;
   }[];
+  // Kunlik faollik tarixi — "qaysi kuni nechta test" (so'nggi ~60 kun)
+  dailyActivity?: {
+    date: string;
+    count: number;
+    avgWpm: number;
+  }[];
   // Feature 3 — badge katalogi (ochilgan + qulflangan)
   badges?: {
     earned: { key: string; icon: string; earnedAt?: string }[];
@@ -111,6 +117,30 @@ export default function Profile() {
 
   const [newNickname, setNewNickname] = useState(authUser?.firstName || "");
   const [isUpdatingNick, setIsUpdatingNick] = useState(false);
+
+  const [idCopied, setIdCopied] = useState(false);
+  const handleCopyId = async (id: string) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(id);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = id;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (!ok) throw new Error("copy failed");
+      }
+      setIdCopied(true);
+      toast({ title: t.battle.copied, description: t.profile.idCopiedDesc });
+      setTimeout(() => setIdCopied(false), 2000);
+    } catch {
+      toast({ variant: "destructive", title: t.battle.copyFailed });
+    }
+  };
 
   const handleUpdateNickname = async () => {
     if (!newNickname || newNickname.length < 4) {
@@ -207,7 +237,7 @@ export default function Profile() {
     );
   }
 
-  const { user, stats, recentResults } = data;
+  const { user, stats, recentResults, dailyActivity } = data;
 
   const chartData = [...recentResults].reverse().map((r) => ({
     date: format(new Date(r.createdAt), "MMM d"),
@@ -422,6 +452,31 @@ export default function Profile() {
             <CardDescription>{t.profile.manageProfile}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
+            {/* Your ID Section */}
+            <div className="space-y-2 max-w-md pb-8 border-b border-border/50">
+              <Label htmlFor="profile-own-id">{t.profile.yourId}</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="profile-own-id"
+                  value={user.id}
+                  readOnly
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="flex-1 font-mono text-xs sm:text-sm"
+                  data-testid="text-own-id"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleCopyId(user.id)}
+                  className="font-bold shrink-0"
+                  data-testid="button-copy-own-id"
+                >
+                  {idCopied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground italic">{t.profile.yourIdDesc}</p>
+            </div>
+
             {/* Nickname Section */}
             <div className="space-y-4 max-w-md pb-8 border-b border-border/50">
               <div className="space-y-2">
@@ -500,6 +555,48 @@ export default function Profile() {
                 {isChangingPassword ? "..." : t.profile.updatePasswordBtn}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {dailyActivity && dailyActivity.length > 0 && (
+        <Card className="bg-card border border-border shadow-sm" data-testid="card-daily-activity">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarCheck className="w-5 h-5 text-muted-foreground" />
+              {t.profile.dailyActivity}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[360px]">
+                <TableHeader className="bg-secondary/40">
+                  <TableRow>
+                    <TableHead>{t.profile.date}</TableHead>
+                    <TableHead>{t.profile.testsCount}</TableHead>
+                    <TableHead>{t.profile.avgWpm}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dailyActivity.map((day) => (
+                    <TableRow key={day.date} data-testid={`row-day-${day.date}`}>
+                      <TableCell className="text-foreground">
+                        {(() => {
+                          // day.date is a plain "YYYY-MM-DD" string — parse as local
+                          // components, not via `new Date(string)`, which reads
+                          // date-only strings as UTC midnight and can shift the
+                          // displayed day backward in timezones behind UTC.
+                          const [y, m, d] = day.date.split("-").map(Number);
+                          return format(new Date(y, m - 1, d), "MMM d, yyyy");
+                        })()}
+                      </TableCell>
+                      <TableCell className="font-mono font-bold text-foreground">{day.count}</TableCell>
+                      <TableCell className="font-mono">{day.avgWpm}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}

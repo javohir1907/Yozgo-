@@ -488,6 +488,11 @@ const isTestEnvironment = process.env.NODE_ENV === "test";
     await db.execute(sql`CREATE INDEX IF NOT EXISTS friendship_addressee_idx ON friendships (addressee_id);`);
     await db.execute(sql`CREATE INDEX IF NOT EXISTS friendship_status_idx ON friendships (status);`);
 
+    // Gamifikatsiya Feature 10: Sayt ichi bildirishnomalar (additive, idempotent).
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS notifications ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id VARCHAR NOT NULL REFERENCES users(id), actor_id VARCHAR REFERENCES users(id), type TEXT NOT NULL, message TEXT NOT NULL, link TEXT, is_read BOOLEAN NOT NULL DEFAULT false, created_at TIMESTAMP NOT NULL DEFAULT now() );`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS notifications_user_unread_idx ON notifications (user_id, is_read);`);
+    await db.execute(sql`CREATE INDEX IF NOT EXISTS notifications_user_created_idx ON notifications (user_id, created_at);`);
+
     // Admin audit log (additive, idempotent) — ban/unban/grant/edit/broadcast amallari.
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS admin_audit_log (

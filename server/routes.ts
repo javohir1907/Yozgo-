@@ -29,7 +29,7 @@ import { computeSoloXp, xpProgress, levelForXp } from "@shared/lib/xp";
 import { resolveRank } from "@shared/lib/rank";
 import { computeSoloCoins } from "@shared/lib/coins";
 import { cosmeticMeta } from "./gamification/cosmetic-defs";
-import { inviteFriendToBattle } from "./userBot";
+import { inviteFriendToBattle, notifyUser } from "./userBot";
 
 // Shared Schemas & Models
 import crypto from "crypto";
@@ -50,6 +50,7 @@ import {
   leagues,
   leagueMembers,
   adminAuditLog,
+  notifications,
 } from "@shared/schema";
 
 // Leaderboard cache — `${language}:${period}` bo'yicha kalanadi (period qo'shilgach
@@ -404,6 +405,18 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const target = await storage.getUser(addresseeId);
       if (!target) return res.status(HTTP_STATUS.NOT_FOUND).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
       await storage.sendFriendRequest(userId, addresseeId);
+      const requester = await storage.getUser(userId);
+      const requesterName = requester?.firstName || requester?.email?.split("@")[0] || "Kimdir";
+      await storage.createNotification({
+        userId: addresseeId,
+        actorId: userId,
+        type: "friend_request",
+        message: `${requesterName} sizga do'stlik so'rovi yubordi`,
+        link: "/friends",
+      });
+      if (target.telegramId) {
+        void notifyUser(Number(target.telegramId), `👋 ${requesterName} sizga YOZGO'da do'stlik so'rovi yubordi. Qabul qilish uchun saytga o'ting: yozgo.uz/friends`);
+      }
       res.status(HTTP_STATUS.OK).json({ ok: true });
     } catch (error) {
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
@@ -417,6 +430,21 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const requesterId = String(req.body?.requesterId || "");
       if (!requesterId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "requesterId kerak" });
       const ok = await storage.acceptFriendRequest(userId, requesterId);
+      if (ok) {
+        const accepter = await storage.getUser(userId);
+        const accepterName = accepter?.firstName || accepter?.email?.split("@")[0] || "Kimdir";
+        await storage.createNotification({
+          userId: requesterId,
+          actorId: userId,
+          type: "friend_accepted",
+          message: `${accepterName} do'stlik so'rovingizni qabul qildi!`,
+          link: "/friends",
+        });
+        const requester = await storage.getUser(requesterId);
+        if (requester?.telegramId) {
+          void notifyUser(Number(requester.telegramId), `✅ ${accepterName} YOZGO'da do'stlik so'rovingizni qabul qildi!`);
+        }
+      }
       res.status(HTTP_STATUS.OK).json({ ok });
     } catch (error) {
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
@@ -437,6 +465,47 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (!friend?.telegramId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Do'stingizda Telegram ulanmagan" });
       const inviter = await storage.getUser(userId);
       await inviteFriendToBattle(Number(friend.telegramId), battleCode, inviter?.firstName || "Do'stingiz");
+      await storage.createNotification({
+        userId: friendId,
+        actorId: userId,
+        type: "battle_invite",
+        message: `${inviter?.firstName || "Do'stingiz"} sizni jangga taklif qildi!`,
+        link: "/battle",
+      });
+      res.status(HTTP_STATUS.OK).json({ ok: true });
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  // ============ IN-APP NOTIFICATIONS (Feature 10) ============
+
+  app.get("/api/notifications", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      res.status(HTTP_STATUS.OK).json(await storage.listNotifications(userId));
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  app.post("/api/notifications/:id/read", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      await storage.markNotificationRead(String(req.params.id), userId);
+      res.status(HTTP_STATUS.OK).json({ ok: true });
+    } catch (error) {
+      res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
+    }
+  });
+
+  app.post("/api/notifications/read-all", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+      await storage.markAllNotificationsRead(userId);
       res.status(HTTP_STATUS.OK).json({ ok: true });
     } catch (error) {
       res.status(HTTP_STATUS.INTERNAL_ERROR).json({ message: ERROR_MESSAGES.INTERNAL });
@@ -485,6 +554,22 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
 
       const userStats = await storage.getUserStats(userId);
       const recentAttempts = await storage.getTestResultsByUserId(userId);
+
+      // Kunlik faollik — "qaysi kuni nechta test" (profil tarixi). recentAttempts
+      // allaqachon to'liq olingan (yuqorida), shu bilan hisoblanadi — qo'shimcha
+      // so'rov yo'q. Kalit sifatida UTC sana ishlatiladi (createdAt — Date).
+      const dailyMap = new Map<string, { count: number; wpmSum: number }>();
+      for (const r of recentAttempts) {
+        const day = new Date(r.createdAt).toISOString().slice(0, 10);
+        const entry = dailyMap.get(day) ?? { count: 0, wpmSum: 0 };
+        entry.count += 1;
+        entry.wpmSum += r.wpm;
+        dailyMap.set(day, entry);
+      }
+      const dailyActivity = Array.from(dailyMap.entries())
+        .map(([date, { count, wpmSum }]) => ({ date, count, avgWpm: Math.round(wpmSum / count) }))
+        .sort((a, b) => (a.date < b.date ? 1 : -1))
+        .slice(0, 60); // so'nggi ~60 kunlik faollik
 
       // Gamifikatsiya — XP/level progress (xp.ts yagona manba; qo'shimcha query yo'q).
       const prog = xpProgress(userRecord.xp ?? 0);
@@ -537,6 +622,7 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
           }
         },
         recentResults: recentAttempts.slice(0, 20), // Oxirgi 20 ta natija chart uchun
+        dailyActivity, // Kunlik faollik tarixi — { date, count, avgWpm }[]
         badges, // Feature 3 — { earned, locked }
       });
     } catch (error) {

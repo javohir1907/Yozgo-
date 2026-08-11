@@ -435,6 +435,33 @@ export const friendships = pgTable(
 
 export type Friendship = typeof friendships.$inferSelect;
 
+// ============ IN-APP NOTIFICATIONS (Feature 10) ============
+// Do'st so'rovi / musobaqaga taklif kabi hodisalar uchun — sayt ichida bell
+// orqali ko'rsatiladi. Har bir qator bitta oluvchi (userId) uchun.
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: varchar("user_id")
+      .references(() => users.id)
+      .notNull(), // oluvchi
+    actorId: varchar("actor_id").references(() => users.id), // hodisani boshlagan foydalanuvchi
+    type: text("type").notNull(), // 'friend_request' | 'friend_accepted' | 'battle_invite'
+    message: text("message").notNull(),
+    link: text("link"), // ixtiyoriy — client route (masalan '/friends')
+    isRead: boolean("is_read").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => {
+    return {
+      userUnreadIdx: index("notifications_user_unread_idx").on(t.userId, t.isRead),
+      userCreatedIdx: index("notifications_user_created_idx").on(t.userId, t.createdAt),
+    };
+  },
+);
+
+export type Notification = typeof notifications.$inferSelect;
+
 export const systemSettings = pgTable("system_settings", {
   key: varchar("key", { length: 50 }).primaryKey(),
   value: text("value").notNull(),
