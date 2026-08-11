@@ -17,6 +17,7 @@ import { AppErrorBoundary } from "@/components/layout/error-boundary";
 import { SkipLink } from "@/components/layout/skip-link";
 import { AppFooter } from "@/components/layout/app-footer";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 const LandingPage = React.lazy(() => import("@/pages/landing"));
 const SettingsPage = React.lazy(() => import("@/pages/settings"));
@@ -96,6 +97,26 @@ function HtmlLang() {
   return <Helmet htmlAttributes={{ lang: uiLang }} />;
 }
 
+// Applies the shop-equipped theme's accent (an "H S% L%" triple) as --primary
+// on the app shell, so it reaches the header and every route — not just
+// whichever page happens to read user.themeMeta itself.
+function EquippedThemeVars({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const accent =
+    typeof user?.themeMeta?.accent === "string" &&
+    /^\d{1,3} \d{1,3}% \d{1,3}%$/.test(user.themeMeta.accent)
+      ? user.themeMeta.accent
+      : null;
+  return (
+    <div
+      className="flex flex-col min-h-screen bg-background text-foreground"
+      style={accent ? ({ ["--primary" as any]: accent } as React.CSSProperties) : undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -103,14 +124,14 @@ function App() {
         <I18nProvider>
           <HtmlLang />
           <TooltipProvider>
-            <div className="flex flex-col min-h-screen bg-background text-foreground">
+            <EquippedThemeVars>
               <SkipLink />
               <NavHeader />
               <main id="main" className="flex flex-1 flex-col pt-14 sm:pt-16">
                 <Router />
               </main>
               <AppFooterSlot />
-            </div>
+            </EquippedThemeVars>
             <Toaster />
           </TooltipProvider>
         </I18nProvider>

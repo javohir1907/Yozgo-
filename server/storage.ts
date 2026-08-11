@@ -30,6 +30,7 @@ import {
   InsertCompetition,
   cosmetics,
   userCosmetics,
+  notifications,
 } from "@shared/schema";
 import { UpsertUser } from "@shared/models/auth";
 
@@ -59,6 +60,12 @@ export interface IStorage {
   acceptFriendRequest(addresseeId: string, requesterId: string): Promise<boolean>;
   getFriendIds(userId: string): Promise<string[]>;
   listFriendships(userId: string): Promise<any>;
+
+  // In-app bildirishnomalar (Feature 10)
+  createNotification(data: { userId: string; actorId?: string | null; type: string; message: string; link?: string | null }): Promise<void>;
+  listNotifications(userId: string, limit?: number): Promise<{ items: any[]; unreadCount: number }>;
+  markNotificationRead(id: string, userId: string): Promise<void>;
+  markAllNotificationsRead(userId: string): Promise<void>;
 
   // Performance Tracking
   createTestResult(
@@ -519,6 +526,46 @@ export class DatabaseStorage implements IStorage {
       else outgoing.push(other);
     }
     return { friends, incoming, outgoing };
+  }
+
+  // ============ IN-APP NOTIFICATIONS (Feature 10) ============
+
+  async createNotification(data: { userId: string; actorId?: string | null; type: string; message: string; link?: string | null }): Promise<void> {
+    await db.insert(notifications).values({
+      userId: data.userId,
+      actorId: data.actorId ?? null,
+      type: data.type,
+      message: data.message,
+      link: data.link ?? null,
+    });
+  }
+
+  async listNotifications(userId: string, limit = 30): Promise<{ items: any[]; unreadCount: number }> {
+    const items = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+    return { items, unreadCount: count };
+  }
+
+  async markNotificationRead(id: string, userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+  }
+
+  async markAllNotificationsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
   }
 
   // ============ SECURITY & MODERATION ============

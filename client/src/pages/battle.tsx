@@ -12,10 +12,11 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Crown, Play, Copy, Users, Clock, Timer, 
-  Flame, Trophy, Check, Loader2, Maximize2, 
-  BarChart3, Zap, Target, Activity, ShieldAlert
+import { useQuery, useMutation } from "@tanstack/react-query";
+import {
+  Crown, Play, Copy, Users, Clock, Timer,
+  Flame, Trophy, Check, Loader2, Maximize2,
+  BarChart3, Zap, Target, Activity, ShieldAlert, UserPlus
 } from "lucide-react";
 
 // UI Components
@@ -35,6 +36,14 @@ import {
   DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Custom Components & Hooks
 import { TypingArea } from "@/components/typing-area";
@@ -177,7 +186,21 @@ export default function BattlePage() {
   const [inputCode, setInputCode] = useState<string>("");
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [isJoining, setIsJoining] = useState<boolean>(false);
-  
+
+  // --- Do'stni jangga taklif qilish (Feature 9 UI) ---
+  const friendsQuery = useQuery<{ friends: { id: string; username: string }[] }>({
+    queryKey: ["/api/friends"],
+    enabled: !!battleCode,
+  });
+  const inviteFriendMut = useMutation({
+    mutationFn: async (friendId: string) => {
+      const res = await apiRequest("POST", "/api/friends/invite-battle", { friendId, battleCode });
+      return res.json();
+    },
+    onSuccess: () => toast({ title: t.battle.inviteSent }),
+    onError: (err: any) => toast({ variant: "destructive", title: t.battle.error, description: err.message }),
+  });
+
   // --- STATE: Gameplay ---
   const [userInput, setUserInput] = useState<string>("");
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -691,6 +714,31 @@ export default function BattlePage() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(battleCode || ""); toast({ title: t.battle.copied }); }}><Copy className="w-4" /></Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" data-testid="button-invite-friend">
+                <UserPlus className="w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>{t.battle.inviteFriend}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {(friendsQuery.data?.friends?.length ?? 0) === 0 ? (
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">{t.leaderboard.noFriends}</div>
+              ) : (
+                friendsQuery.data!.friends.map((f) => (
+                  <DropdownMenuItem
+                    key={f.id}
+                    disabled={inviteFriendMut.isPending}
+                    onClick={() => inviteFriendMut.mutate(f.id)}
+                    data-testid={`button-invite-${f.id}`}
+                  >
+                    {f.username}
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => setLocation("/")}>{t.battle.leaveRoom}</Button>
         </div>
       </div>

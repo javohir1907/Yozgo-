@@ -163,6 +163,13 @@ export class BattleManager {
     // shuning uchun bazadagi 'waiting'/'playing' holatidagi janglar "yetim" qoladi
     // (abadiy 'playing' bo'lib, faol-jang statistikasini shishiradi). Ularni yopamiz.
     this.cleanupOrphanedBattles();
+
+    // Xonalar "abadiy ochiq" qolmasin: har daqiqada o'z vaqti (competitionLength)
+    // o'tib ketgan 'waiting'/'playing' janglarni bazada 'finished' qilamiz. Bu
+    // process-ichidagi setTimeout'ga (handleStartBattle) qaraganda ishonchli —
+    // qayta ishga tushirilsa ham, xona to'liq bo'shab ketsa ham (finishBattle
+    // xotiradagi room topolmay jim chiqib ketadigan holat) baribir yopiladi.
+    setInterval(() => this.closeExpiredBattles(), 60 * 1000);
   }
 
   private async cleanupOrphanedBattles(): Promise<void> {
@@ -175,6 +182,40 @@ export class BattleManager {
       }
     } catch (e) {
       console.error("[BATTLE] Yetim janglarni tozalashda xatolik:", e);
+    }
+  }
+
+  private async closeExpiredBattles(): Promise<void> {
+    try {
+      // Muddat = created_at + competition_length (daqiqa) + duration (oxirgi
+      // raund uchun, soniya) + 30s zaxira. Bazada saqlanadi — instance qayta
+      // ishga tushsa ham, xonada hech kim qolmasa ham baribir hisoblanadi.
+      const result = await pool.query(
+        `UPDATE battles
+         SET status = 'finished'
+         WHERE status IN ('waiting', 'playing')
+           AND created_at
+             + (COALESCE(competition_length, 10) * interval '1 minute')
+             + (COALESCE(duration, 60) * interval '1 second')
+             + interval '30 seconds'
+             < now()
+         RETURNING id, code`,
+      );
+      if (!result.rowCount) return;
+
+      console.log(`🧹 [BATTLE] Vaqti tugagan ${result.rowCount} ta xona yopildi.`);
+      for (const row of result.rows as { id: string; code: string }[]) {
+        const room = this.rooms.get(row.code);
+        if (!room) continue;
+        room.status = "finished";
+        this.io.to(row.code).emit("error-message", {
+          message: "Xona vaqti tugagani uchun yopildi.",
+        });
+        this.io.to(row.code).emit("battle-end", { mode: "overall", winnerId: null, overall: [] });
+        this.rooms.delete(row.code);
+      }
+    } catch (e) {
+      console.error("[BATTLE] Muddati o'tgan xonalarni yopishda xatolik:", e);
     }
   }
 

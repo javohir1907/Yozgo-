@@ -6,6 +6,7 @@ import { useTheme } from "@/lib/theme";
 import { useI18n, type UILanguage } from "@/lib/i18n";
 import { KeycapLogo } from "@/components/brand/keycap-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { NotificationBell } from "@/components/notification-bell";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,13 +42,16 @@ export function NavHeader() {
   return (
     <header className="fixed top-0 left-0 z-[100] w-full bg-background/95 backdrop-blur-md border-b border-border/70 shadow-sm transition-all">
       <div className="container flex h-14 sm:h-16 items-center justify-between px-2 sm:px-4">
-        <div className="flex items-center gap-2 sm:gap-8">
-          <Link href="/" aria-label="YOZGO" className="flex items-center mr-1 sm:mr-6">
+        <div className="flex items-center gap-2 sm:gap-8 min-w-0 flex-1">
+          <Link href="/" aria-label="YOZGO" className="flex items-center mr-1 sm:mr-6 shrink-0">
             <KeycapLogo size="sm" className="sm:hidden" />
             <KeycapLogo size="lg" className="hidden sm:flex" />
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1 lg:gap-2" aria-label={t.nav.test}>
+          <nav
+            className="hidden md:flex items-center gap-1 lg:gap-2 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label={t.nav.test}
+          >
             {navItems.map((item) => {
               const isActive = location === item.href;
               return (
@@ -77,7 +81,7 @@ export function NavHeader() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 border-l border-muted pl-2 sm:pl-4">
+        <div className="flex items-center gap-1 sm:gap-2 border-l border-muted pl-2 sm:pl-4 shrink-0">
           {/* Mobil Menyusi (Gamburger) - Faqat telefonda ko'rinadi */}
           <div className="md:hidden flex items-center mr-0">
             <DropdownMenu>
@@ -159,6 +163,8 @@ export function NavHeader() {
           </Link>
 
           {isAuthenticated ? (
+            <>
+            <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -211,6 +217,7 @@ export function NavHeader() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </>
           ) : (
             <Link href="/auth">
               <Button size="sm" data-testid="button-login" className="font-bold text-xs sm:text-sm h-8 px-3 sm:h-9 sm:px-4 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md sm:rounded-lg shadow-sm">
