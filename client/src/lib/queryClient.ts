@@ -8,13 +8,17 @@ export function normalizeUrl(url: string) {
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    let errorMessage = res.statusText;
+    // Read the body once as text — a Response stream can only be consumed
+    // once, so a failed res.json() followed by res.text() on the same
+    // Response always throws "body stream already read" and hides the
+    // real error. Parse the text in-memory instead.
+    const raw = await res.text().catch(() => "");
+    let errorMessage = raw || res.statusText;
     try {
-      const errorData = await res.json();
+      const errorData = JSON.parse(raw);
       errorMessage = errorData.message || errorMessage;
     } catch {
-      const text = await res.text();
-      errorMessage = text || errorMessage;
+      /* raw isn't JSON — fall back to it as-is */
     }
     throw new Error(`${res.status}: ${errorMessage}`);
   }
