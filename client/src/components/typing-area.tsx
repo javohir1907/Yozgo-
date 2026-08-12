@@ -6,6 +6,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { MousePointer2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 
@@ -198,6 +199,22 @@ export function TypingArea({
     if (isActive && !isTouch) inputRef.current?.focus();
   }, [isActive, isTouch]);
 
+  // "…or press any key to focus": while the surface is unfocused, a plain
+  // character keypress hands focus to the hidden input instead of doing nothing.
+  // Modifier combos and navigation keys are left alone so browser shortcuts
+  // (⌘R, Tab, F5) still work, and touch is excluded — there the keyboard only
+  // opens from a real tap.
+  useEffect(() => {
+    if (isFocused || isTouch) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.length !== 1) return;
+      inputRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isFocused, isTouch]);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Tab") {
@@ -217,7 +234,10 @@ export function TypingArea({
   // user's S/M/L scale — the old fixed h-[15rem] clipped the 3rd line when
   // narrow screens wrapped more.
   const viewportHeight = "calc(3 * 1.55em + 2 * 0.6em)";
-  const showRecovery = isActive && !isFocused;
+  // Prompt whenever the surface is unfocused, not only mid-test: the most common
+  // confusion was on a fresh page, where nothing explained that the words are
+  // the click target. Touch gets its own tap prompt below.
+  const showRecovery = !isFocused && !isTouch;
   const currentWord = words[currentIndex] ?? "";
 
   return (
@@ -262,10 +282,17 @@ export function TypingArea({
         <div
           ref={wordsRef}
           aria-hidden="true"
-          className="relative flex flex-wrap gap-x-4 gap-y-[0.6em] px-2"
+          className={cn(
+            "relative flex flex-wrap gap-x-4 gap-y-[0.6em] px-2",
+            showRecovery && "blur-[3px] opacity-60",
+          )}
           style={{
             transform: `translateY(${offsetY}px)`,
-            transition: "transform 0.3s cubic-bezier(0.4,0,0.2,1)",
+            // One declaration: an inline `transition` would otherwise override
+            // any Tailwind transition class and the blur would snap instead of
+            // fading.
+            transition:
+              "transform 0.3s cubic-bezier(0.4,0,0.2,1), filter 0.2s ease-out, opacity 0.2s ease-out",
           }}
         >
           {isActive && (
@@ -295,9 +322,13 @@ export function TypingArea({
           <button
             type="button"
             onClick={focusInput}
-            className="absolute inset-0 z-30 flex items-center justify-center rounded-lg bg-background/50 text-sm font-medium text-foreground backdrop-blur-sm"
+            // No backdrop tint here: the words themselves carry the blur, so the
+            // prompt stays legible without washing the whole surface out.
+            className="absolute inset-0 z-30 flex items-center justify-center gap-2 text-base font-medium text-muted-foreground"
+            data-testid="typing-focus-prompt"
           >
-            {t.typing.clickToContinue ?? "Click to continue"}
+            <MousePointer2 className="h-4 w-4 shrink-0" />
+            {t.typing.clickToContinue ?? "Click here or press any key to focus"}
           </button>
         )}
 

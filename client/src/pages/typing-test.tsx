@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTypingTest } from "@/hooks/use-typing-test";
 import { TypingArea } from "@/components/typing-area";
@@ -34,18 +34,54 @@ function makeClientResultId(): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
+// Language/timer chosen on this page are remembered for the rest of the browser
+// session. Without this, leaving for another route unmounted the page and the
+// pickers snapped back to the saved defaults, which reads as "my choice was
+// ignored". sessionStorage (not localStorage) is deliberate: the persistent
+// preference still lives in Settings, this only survives until the tab closes.
+const SESSION_PREFS_KEY = "yozgo-session-test-prefs";
+
+function readSessionPrefs(): { language?: Language; mode?: TimerMode } {
+  try {
+    const raw = sessionStorage.getItem(SESSION_PREFS_KEY);
+    if (!raw) return {};
+    const p = JSON.parse(raw) as Record<string, unknown>;
+    const language =
+      p.language === "en" || p.language === "ru" || p.language === "uz" || p.language === "kaa"
+        ? (p.language as Language)
+        : undefined;
+    const mode =
+      p.mode === 15 || p.mode === 30 || p.mode === 60 ? (p.mode as TimerMode) : undefined;
+    return { language, mode };
+  } catch {
+    return {};
+  }
+}
+
+function writeSessionPrefs(prefs: { language: Language; mode: TimerMode }) {
+  try {
+    sessionStorage.setItem(SESSION_PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* storage blocked — the choice still holds for this mount */
+  }
+}
+
 export default function TypingTestPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useI18n();
   const queryClient = useQueryClient();
-  // Seed from saved settings so the settings page is no longer decorative.
+  // Session choice wins; otherwise fall back to the saved Settings default.
   const [language, setLanguage] = useState<Language>(
-    () => readUserSettings().defaultLanguage as Language,
+    () => readSessionPrefs().language ?? (readUserSettings().defaultLanguage as Language),
   );
   const [mode, setMode] = useState<TimerMode>(
-    () => readUserSettings().defaultTimer as TimerMode,
+    () => readSessionPrefs().mode ?? (readUserSettings().defaultTimer as TimerMode),
   );
+
+  useEffect(() => {
+    writeSessionPrefs({ language, mode });
+  }, [language, mode]);
 
   const resultMutation = useMutation({
     mutationFn: async (result: {
@@ -134,13 +170,11 @@ export default function TypingTestPage() {
 
   return (
     <div className="relative min-h-[calc(100vh-8rem)]">
-      <div 
-        className={`fixed inset-0 pointer-events-none transition-all duration-500 z-0 ${
-          isActive && !isFinished 
-            ? "opacity-100 bg-black/5 dark:bg-transparent" 
-            : "opacity-0"
-        }`} 
-      />
+      {/* A full-screen `bg-black/5` dim used to sit here while typing (light mode
+          only). It tinted the page around the words and made the text harder to
+          read rather than easier. Focus is now communicated the way typing sites
+          do it: the words blur and prompt when the input loses focus, and stay
+          perfectly clean while typing. */}
       <div className="container relative z-10 mx-auto px-4 py-12 flex flex-col items-center min-h-[calc(100vh-8rem)]">
         {!isFinished ? (
           <>

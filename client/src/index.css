@@ -241,26 +241,46 @@
     display: inline-block;
     padding: 0;
     color: hsl(var(--pending));
+    /* Colour-only transition. It must never touch a layout property, or the
+     * line reflows mid-keystroke (the "breathing text" this file warns about).
+     * 90ms is under the ~100ms perceptual threshold, so it reads as instant
+     * while still smoothing the pending -> correct flip at speed. */
+    transition: color 90ms linear, background-color 90ms linear;
   }
   .typing-surface [data-char][data-state="correct"] {
     color: hsl(var(--correct));
   }
+  /* Mistyped and missed characters differ in weight of treatment: a wrong
+   * keystroke is the user's own and gets the full red; a skipped one is
+   * quieter, so the eye lands on what was actually typed wrong. Neither adds
+   * padding/border — only colour and an underline, which do not affect metrics.
+   */
   .typing-surface [data-char][data-state="wrong"],
-  .typing-surface [data-char][data-state="extra"],
-  .typing-surface [data-char][data-state="missed"] {
+  .typing-surface [data-char][data-state="extra"] {
     color: hsl(var(--error));
-    background-color: hsl(var(--error) / 0.14);
-    border-radius: 2px;
     text-decoration: underline;
-    text-decoration-color: hsl(var(--error) / 0.85);
+    text-decoration-color: hsl(var(--error) / 0.7);
     text-decoration-thickness: 2px;
     text-underline-offset: 0.18em;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
   }
-  .typing-surface [data-word="active"] {
-    background-color: hsl(var(--primary) / 0.06);
-    border-radius: 0.375rem;
+  .typing-surface [data-char][data-state="missed"] {
+    color: hsl(var(--error) / 0.55);
+  }
+  /* Past words recede so the active line is the obvious focal point — this
+   * replaces the tinted box that used to sit behind the active word and fought
+   * with the text for attention (badly in light mode). */
+  .typing-surface [data-word="past"] {
+    opacity: 0.55;
+    transition: opacity 180ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .typing-surface [data-char],
+    .typing-surface [data-word="past"] {
+      transition: none;
+    }
   }
 
   /* The caret used animation: blink — a keyframe that never existed — and a

@@ -42,14 +42,18 @@ export function NavHeader() {
   return (
     <header className="fixed top-0 left-0 z-[100] w-full bg-background/95 backdrop-blur-md border-b border-border/70 shadow-sm transition-all">
       <div className="container flex h-14 sm:h-16 items-center justify-between px-2 sm:px-4">
-        <div className="flex items-center gap-2 sm:gap-8 min-w-0 flex-1">
-          <Link href="/" aria-label="YOZGO" className="flex items-center mr-1 sm:mr-6 shrink-0">
+        {/* Widths are tight at exactly xl (1280px), where labels first appear:
+            Russian is the longest set and the nav row measures ~709px there,
+            leaving only ~30px of slack once the logo and the signed-in icon
+            cluster are accounted for. Hence the trimmed gaps. */}
+        <div className="flex items-center gap-2 md:gap-3 xl:gap-4 min-w-0 flex-1">
+          <Link href="/" aria-label="YOZGO" className="flex items-center mr-1 md:mr-2 shrink-0">
             <KeycapLogo size="sm" className="sm:hidden" />
             <KeycapLogo size="lg" className="hidden sm:flex" />
           </Link>
 
           <nav
-            className="hidden md:flex items-center gap-1 lg:gap-2 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="hidden md:flex items-center gap-0.5 xl:gap-1 min-w-0"
             aria-label={t.nav.test}
           >
             {navItems.map((item) => {
@@ -63,7 +67,12 @@ export function NavHeader() {
                     aria-label={item.label}
                     aria-current={isActive ? "page" : undefined}
                     title={item.label}
-                    className={`relative gap-1.5 lg:gap-2 h-9 lg:h-10 px-2 lg:px-4 transition-all duration-300 font-bold ${isActive
+                    // Labels appear only at xl. Between md and xl the buttons are
+                    // icon-only, which is what keeps all 7 items on one row in
+                    // every language — Russian/Uzbek labels ("Ежедневные задания",
+                    // "Kunlik vazifalar") are ~2x the English ones and used to
+                    // push the 7th item off-screen.
+                    className={`relative gap-1.5 h-9 px-2 xl:px-2.5 text-[13px] shrink-0 transition-colors duration-200 font-bold ${isActive
                         ? "text-primary bg-primary/10 hover:bg-primary/20"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                       }`}
@@ -72,8 +81,8 @@ export function NavHeader() {
                     {isActive && (
                       <div className="absolute bottom-0 left-0 w-full h-[3px] bg-primary rounded-t-sm"></div>
                     )}
-                    <item.icon className="w-4 h-4" />
-                    <span className="hidden lg:inline">{item.label}</span>
+                    <item.icon className="w-4 h-4 shrink-0" />
+                    <span className="hidden xl:inline whitespace-nowrap">{item.label}</span>
                   </Button>
                 </Link>
               );

@@ -91,7 +91,7 @@ const translations = {
     typing: {
       typeToStart: "Type to start...",
       inputLabel: "Typing input",
-      clickToContinue: "Click to continue",
+      clickToContinue: "Click here or press any key to focus",
       tapToType: "Tap to start typing",
       result: "Result",
       wpm: "wpm",
@@ -480,7 +480,7 @@ const translations = {
     typing: {
       typeToStart: "Начните печатать...",
       inputLabel: "Поле ввода",
-      clickToContinue: "Нажмите, чтобы продолжить",
+      clickToContinue: "Нажмите здесь или любую клавишу",
       tapToType: "Нажмите, чтобы начать печатать",
       result: "Результат",
       wpm: "слов/мин",
@@ -870,7 +870,7 @@ const translations = {
     typing: {
       typeToStart: "Yozishni boshlang...",
       inputLabel: "Yozuv maydoni",
-      clickToContinue: "Davom etish uchun bosing",
+      clickToContinue: "Shu yerni yoki istalgan tugmani bosing",
       tapToType: "Yozishni boshlash uchun bosing",
       result: "Natija",
       wpm: "so'z/min",
@@ -1260,7 +1260,7 @@ const translations = {
     typing: {
       typeToStart: "Jazıwdı baslań...",
       inputLabel: "Jazıw maydanı",
-      clickToContinue: "Dawam etiw ushın basıń",
+      clickToContinue: "Usı jerdi yaki qálegen klavishanı basıń",
       tapToType: "Jazıwdı baslaw ushın basıń",
       result: "Nátije",
       wpm: "sóz/min",
