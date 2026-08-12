@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+#
+# YOZGO — sirlarni commitdan oldin ushlab qoluvchi hook.
+#
+# Sabab: bot tokenlari kodga qattiq yozilib public repoga tushgan va sizib
+# chiqqan edi (botlar buzildi). Bu hook o'sha xatoning takrorlanishini bloklaydi.
+#
+# O'rnatish (bir marta, har bir klonda):
+#   git config core.hooksPath scripts/hooks
+#
+# Faqat STAGE qilingan o'zgarishlar tekshiriladi. Yolg'on ijobiy bo'lsa:
+#   git commit --no-verify
+
+set -uo pipefail
+
+# Tekshirilmaydigan fayllar: namunalar, hujjatlar va hookning o'zi (ular
+# ataylab pattern namunalarini o'z ichiga oladi).
+EXCLUDE_RE='(^\.env\.example$|^DEPLOY\.md$|^scripts/hooks/pre-commit$|\.lock$|^package-lock\.json$)'
+
+# Qidiriladigan sirlar. Har bir qator: <nom>|<regex>
+PATTERNS=(
+  "Telegram bot token|[0-9]{8,10}:[A-Za-z0-9_-]{35}"
+  "Resend API kaliti|re_[A-Za-z0-9_]{16,}"
+  "OpenAI/Anthropic kaliti|sk-(ant-)?[A-Za-z0-9_-]{20,}"
+  "AWS access key|AKIA[0-9A-Z]{16}"
+  "Private key bloki|-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----"
+  "Parolli DB ulanish satri|postgres(ql)?://[^:/@ ]+:[^@ ]{6,}@"
+  "Qattiq yozilgan sir|(SECRET|TOKEN|PASSWORD|PASSWD|API_?KEY)[A-Z_]*[[:space:]]*[:=][[:space:]]*[\"'][^\"']{12,}[\"']"
+)
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACM | grep -Ev "$EXCLUDE_RE" || true)
+[ -z "$staged_files" ] && exit 0
+
+found=0
+while IFS= read -r file; do
+  [ -z "$file" ] && continue
+  # Binar fayllarni o'tkazib yuboramiz.
+  git diff --cached --numstat -- "$file" | grep -q '^-' && continue
+
+  # Faqat qo'shilayotgan qatorlar (+ bilan boshlanadi), diff sarlavhasisiz.
+  added=$(git diff --cached -U0 -- "$file" | grep '^+' | grep -v '^+++' || true)
+  [ -z "$added" ] && continue
+
+  for entry in "${PATTERNS[@]}"; do
+    name="${entry%%|*}"
+    regex="${entry#*|}"
+    # `--` shart: ba'zi patternlar `-` bilan boshlanadi (PRIVATE KEY bloki),
+    # usiz grep ularni flag deb o'qiydi.
+    if echo "$added" | grep -qE -- "$regex"; then
+      if [ "$found" -eq 0 ]; then
+        echo ""
+        echo "❌ COMMIT TO'XTATILDI — sir topildi:"
+        echo ""
+      fi
+      found=1
+      echo "  $file — $name"
+      # Qiymatni to'liq chiqarmaymiz: faqat qator raqami va boshi.
+      echo "$added" | grep -nE -- "$regex" | head -3 | cut -c1-80 | sed 's/^/      /'
+    fi
+  done
+done <<< "$staged_files"
+
+if [ "$found" -eq 1 ]; then
+  cat <<'EOF'
+
+Nima qilish kerak:
+  1. Sirni koddan olib tashlang, o'rniga process.env.<NOM> ishlating.
+  2. Haqiqiy qiymatni .env (git'ga tushmaydi) va Coolify env'ga qo'ying.
+  3. Agar sir allaqachon biror joyga yuborilgan bo'lsa — uni REVOKE qiling.
+
+Ataylab (masalan test namunasi) bo'lsa:  git commit --no-verify
+EOF
+  exit 1
+fi
+
+exit 0
