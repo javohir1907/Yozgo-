@@ -565,8 +565,10 @@ const shutdown = async (signal: string) => {
   });
 
   try {
-    // 2. Ma'lumotlar bazasi bilan ulanishni xavfsiz uzish
-    const { pool } = require("./db");
+    // 2. Ma'lumotlar bazasi bilan ulanishni xavfsiz uzish.
+    // `pool` yuqorida import qilingan — bu yerda `require()` ishlatilardi, lekin
+    // paket ESM ("type": "module", esbuild format: "esm"), ya'ni `require`
+    // mavjud emas va shutdown har safar ReferenceError bilan tugardi.
     await pool.end();
     logger.info("[SYSTEM] Database ulanishi uzildi.", { source: "shutdown" });
     

@@ -19,13 +19,20 @@ export function getUserBot() {
 }
 
 export function startUserBot() {
-  if (IS_ADMIN_MODE) {
-    console.log("[userBot] APP_MODE=admin — polling skipped");
-    return;
-  }
   const token = process.env.USER_BOT_TOKEN;
   if (!token) {
     console.warn("⚠️ USER_BOT_TOKEN topilmadi — User Bot o'chirildi");
+    return;
+  }
+
+  // Admin konteynerda POLLING yo'q (bitta token uchun ikkita getUpdates poller
+  // 409 Conflict beradi), lekin instansiyaning O'ZI kerak: ommaviy xabar
+  // (/api/admin/broadcast) faqat shu konteynerda mavjud, va u userBot orqali
+  // yuboradi. Ilgari bu yerda `return` bo'lgani uchun userBot null qolib,
+  // broadcast har doim "0 user"ga ketardi. Yuborish uchun polling shart emas.
+  if (IS_ADMIN_MODE) {
+    userBot = new TelegramBot(token, { polling: false });
+    console.log("[userBot] APP_MODE=admin — send-only rejim (polling o'chiq)");
     return;
   }
 

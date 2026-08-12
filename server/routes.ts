@@ -29,7 +29,7 @@ import { computeSoloXp, xpProgress, levelForXp } from "@shared/lib/xp";
 import { resolveRank } from "@shared/lib/rank";
 import { computeSoloCoins } from "@shared/lib/coins";
 import { cosmeticMeta } from "./gamification/cosmetic-defs";
-import { inviteFriendToBattle, notifyUser } from "./userBot";
+import { inviteFriendToBattle, notifyUser, getUserBot } from "./userBot";
 
 // Shared Schemas & Models
 import crypto from "crypto";
@@ -1123,7 +1123,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       res.status(200).json({ success: true, message: "Tarqatish orqa fonda boshlandi" });
 
       // ORQA FONDA XABAR TARQATISH LOGIKASI (BACKGROUND)
-      const { getUserBot } = require("./userBot");
+      // getUserBot yuqorida import qilingan — bu yerda `require()` edi, lekin
+      // paket ESM bo'lgani uchun u ReferenceError berardi va tarqatish hech
+      // qachon boshlanmasdi (client esa 200 OK olib "boshlandi" deb ko'rsatardi).
       const bot = getUserBot();
       if (!bot) {
         console.warn("User bot is not connected. Broadcast failed.");
