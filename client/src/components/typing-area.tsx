@@ -109,6 +109,8 @@ export function TypingArea({
 
   const [offsetY, setOffsetY] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  // Tab arms a restart; Enter confirms it. See handleKeyDown.
+  const [restartArmed, setRestartArmed] = useState(false);
   const [containerWidth, setContainerWidth] = useState(0);
   const isTouch =
     typeof window !== "undefined" && "ontouchstart" in window;
@@ -141,6 +143,18 @@ export function TypingArea({
     { top: number; left: number; w: number }[]
   >([]);
   const lineHeightRef = useRef(0);
+
+  // Characters typed past the end of the word render additional [data-char]
+  // spans. The measurement pass below has to see them, otherwise charOffsets
+  // stops at the word's real length, the caret memo clamps to that last index
+  // and the caret sits frozen while the user keeps typing. This value only
+  // changes while overflowing, so ordinary typing still measures once per word
+  // rather than once per keystroke.
+  const overflowCount = Math.max(
+    0,
+    userInput.length - (words[currentIndex]?.length ?? 0),
+  );
+
   useLayoutEffect(() => {
     const el = activeWordRef.current;
     if (!el) return;
@@ -173,7 +187,7 @@ export function TypingArea({
         setOffsetY(line >= 2 ? -(line - 1) * lineHeightRef.current : 0);
       }
     }
-  }, [currentIndex, words, containerWidth]);
+  }, [currentIndex, words, containerWidth, overflowCount]);
 
   // Caret position is pure arithmetic over the cached offsets.
   const caret = useMemo(() => {
@@ -224,14 +238,23 @@ export function TypingArea({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Tab") {
+        // Tab alone used to restart instantly, which meant a reflex reach for
+        // Tab threw away a run in progress. It now only arms the restart, the
+        // way monkeytype does it — Enter confirms, anything else cancels.
         e.preventDefault();
+        setRestartArmed(true);
+      } else if (restartArmed && e.key === "Enter") {
+        e.preventDefault();
+        setRestartArmed(false);
         onRestart?.();
+      } else if (restartArmed) {
+        setRestartArmed(false);
       } else if (e.key === "Backspace" && userInput.length === 0 && onGoBack) {
         e.preventDefault();
         onGoBack();
       }
     },
-    [userInput.length, onRestart, onGoBack],
+    [userInput.length, onRestart, onGoBack, restartArmed],
   );
 
   const focusInput = useCallback(() => inputRef.current?.focus(), []);
@@ -348,6 +371,17 @@ export function TypingArea({
           </button>
         )}
       </label>
+
+      {restartArmed && (
+        <p
+          className="mt-3 text-center text-xs font-mono uppercase tracking-widest text-muted-foreground"
+          role="status"
+          aria-live="polite"
+          data-testid="restart-armed-hint"
+        >
+          {t.typing.restartConfirm ?? "Press Enter to restart"}
+        </p>
+      )}
 
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {currentWord}

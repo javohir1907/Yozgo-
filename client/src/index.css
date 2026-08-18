@@ -241,11 +241,19 @@
     display: inline-block;
     padding: 0;
     color: hsl(var(--pending));
-    /* Colour-only transition. It must never touch a layout property, or the
-     * line reflows mid-keystroke (the "breathing text" this file warns about).
-     * 90ms is under the ~100ms perceptual threshold, so it reads as instant
-     * while still smoothing the pending -> correct flip at speed. */
-    transition: color 90ms linear, background-color 90ms linear;
+    /* NO transition here, deliberately.
+     *
+     * The word spans are keyed by index and reused across word boundaries, so
+     * when the active word advances React hands the same DOM nodes different
+     * characters. A colour transition then animates that reuse: every reused
+     * glyph fades between states at once and the whole line shimmers on every
+     * space. That read as a broken animation and made the text hard to track.
+     * State changes are instant; the contrast between --pending and --correct
+     * is what shows progress.
+     *
+     * Weight is intentionally not used either: `inter` is a selectable typing
+     * font and is proportional, so bolding typed characters would change glyph
+     * advance and reflow the line mid-keystroke. */
   }
   .typing-surface [data-char][data-state="correct"] {
     color: hsl(var(--correct));
@@ -275,11 +283,6 @@
    * back down to pending's weight, so there was no way to see how far you had
    * got. Nothing dims completed work. */
 
-  @media (prefers-reduced-motion: reduce) {
-    .typing-surface [data-char] {
-      transition: none;
-    }
-  }
 
   /* The caret used animation: blink — a keyframe that never existed — and a
    * shadow of var(--primary), which is a bare HSL triple, not a colour, so the
