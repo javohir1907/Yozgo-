@@ -225,6 +225,8 @@ export default function TypingTestPage() {
             consistency={stats.consistency}
             correctChars={stats.correctChars}
             incorrectChars={stats.incorrectChars}
+            language={language}
+            mode={mode}
             onRestart={reset}
           />
         </div>

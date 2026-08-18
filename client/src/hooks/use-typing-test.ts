@@ -187,16 +187,9 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
       if (value.endsWith(" ") || value.endsWith("\u00A0")) {
         const currentTyped = value.slice(0, -1);
 
-        // Space only does its job \u2014 moving to the next word \u2014 once something has
-        // been typed for the current one. Previously ANY trailing space advanced
-        // the index, so a stray/leading space committed an empty word and the
-        // caret jumped over whole words (several at once when held down).
-        if (currentTyped.length === 0) {
-          setUserInput("");
-          return;
-        }
-
-        // Tezkor yozishda: State birdaniga yangilanib probel bilan qo'shilib qolgan harflarni hisoblash
+        // Tezkor yozishda: State birdaniga yangilanib probel bilan qo'shilib
+        // qolgan harflarni hisoblash. This runs whether or not the space ends
+        // up advancing the word — the letters were still typed.
         if (currentTyped.length > userInput.length) {
           const addedLen = currentTyped.length - userInput.length;
           allKeystrokesRef.current += addedLen;
@@ -220,16 +213,25 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
         // Probel bosildi -> bitta tugma
         allKeystrokesRef.current += 1;
 
-        // Agar so'z to'liq to'g'ri bo'lsa, probel ham to'g'ri belgi sifatida hisoblanadi
-        const isCorrect = currentTyped === word;
-        if (isCorrect) {
-          correctCharsRef.current += 1;
-        }
+        if (currentTyped.length < word.length) {
+          // Space pressed before the word is finished. It costs one keystroke
+          // (so accuracy reflects the slip) but does NOT move on — jumping to
+          // the next word here abandoned the rest of the current one, so a
+          // mistimed thumb silently skipped content.
+          setUserInput(currentTyped);
+          updateLiveStats();
+        } else {
+          // Agar so'z to'liq to'g'ri bo'lsa, probel ham to'g'ri belgi sifatida hisoblanadi
+          const isCorrect = currentTyped === word;
+          if (isCorrect) {
+            correctCharsRef.current += 1;
+          }
 
-        setHistory((prev) => [...prev, currentTyped]);
-        setCurrentIndex((prev) => prev + 1);
-        setUserInput("");
-        updateLiveStats();
+          setHistory((prev) => [...prev, currentTyped]);
+          setCurrentIndex((prev) => prev + 1);
+          setUserInput("");
+          updateLiveStats();
+        }
       } else {
         if (value.length > userInput.length) {
           // Harf qo'shildi

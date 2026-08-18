@@ -268,17 +268,15 @@
   .typing-surface [data-char][data-state="missed"] {
     color: hsl(var(--error) / 0.55);
   }
-  /* Past words recede so the active line is the obvious focal point — this
-   * replaces the tinted box that used to sit behind the active word and fought
-   * with the text for attention (badly in light mode). */
-  .typing-surface [data-word="past"] {
-    opacity: 0.55;
-    transition: opacity 180ms ease-out;
-  }
+  /* Progress is carried by the character colours alone: untyped text sits at
+   * the dim --pending, everything already typed jumps to the high-contrast
+   * --correct (near-black on light, near-white on dark). An earlier
+   * `opacity: .55` on past words undid exactly that — it faded finished words
+   * back down to pending's weight, so there was no way to see how far you had
+   * got. Nothing dims completed work. */
 
   @media (prefers-reduced-motion: reduce) {
-    .typing-surface [data-char],
-    .typing-surface [data-word="past"] {
+    .typing-surface [data-char] {
       transition: none;
     }
   }

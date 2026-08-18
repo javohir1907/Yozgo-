@@ -204,11 +204,17 @@ export function TypingArea({
   // Modifier combos and navigation keys are left alone so browser shortcuts
   // (⌘R, Tab, F5) still work, and touch is excluded — there the keyboard only
   // opens from a real tap.
+  //
+  // preventDefault matters: the key that buys focus must NOT also be typed.
+  // Without it the very first keypress started the test with whatever character
+  // the user happened to hit — usually counted as a mistake before they had
+  // even begun.
   useEffect(() => {
     if (isFocused || isTouch) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.length !== 1) return;
+      e.preventDefault();
       inputRef.current?.focus();
     };
     window.addEventListener("keydown", onKeyDown);

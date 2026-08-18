@@ -12,6 +12,9 @@ interface ResultCardProps {
   consistency?: number;
   correctChars: number;
   incorrectChars: number;
+  /** Which test produced this — shown so a saved/shared result is identifiable. */
+  language?: "en" | "ru" | "uz" | "kaa";
+  mode?: number;
   onRestart: () => void;
 }
 
@@ -22,11 +25,22 @@ export function ResultCard({
   consistency,
   correctChars,
   incorrectChars,
+  language,
+  mode,
   onRestart,
 }: ResultCardProps) {
   const { t } = useI18n();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
+
+  const languageLabel = language
+    ? {
+        en: t.languages.english,
+        ru: t.languages.russian,
+        uz: t.languages.uzbek,
+        kaa: t.languages.karakalpak,
+      }[language]
+    : undefined;
 
   const handleShare = async () => {
     const text = `YOZGO Typing Test Result:\n🚀 Speed: ${wpm} WPM\n🎯 Accuracy: ${accuracy}%\n📊 Raw WPM: ${rawWpm || 0}\n📈 Consistency: ${consistency || 0}%\n\nJoin the arena at yozgo.uz!`;
@@ -59,6 +73,16 @@ export function ResultCard({
     <Card className="w-full max-w-2xl mx-auto border-none bg-transparent" data-testid="result-card">
       <CardHeader className="text-center p-0 mb-8">
         <CardTitle className="text-5xl font-mono text-primary mb-2">{t.typing.result}</CardTitle>
+        {(language || mode) && (
+          <div
+            className="flex items-center justify-center gap-2 text-xs font-mono uppercase tracking-widest text-muted-foreground"
+            data-testid="result-test-meta"
+          >
+            {language && <span>{languageLabel}</span>}
+            {language && mode ? <span className="opacity-40">·</span> : null}
+            {mode && <span>{mode}s</span>}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
