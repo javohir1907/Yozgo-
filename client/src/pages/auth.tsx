@@ -55,8 +55,13 @@ function TelegramBlock({
   const { t } = useI18n();
   const [copiedManual, setCopiedManual] = useState(false);
 
+  // Eight characters, not the full 32-hex token: copying a 32-character string
+  // and pasting it into Telegram is a chore people abandon. The bot resolves
+  // this prefix back to the token.
+  const pairingCode = tgToken.slice(0, 8).toUpperCase();
+
   const onCopyManual = async () => {
-    const value = `auth_${tgToken}`;
+    const value = pairingCode;
     try {
       // navigator.clipboard is undefined on insecure origins and can be denied,
       // so fall back to the execCommand path rather than failing silently.
@@ -127,8 +132,8 @@ function TelegramBlock({
         <div className="rounded-md border border-dashed p-2 space-y-1.5">
           <p className="text-[11px] leading-snug text-muted-foreground">{t.auth.manualTitle}</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-[11px]" data-testid="text-manual-auth">
-              auth_{tgToken}
+            <code className="flex-1 rounded bg-muted px-2 py-1 text-center font-mono text-sm font-bold tracking-[0.3em]" data-testid="text-manual-auth">
+              {pairingCode}
             </code>
             <Button type="button" size="sm" variant="secondary" onClick={onCopyManual}>
               {copiedManual ? t.auth.manualCopied : t.auth.manualCopy}
@@ -261,6 +266,15 @@ export default function AuthPage() {
     }
   };
 
+  // Server xatolarini UI tiliga o'giradi. Known machine-readable codes are
+  // translated; anything else falls back to the server's own text, and finally
+  // to a translated generic message — so an English UI never shows raw Uzbek
+  // (or a raw JSON parse error).
+  const serverMsg = (d: any, fallback: string): string => {
+    if (d?.code === "RATE_LIMITED") return t.auth.rateLimited;
+    return d?.message || fallback;
+  };
+
   // Telegram deep-link yaratish (register yoki login). Yangi token = eski jarayon
   // bekor — bog'lanish/tasdiq holatlari reset qilinadi.
   async function startTelegram(purpose: "register" | "login") {
@@ -272,8 +286,8 @@ export default function AuthPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ purpose }),
       });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.message || t.auth.tgConnectError);
+      const d = await res.json().catch(() => ({} as any));
+      if (!res.ok) throw new Error(serverMsg(d, t.auth.tgConnectError));
       setTgToken(d.token);
       setTgDeepLink(d.deepLink);
       setTgBound(false);
@@ -304,7 +318,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email, username }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.message || t.auth.emailCodeSendError);
+      if (!res.ok) throw new Error(serverMsg(d, t.auth.emailCodeSendError));
       setEmailVerified(false);
       setEmailCode("");
       setEmailToken("");
@@ -328,7 +342,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email, username }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.message || t.auth.emailCodeSendError);
+      if (!res.ok) throw new Error(serverMsg(d, t.auth.emailCodeSendError));
       setEmailVerified(false);
       setEmailCode("");
       setEmailToken("");
@@ -352,7 +366,7 @@ export default function AuthPage() {
         body: JSON.stringify({ email, code: emailCode }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.message || t.auth.emailCodeVerifyError);
+      if (!res.ok) throw new Error(serverMsg(d, t.auth.emailCodeVerifyError));
       setEmailVerified(true);
       setEmailToken(d.emailToken || "");
     } catch (e: any) {
@@ -373,7 +387,7 @@ export default function AuthPage() {
         body: JSON.stringify({ token: tgToken, code: tgCode }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.message || t.auth.tgCodeVerifyError);
+      if (!res.ok) throw new Error(serverMsg(d, t.auth.tgCodeVerifyError));
       setTgVerified(true);
     } catch (e: any) {
       setError(e.message || t.auth.genericError);

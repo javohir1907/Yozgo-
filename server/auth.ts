@@ -124,31 +124,45 @@ export function setupAuth(app: Express): void {
   // NOTE on `message` objects: express-rate-limit sends a bare string as
   // text/plain, so the client's res.json() rejected and the real reason ("you
   // are rate limited") was swallowed and shown as a generic failure. Objects
-  // are sent as JSON, which the client already knows how to read.
-  const otpLimiter = rateLimit({
-    windowMs: 5 * 60 * 1000,
-    max: 5,
-    message: { message: "Juda ko'p kod so'raldi. Iltimos 5 daqiqadan so'ng qayta urinib ko'ring." },
+  // are sent as JSON, which the client already knows how to read. `code` lets
+  // the client translate the message into the UI language instead of showing
+  // this Uzbek fallback text to an English/Russian user.
+  const RATE_LIMITED = { code: "RATE_LIMITED", message: "Juda ko'p so'rov. Iltimos birozdan so'ng qayta urinib ko'ring." };
+
+  // Email and Telegram get SEPARATE buckets. They shared one, and a single
+  // registration attempt spends both (email-otp + telegram/start) plus one more
+  // for every "open the bot again" — so five requests were gone within the
+  // first attempt and the user was told they had tried too many times.
+  const emailOtpLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 8,
+    message: RATE_LIMITED,
+  });
+
+  const telegramStartLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 15,
+    message: RATE_LIMITED,
   });
 
   const authAttemptLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
-    message: { message: "Juda ko'p urinishlar qilindi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring." },
+    message: RATE_LIMITED,
   });
 
   const forgotPasswordLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 3,
-    message: { message: "Juda ko'p so'rov yuborildi. Iltimos 1 soatdan keyin urinib ko'ring." },
+    message: RATE_LIMITED,
   });
 
   // BITTA instance ikkala verify route'da — per-IP hisoblagich umumiy bo'lib
   // 6 xonali kodni brute-force qilishni cheklaydi (10 urinish / 5 daqiqa).
   const codeVerifyLimiter = rateLimit({
-    windowMs: 5 * 60 * 1000,
-    max: 10,
-    message: { message: "Juda ko'p urinishlar. Iltimos keyinroq urinib ko'ring." },
+    windowMs: 10 * 60 * 1000,
+    max: 20,
+    message: RATE_LIMITED,
   });
 
   // ============ USERNAME AVAILABILITY ============
@@ -167,7 +181,7 @@ export function setupAuth(app: Express): void {
   });
 
   // ============ EMAIL kanal: register uchun OTP ============
-  app.post("/api/auth/register/email-otp", otpLimiter, async (req: Request, res: Response) => {
+  app.post("/api/auth/register/email-otp", emailOtpLimiter, async (req: Request, res: Response) => {
     try {
       const { email, username } = req.body;
       if (!email || !username) return res.status(400).json({ message: "Email va username kiritilmadi" });
@@ -213,7 +227,7 @@ export function setupAuth(app: Express): void {
   });
 
   // ============ TELEGRAM kanal: deep-link token yaratish ============
-  app.post("/api/auth/telegram/start", otpLimiter, async (req: Request, res: Response) => {
+  app.post("/api/auth/telegram/start", telegramStartLimiter, async (req: Request, res: Response) => {
     try {
       const purpose = req.body?.purpose === "login" ? "login" : "register";
       const token = crypto.randomBytes(16).toString("hex");

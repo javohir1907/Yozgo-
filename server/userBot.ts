@@ -121,9 +121,9 @@ export function startUserBot() {
         // Otherwise this branch swallows it with "press the phone button" and
         // the user is stuck on a stale attempt until the row expires — which is
         // what made retrying feel impossible without a page reload.
-        const restart = msg.text?.match(/\bauth_([a-f0-9]{32})\b/i) || msg.text?.match(/^([a-f0-9]{32})$/i);
+        const restart = msg.text ? matchAuthReference(msg.text) : null;
         if (restart) {
-          await handleAuthToken(chatId, restart[1].toLowerCase(), msg.from?.id);
+          await handleAuthReference(chatId, restart, msg.from?.id);
           return;
         }
 
@@ -255,9 +255,9 @@ export function startUserBot() {
         // dead-ends. So the same token is accepted as a pasted message: the
         // site shows it with a copy button, and the user can finish from any
         // device, including their phone, without the link working at all.
-        const authMatch = text.match(/\bauth_([a-f0-9]{32})\b/i) || text.match(/^([a-f0-9]{32})$/i);
-        if (authMatch) {
-          await handleAuthToken(chatId, authMatch[1].toLowerCase(), msg.from?.id);
+        const authRef = matchAuthReference(text);
+        if (authRef) {
+          await handleAuthReference(chatId, authRef, msg.from?.id);
           return;
         }
 
@@ -310,6 +310,42 @@ export function startUserBot() {
 // (request_contact). Kontakt kelgach (message handler'dagi auth_phone branch) telegram_id
 // + phone bog'lanadi va tasdiqlash kodi yuboriladi. Method A: bot Start bosmagan userга
 // yozolmaydi — user Start bosgani uchun endi yozа olamiz.
+/**
+ * Saytdagi juftlash kodi (yoki to'liq token) matndan ajratiladi.
+ *
+ * The site shows an 8-character pairing code rather than the 32-hex token:
+ * copying a 32-character string and pasting it into Telegram is a chore that
+ * loses people. The 8 characters are the token's prefix, so no extra column is
+ * needed — the lookup below resolves it by prefix.
+ */
+function matchAuthReference(text: string): string | null {
+  const full = text.match(/\bauth_([a-f0-9]{32})\b/i) || text.match(/\b([a-f0-9]{32})\b/i);
+  if (full) return full[1].toLowerCase();
+  const short = text.match(/\bauth[_-]?([a-f0-9]{8})\b/i) || text.match(/^\s*([a-f0-9]{8})\s*$/i);
+  return short ? short[1].toLowerCase() : null;
+}
+
+/** Juftlash kodi/token bo'yicha auth qatorini topib telefon so'rovini boshlaydi. */
+async function handleAuthReference(chatId: number, ref: string, tgUserId?: number) {
+  if (!tgUserId) return;
+  const [row] = await db
+    .select({ token: verificationCodes.token })
+    .from(verificationCodes)
+    .where(and(
+      eq(verificationCodes.channel, "telegram"),
+      gt(verificationCodes.expiresAt, new Date()),
+      sql`${verificationCodes.token} LIKE ${ref + "%"}`,
+    ));
+  if (!row?.token) {
+    await userBot?.sendMessage(
+      chatId,
+      "❌ Bu kod eskirgan yoki topilmadi. Saytdan yangi kodni oling va qayta yuboring.",
+    );
+    return;
+  }
+  await handleAuthToken(chatId, row.token, tgUserId);
+}
+
 async function handleAuthToken(chatId: number, token: string, tgUserId?: number) {
   if (!tgUserId) return;
   const [row] = await db.select().from(verificationCodes).where(and(

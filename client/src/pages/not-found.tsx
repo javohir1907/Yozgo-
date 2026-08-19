@@ -9,9 +9,11 @@ export default function NotFound() {
   const { t } = useI18n();
   return (
     <PageShell size="sm" seo={{ title: t.notFound.title, noindex: true }}>
+      {/* The heading is the plain-language sentence; "404" is a status code,
+          not something a visitor needs read to them first. */}
       <EmptyState
         icon={AlertCircle}
-        title={`404 — ${t.notFound.title}`}
+        title={t.notFound.title}
         description={t.notFound.description}
         action={
           <Button asChild variant="outline" data-testid="link-go-home">

@@ -20,7 +20,18 @@ async function throwIfResNotOk(res: Response) {
     } catch {
       /* raw isn't JSON — fall back to it as-is */
     }
-    throw new Error(`${res.status}: ${errorMessage}`);
+    // The status code used to be prefixed onto the message ("402: Coin yetarli
+    // emas"), so every toast in the app opened with a raw HTTP number. It is
+    // carried as a property instead — available to code that needs it, invisible
+    // to the reader.
+    const err = new Error(errorMessage) as Error & { status?: number; code?: string };
+    err.status = res.status;
+    try {
+      err.code = JSON.parse(raw)?.code;
+    } catch {
+      /* not JSON — no code to carry */
+    }
+    throw err;
   }
 }
 
