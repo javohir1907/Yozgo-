@@ -509,6 +509,34 @@ export default function BattlePage() {
     }
   };
 
+  // A friend invite links here as /battle?code=XXXX. Pick the code up, drop it
+  // into the join field and open the terms step automatically, so the invite is
+  // one click instead of landing on the menu with nothing to act on. The code
+  // is consumed from the URL immediately so a refresh does not re-run this
+  // against an already-used code.
+  const invitedRef = useRef(false);
+  useEffect(() => {
+    if (invitedRef.current || !user || battleCode) return;
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("code");
+    if (!code) return;
+    invitedRef.current = true;
+    setInputCode(code.toUpperCase());
+    url.searchParams.delete("code");
+    window.history.replaceState({}, "", url.pathname + url.search);
+    void (async () => {
+      setIsJoining(true);
+      try {
+        await apiRequest("POST", "/api/battles/validate-code", { battleCode: code.trim().toUpperCase() });
+        setShowTerms(true);
+      } catch (err: any) {
+        toast({ title: t.battle.error, description: err.message, variant: "destructive" });
+      } finally {
+        setIsJoining(false);
+      }
+    })();
+  }, [user, battleCode, toast, t.battle.error]);
+
   /**
    * Shartlarga rozilik bilan xonaga ulanish.
    */

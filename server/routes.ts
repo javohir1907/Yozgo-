@@ -29,7 +29,7 @@ import { computeSoloXp, xpProgress, levelForXp } from "@shared/lib/xp";
 import { resolveRank } from "@shared/lib/rank";
 import { computeSoloCoins } from "@shared/lib/coins";
 import { cosmeticMeta } from "./gamification/cosmetic-defs";
-import { inviteFriendToBattle, notifyUser, getUserBot } from "./userBot";
+import { inviteFriendToBattle, notifyUser, getUserBot, mintRoomAccessCode } from "./userBot";
 
 // Shared Schemas & Models
 import crypto from "crypto";
@@ -462,15 +462,33 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const friendIds = await storage.getFriendIds(userId);
       if (!friendIds.includes(friendId)) return res.status(HTTP_STATUS.FORBIDDEN).json({ message: "Bu foydalanuvchi do'stingiz emas" });
       const friend = await storage.getUser(friendId);
-      if (!friend?.telegramId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Do'stingizda Telegram ulanmagan" });
+      if (!friend) return res.status(HTTP_STATUS.NOT_FOUND).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
+
+      const battle = await storage.getBattleByCode(battleCode);
+      if (!battle) return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Xona topilmadi" });
+      if (battle.status === "finished") {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Bu jang allaqachon yakunlangan." });
+      }
+
+      // One code, both channels. The notification carries it in the link so
+      // clicking it drops the friend straight into the room — it used to point
+      // at bare "/battle", which is why an invited friend just landed on the
+      // battle menu and got stuck there with no way in.
+      const accessCode = await mintRoomAccessCode(battle.id, friendId);
       const inviter = await storage.getUser(userId);
-      await inviteFriendToBattle(Number(friend.telegramId), battleCode, inviter?.firstName || "Do'stingiz");
+      const inviterName = inviter?.firstName || "Do'stingiz";
+
+      // Telegram is now optional: the in-app notification alone is enough.
+      if (friend.telegramId) {
+        void inviteFriendToBattle(Number(friend.telegramId), inviterName, accessCode);
+      }
+
       await storage.createNotification({
         userId: friendId,
         actorId: userId,
         type: "battle_invite",
-        message: `${inviter?.firstName || "Do'stingiz"} sizni jangga taklif qildi!`,
-        link: "/battle",
+        message: `${inviterName} sizni jangga taklif qildi!`,
+        link: `/battle?code=${accessCode}`,
       });
       res.status(HTTP_STATUS.OK).json({ ok: true });
     } catch (error) {

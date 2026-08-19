@@ -7,7 +7,6 @@ import { processInChunks } from "./utils/async-chunker";
 import { BotStateService } from "./services/bot-state.service";
 
 let userBot: TelegramBot | null = null;
-const MINI_APP_URL = process.env.VITE_API_BASE_URL?.replace("/api", "") || "https://yozgo.uz";
 
 // APP_MODE=admin (admin.yozgo.uz konteyneri): Telegram bitta bot token uchun ikkita
 // getUpdates poller'ga ruxsat bermaydi (409 Conflict). Shu sababli admin konteynerda
@@ -59,18 +58,14 @@ export function startUserBot() {
     }
   });
 
+  // The chat menu button is reset to Telegram's default: the bot no longer
+  // opens the site as a mini app.
   try {
     fetch(`https://api.telegram.org/bot${token}/setChatMenuButton`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        menu_button: {
-          type: "web_app",
-          text: "O'ynash 🚀",
-          web_app: { url: MINI_APP_URL },
-        },
-      }),
-    }).catch((err) => console.error("Menu button setup failed:", err));
+      body: JSON.stringify({ menu_button: { type: "default" } }),
+    }).catch((err) => console.error("Menu button reset failed:", err));
   } catch (err) {}
 
   userBot.onText(/^\/start(?:\s+(.+))?$/, async (msg, match) => {
@@ -106,13 +101,7 @@ export function startUserBot() {
       `YOZGO — O'zbekistonning birinchi va yagona terma-yozish raqobat platformasiga xush kelibsiz!\n\n` +
       `Musobaqada ishtirok etish uchun xona kodini botga yuboring (masalan: OHSVEW).`;
 
-    const opts = {
-      reply_markup: {
-        inline_keyboard: [[{ text: "🎯 Yozgoga kirish", web_app: { url: "https://yozgo.uz" } }]],
-      },
-    };
-
-    userBot?.sendMessage(chatId, text, opts);
+    userBot?.sendMessage(chatId, text);
   });
 
   userBot.on("message", async (msg) => {
@@ -340,6 +329,20 @@ async function handleRoomCode(chatId: number, code: string, tgUserId?: number) {
   await generateAndSendRoomCode(battle.id, tgUserId, chatId);
 }
 
+/**
+ * Mints a one-time room access code bound to a specific site account.
+ *
+ * Split out of generateAndSendRoomCode so the friend-invite path can mint a
+ * code and hand it to the in-app notification — clicking that notification
+ * previously landed on the battle menu with no code, which is why an invited
+ * friend could never actually get into the room.
+ */
+export async function mintRoomAccessCode(battleId: string, userId: string): Promise<string> {
+  const code = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8 characters
+  await db.insert(roomAccessCodes).values({ roomId: battleId, userId, code });
+  return code;
+}
+
 // Kod yaratish va DB xatolarini KUCHAYTIRDIK
 export async function generateAndSendRoomCode(
   battleId: string,
@@ -364,24 +367,14 @@ export async function generateAndSendRoomCode(
   }
 
   try {
-    const code = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8 characters
-    await db.insert(roomAccessCodes).values({
-      roomId: battleId,
-      userId: owner.id,
-      code: code,
-    });
+    const code = await mintRoomAccessCode(battleId, owner.id);
 
     const text = `🎉 Sizning kirish kodingiz:\n\n\`${code}\`\n\n👆 Yuqoridagi kod ustiga bir marta bossangiz avtomatik nusxalanadi.\nSaytdagi maydonga kiritib jangga qo'shiling. Kod bir martalik!`;
 
     // Awaited: an un-awaited send meant a blocked bot / Markdown error rejected
     // outside this try, so the row was already written, the user got nothing,
     // and the failure only surfaced in the unhandledRejection log.
-    await userBot?.sendMessage(chatId, text, {
-      parse_mode: "Markdown",
-      reply_markup: {
-        inline_keyboard: [[{ text: "📲 Jangga kirish", web_app: { url: `${MINI_APP_URL}/battle` } }]],
-      },
-    });
+    await userBot?.sendMessage(chatId, text, { parse_mode: "Markdown" });
   } catch (err: any) {
     console.error("Kod generatsiya xatosi:", err.message);
     
@@ -425,20 +418,18 @@ export async function sendMessageToWinner(telegramId: number, text: string) {
  */
 export async function inviteFriendToBattle(
   friendTelegramId: number,
-  battleCode: string,
   inviterName: string,
+  accessCode: string,
 ) {
   if (!userBot) return;
-  const [battle] = await db.select().from(battles).where(eq(battles.code, battleCode));
-  if (!battle || battle.status === "finished") {
-    await userBot.sendMessage(friendTelegramId, "❌ Taklif qilingan jang topilmadi yoki yakunlangan.");
-    return;
-  }
+  // The code is minted by the caller (which also puts it in the in-app
+  // notification), so both channels hand out the SAME one-time code — minting
+  // separately would burn one of them the moment the other was used.
   await userBot.sendMessage(
     friendTelegramId,
-    `🎮 ${inviterName} sizni YOZGO jangiga taklif qildi! Quyidagi kod bilan qo'shiling:`,
+    `🎮 ${inviterName} sizni YOZGO jangiga taklif qildi!\n\nKirish kodingiz:\n\n\`${accessCode}\`\n\nSaytdagi "Jang" bo'limiga kiritib qo'shiling. Kod bir martalik!`,
+    { parse_mode: "Markdown" },
   );
-  await generateAndSendRoomCode(battle.id, friendTelegramId, friendTelegramId);
 }
 
 /**

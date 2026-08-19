@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { AuthCard } from "@/components/layout/auth-card";
 import { PasswordField } from "@/components/common/password-field";
 import { InlineAlert } from "@/components/common/inline-alert";
+import { useI18n } from "@/lib/i18n";
 import SEO from "@/components/SEO";
 
 // apiRequest xatolari "NNN: <xabar>" ko'rinishida keladi (throwIfResNotOk) — status
@@ -51,34 +52,33 @@ function TelegramBlock({
   verifying?: boolean;
   onVerify?: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-2 rounded-lg border p-3">
       <div className="flex items-center justify-between">
-        <Label className="flex items-center gap-1"><Send className="w-4 h-4 text-info" /> Telegram tasdiqlash</Label>
+        <Label className="flex items-center gap-1"><Send className="w-4 h-4 text-info" /> {t.auth.tgVerification}</Label>
         {verified ? (
-          <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Tasdiqlandi</span>
+          <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> {t.auth.verified}</span>
         ) : tgBound ? (
-          <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Ulandi</span>
+          <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> {t.auth.connected}</span>
         ) : null}
       </div>
       {!verified && (
         <Button type="button" variant="outline" className="w-full" onClick={onStart} disabled={busy}>
-          <Send className="w-4 h-4 mr-2" /> {tgToken ? "Botni qayta ochish" : "Telegram botni ochish"}
+          <Send className="w-4 h-4 mr-2" /> {tgToken ? t.auth.reopenBot : t.auth.openBot}
         </Button>
       )}
       {tgDeepLink && !verified && (
         // window.open fetch'dan KEYIN chaqirilgani uchun Safari popup-blocker uni
         // bloklashi mumkin — to'g'ridan-to'g'ri bosiladigan havola har doim ishlaydi.
         <a href={tgDeepLink} target="_blank" rel="noreferrer" className="block text-center text-xs text-primary hover:underline">
-          Bot ochilmadimi? Shu havolani bosing
+          {t.auth.botNotOpened}
         </a>
       )}
-      <p className="text-xs text-muted-foreground">
-        Bot ochilib <b>Start</b> bosing → telefon raqamingizni yuboring (tugma orqali) → bot 6 xonali kodni yuboradi → shu yerga kiriting.
-      </p>
+      <p className="text-xs text-muted-foreground">{t.auth.tgHelp}</p>
       <div className="flex gap-2">
         <Input
-          placeholder="Telegram kodi (6 xonali)"
+          placeholder={t.auth.tgCodePlaceholder}
           value={tgCode}
           onChange={(e) => setTgCode(e.target.value)}
           maxLength={6}
@@ -87,7 +87,7 @@ function TelegramBlock({
         />
         {onVerify && (
           <Button type="button" onClick={onVerify} disabled={verified || verifying || busy || tgCode.length < 6}>
-            {verifying ? "..." : "Tasdiqlash"}
+            {verifying ? "..." : t.auth.verify}
           </Button>
         )}
       </div>
@@ -97,6 +97,7 @@ function TelegramBlock({
 
 export default function AuthPage() {
   const { login, register, loginTelegram, isAuthenticated } = useAuth();
+  const { t } = useI18n();
   const [, setLocation] = useLocation();
 
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -143,7 +144,8 @@ export default function AuthPage() {
       return;
     }
     setCheckingUsername(true);
-    const t = setTimeout(async () => {
+    // Renamed off `t` — that now holds the translations for this component.
+    const debounce = setTimeout(async () => {
       try {
         const res = await fetch(normalizeUrl(`/api/auth/check-username?username=${encodeURIComponent(username)}`));
         if (res.ok) setUsernameFree((await res.json()).available);
@@ -151,7 +153,7 @@ export default function AuthPage() {
         setCheckingUsername(false);
       }
     }, 500);
-    return () => clearTimeout(t);
+    return () => clearTimeout(debounce);
   }, [username, mode]);
 
   // Telegram bog'lanish holatini poll qilish (Start + telefon yuborildimi?)
@@ -208,7 +210,7 @@ export default function AuthPage() {
         body: JSON.stringify({ purpose }),
       });
       const d = await res.json();
-      if (!res.ok) throw new Error(d.message || "Telegram ulanishida xatolik");
+      if (!res.ok) throw new Error(d.message || t.auth.tgConnectError);
       setTgToken(d.token);
       setTgDeepLink(d.deepLink);
       setTgBound(false);
@@ -218,7 +220,7 @@ export default function AuthPage() {
       // fallback havola ham ko'rsatiladi (TelegramBlock).
       window.open(d.deepLink, "_blank");
     } catch (e: any) {
-      setError(e.message || "Xatolik");
+      setError(e.message || t.auth.genericError);
     } finally {
       setBusy(false);
     }
@@ -228,9 +230,9 @@ export default function AuthPage() {
   async function submitRegisterForm(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (username.length < 4) { setError("Username kamida 4 belgi (kichik harf/raqam/_)."); return; }
-    if (usernameFree === false) { setError("Bu username band, boshqasini tanlang."); return; }
-    if (password.length < 6) { setError("Parol kamida 6 belgi."); return; }
+    if (username.length < 4) { setError(t.auth.usernameMin); return; }
+    if (usernameFree === false) { setError(t.auth.usernameExists); return; }
+    if (password.length < 6) { setError(t.auth.passwordMin); return; }
     setBusy(true);
     try {
       const res = await fetch(normalizeUrl(`/api/auth/register/email-otp`), {
@@ -239,14 +241,14 @@ export default function AuthPage() {
         body: JSON.stringify({ email, username }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.message || "Email kodini yuborishda xatolik");
+      if (!res.ok) throw new Error(d.message || t.auth.emailCodeSendError);
       setEmailVerified(false);
       setEmailCode("");
       setEmailToken("");
       await startTelegram("register");
       setRegStep("verify");
     } catch (e: any) {
-      setError(e.message || "Xatolik");
+      setError(e.message || t.auth.genericError);
     } finally {
       setBusy(false);
     }
@@ -263,12 +265,12 @@ export default function AuthPage() {
         body: JSON.stringify({ email, username }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.message || "Email kodini yuborishda xatolik");
+      if (!res.ok) throw new Error(d.message || t.auth.emailCodeSendError);
       setEmailVerified(false);
       setEmailCode("");
       setEmailToken("");
     } catch (e: any) {
-      setError(e.message || "Xatolik");
+      setError(e.message || t.auth.genericError);
     } finally {
       setBusy(false);
     }
@@ -285,11 +287,11 @@ export default function AuthPage() {
         body: JSON.stringify({ email, code: emailCode }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.message || "Email kodini tasdiqlashda xatolik");
+      if (!res.ok) throw new Error(d.message || t.auth.emailCodeVerifyError);
       setEmailVerified(true);
       setEmailToken(d.emailToken || "");
     } catch (e: any) {
-      setError(e.message || "Xatolik");
+      setError(e.message || t.auth.genericError);
     } finally {
       setEmailVerifying(false);
     }
@@ -306,10 +308,10 @@ export default function AuthPage() {
         body: JSON.stringify({ token: tgToken, code: tgCode }),
       });
       const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.message || "Telegram kodini tasdiqlashda xatolik");
+      if (!res.ok) throw new Error(d.message || t.auth.tgCodeVerifyError);
       setTgVerified(true);
     } catch (e: any) {
-      setError(e.message || "Xatolik");
+      setError(e.message || t.auth.genericError);
     } finally {
       setTgVerifying(false);
     }
@@ -319,8 +321,8 @@ export default function AuthPage() {
   async function submitRegister(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!emailVerified || !emailToken) { setError("Email tasdiqlanmagan. Avval email kodini tasdiqlang."); return; }
-    if (!tgVerified) { setError("Telegram tasdiqlanmagan. Avval Telegram kodini tasdiqlang."); return; }
+    if (!emailVerified || !emailToken) { setError(t.auth.emailNotVerified); return; }
+    if (!tgVerified) { setError(t.auth.tgNotVerified); return; }
     setBusy(true);
     try {
       await register({ username, email, password, gender, emailToken, telegramToken: tgToken });
@@ -368,10 +370,10 @@ export default function AuthPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: forgotEmail.trim() }),
       });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.message || "Xatolik"); return; }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setError(d.message || t.auth.genericError); return; }
       setForgotSent(true);
     } catch {
-      setError("Tarmoq xatosi");
+      setError(t.auth.networkError);
     }
   }
 
@@ -380,22 +382,22 @@ export default function AuthPage() {
   // ---------- Forgot password ----------
   if (showForgot) {
     return (
-      <AuthCard title="Parolni tiklash">
+      <AuthCard title={t.auth.forgotTitle}>
         {forgotSent ? (
           <div className="text-center space-y-4">
             <Mail className="w-12 h-12 text-primary mx-auto" />
-            <p className="text-sm text-muted-foreground">Agar hisob mavjud bo'lsa, ko'rsatmalar emailingizga yuboriladi.</p>
-            <Button className="w-full" onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}>Ortga</Button>
+            <p className="text-sm text-muted-foreground">{t.auth.forgotSentMsg}</p>
+            <Button className="w-full" onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail(""); }}>{t.auth.back}</Button>
           </div>
         ) : (
           <form onSubmit={submitForgot} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="forgot-email">Email</Label>
+              <Label htmlFor="forgot-email">{t.auth.email}</Label>
               <Input id="forgot-email" type="email" placeholder="you@example.com" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} required />
             </div>
             {errorLine}
-            <Button type="submit" className="w-full">Yuborish</Button>
-            <button type="button" className="w-full text-sm text-muted-foreground hover:text-foreground" onClick={() => setShowForgot(false)}>Ortga</button>
+            <Button type="submit" className="w-full">{t.auth.send}</Button>
+            <button type="button" className="w-full text-sm text-muted-foreground hover:text-foreground" onClick={() => setShowForgot(false)}>{t.auth.back}</button>
           </form>
         )}
       </AuthCard>
@@ -405,19 +407,19 @@ export default function AuthPage() {
   // ---------- Register: verify step (har kanal ALOHIDA tasdiqlanadi) ----------
   if (mode === "register" && regStep === "verify") {
     return (
-      <AuthCard title="Ikki tasdiq" description="Email VA Telegram — ikkalasi ham tasdiqlanishi shart">
+      <AuthCard title={t.auth.twoStepTitle} description={t.auth.twoStepDesc}>
         <form onSubmit={submitRegister} className="space-y-4">
           <div className="space-y-2 rounded-lg border p-3">
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1"><Mail className="w-4 h-4 text-primary" /> Email kodi</Label>
+              <Label className="flex items-center gap-1"><Mail className="w-4 h-4 text-primary" /> {t.auth.emailCodeLabel}</Label>
               {emailVerified && (
-                <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Tasdiqlandi</span>
+                <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> {t.auth.verified}</span>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">{email} manziliga yuborilgan 6 xonali kod.</p>
+            <p className="text-xs text-muted-foreground">{t.auth.emailCodeSentTo} {email}</p>
             <div className="flex gap-2">
               <Input
-                placeholder="Email kodi"
+                placeholder={t.auth.emailCodePlaceholder}
                 value={emailCode}
                 onChange={(e) => setEmailCode(e.target.value)}
                 maxLength={6}
@@ -425,12 +427,12 @@ export default function AuthPage() {
                 disabled={emailVerified}
               />
               <Button type="button" onClick={verifyEmail} disabled={emailVerified || emailVerifying || busy || emailCode.length < 6}>
-                {emailVerifying ? "..." : "Tasdiqlash"}
+                {emailVerifying ? "..." : t.auth.verify}
               </Button>
             </div>
             {!emailVerified && (
               <button type="button" className="text-xs text-primary hover:underline" onClick={resendEmailCode} disabled={busy}>
-                Kodni qayta yuborish
+                {t.auth.resendCode}
               </button>
             )}
           </div>
@@ -450,18 +452,18 @@ export default function AuthPage() {
 
           {errorLine}
           <Button type="submit" className="w-full" disabled={busy || !emailVerified || !tgVerified}>
-            {busy ? "Tasdiqlanmoqda..." : "Ro'yxatdan o'tish"}
+            {busy ? t.auth.verifyingBusy : t.auth.registerSubmit}
           </Button>
           {(!emailVerified || !tgVerified) && (
             <p className="text-xs text-center text-muted-foreground">
               {!emailVerified && !tgVerified
-                ? "Email va Telegram tasdiqlanishi kutilmoqda."
+                ? t.auth.waitingBoth
                 : !emailVerified
-                  ? "Email tasdiqlanishi kutilmoqda."
-                  : "Telegram tasdiqlanishi kutilmoqda."}
+                  ? t.auth.waitingEmail
+                  : t.auth.waitingTelegram}
             </p>
           )}
-          <button type="button" className="w-full text-sm text-muted-foreground hover:text-foreground" onClick={() => { setRegStep("form"); setError(""); }}>Ortga</button>
+          <button type="button" className="w-full text-sm text-muted-foreground hover:text-foreground" onClick={() => { setRegStep("form"); setError(""); }}>{t.auth.back}</button>
         </form>
       </AuthCard>
     );
@@ -470,12 +472,12 @@ export default function AuthPage() {
   // ---------- Register: form step ----------
   if (mode === "register") {
     return (
-      <AuthCard title="Hisob yaratish" description="Username, email, parol va Telegram">
+      <AuthCard title={t.auth.createTitle} description={t.auth.createDesc}>
         <form onSubmit={submitRegisterForm} className="space-y-4">
           <div className="space-y-2">
-            <Label>Username</Label>
+            <Label>{t.auth.username}</Label>
             <Input
-              placeholder="masalan: ali_99"
+              placeholder={t.auth.usernamePlaceholder}
               value={username}
               onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
               minLength={4}
@@ -485,16 +487,16 @@ export default function AuthPage() {
               className={username && usernameFree === true ? "border-success" : ""}
             />
             {username && !checkingUsername && usernameFree !== null && (
-              <p className={`text-sm ${usernameFree ? "text-success" : "text-destructive"}`} role="status">{usernameFree ? "✓ Mavjud" : "Bu username band"}</p>
+              <p className={`text-sm ${usernameFree ? "text-success" : "text-destructive"}`} role="status">{usernameFree ? t.auth.usernameFree : t.auth.usernameTaken}</p>
             )}
-            {username && checkingUsername && <p className="text-sm text-warning">Tekshirilmoqda...</p>}
+            {username && checkingUsername && <p className="text-sm text-warning">{t.auth.checking}</p>}
           </div>
           <div className="space-y-2">
-            <Label>Email</Label>
+            <Label>{t.auth.email}</Label>
             <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
           <PasswordField
-            label="Parol"
+            label={t.auth.password}
             value={password}
             onChange={setPassword}
             autoComplete="new-password"
@@ -502,7 +504,7 @@ export default function AuthPage() {
             required
           />
           <div className="space-y-2">
-            <Label>Jinsingiz (majburiy)</Label>
+            <Label>{t.auth.genderLabel}</Label>
             <div className="grid grid-cols-2 gap-4">
               <button
                 type="button"
@@ -515,7 +517,7 @@ export default function AuthPage() {
                     : "border-border bg-card text-muted-foreground hover:border-info/40"
                 )}
               >
-                ♂ O'g'il bola
+                ♂ {t.auth.boy}
               </button>
               <button
                 type="button"
@@ -528,15 +530,15 @@ export default function AuthPage() {
                     : "border-border bg-card text-muted-foreground hover:border-primary/40"
                 )}
               >
-                ♀ Qiz bola
+                ♀ {t.auth.girl}
               </button>
             </div>
           </div>
           {errorLine}
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? "Yuborilmoqda..." : "Davom etish"}</Button>
+          <Button type="submit" className="w-full" disabled={busy}>{busy ? t.auth.sending : t.auth.continueBtn}</Button>
           <div className="text-center text-sm text-muted-foreground">
-            Hisobingiz bormi?{" "}
-            <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setMode("login"); setError(""); }}>Kirish</button>
+            {t.auth.hasAccount}{" "}
+            <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setMode("login"); setError(""); }}>{t.auth.loginLink}</button>
           </div>
         </form>
       </AuthCard>
@@ -546,31 +548,31 @@ export default function AuthPage() {
   // ---------- Login ----------
   return (
     <>
-    <SEO title="Kirish" noindex />
-    <AuthCard title="Kirish" description="Parol yoki Telegram orqali">
+    <SEO title={t.auth.loginTitle} noindex />
+    <AuthCard title={t.auth.loginTitle} description={t.auth.loginMethods}>
       <div className="flex gap-2 mb-4">
-        <Button type="button" variant={loginTab === "password" ? "default" : "outline"} className="flex-1" onClick={() => { setLoginTab("password"); setError(""); }}>Parol</Button>
-        <Button type="button" variant={loginTab === "telegram" ? "default" : "outline"} className="flex-1" onClick={() => { setLoginTab("telegram"); setError(""); }}><Send className="w-4 h-4 mr-1" /> Telegram</Button>
+        <Button type="button" variant={loginTab === "password" ? "default" : "outline"} className="flex-1" onClick={() => { setLoginTab("password"); setError(""); }}>{t.auth.passwordTab}</Button>
+        <Button type="button" variant={loginTab === "telegram" ? "default" : "outline"} className="flex-1" onClick={() => { setLoginTab("telegram"); setError(""); }}><Send className="w-4 h-4 mr-1" /> {t.auth.telegramTab}</Button>
       </div>
 
       {loginTab === "password" ? (
         <form onSubmit={submitLoginPassword} className="space-y-4">
           <div className="space-y-2">
-            <Label>Email yoki username</Label>
-            <Input placeholder="you@example.com yoki ali_99" value={loginId} onChange={(e) => setLoginId(e.target.value)} required />
+            <Label>{t.auth.emailOrUsername}</Label>
+            <Input placeholder={t.auth.emailOrUsernamePlaceholder} value={loginId} onChange={(e) => setLoginId(e.target.value)} required />
           </div>
           <PasswordField
-            label="Parol"
+            label={t.auth.password}
             value={password}
             onChange={setPassword}
             autoComplete="current-password"
             required
             labelAction={
-              <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowForgot(true)}>Parolni unutdingizmi?</button>
+              <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowForgot(true)}>{t.auth.forgotPassword}</button>
             }
           />
           {errorLine}
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? "Kirilmoqda..." : "Kirish"}</Button>
+          <Button type="submit" className="w-full" disabled={busy}>{busy ? t.auth.signingIn : t.auth.login}</Button>
         </form>
       ) : (
         <form onSubmit={submitLoginTelegram} className="space-y-4">
@@ -584,13 +586,13 @@ export default function AuthPage() {
             onStart={() => startTelegram("login")}
           />
           {errorLine}
-          <Button type="submit" className="w-full" disabled={busy || !tgCode}>{busy ? "Kirilmoqda..." : "Telegram orqali kirish"}</Button>
+          <Button type="submit" className="w-full" disabled={busy || !tgCode}>{busy ? t.auth.signingIn : t.auth.loginWithTelegram}</Button>
         </form>
       )}
 
       <div className="mt-6 text-center text-sm text-muted-foreground">
-        Hisobingiz yo'qmi?{" "}
-        <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setMode("register"); setRegStep("form"); setError(""); }}>Ro'yxatdan o'tish</button>
+        {t.auth.noAccount}{" "}
+        <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setMode("register"); setRegStep("form"); setError(""); }}>{t.auth.registerLink}</button>
       </div>
     </AuthCard>
     </>
