@@ -53,6 +53,32 @@ function TelegramBlock({
   onVerify?: () => void;
 }) {
   const { t } = useI18n();
+  const [copiedManual, setCopiedManual] = useState(false);
+
+  const onCopyManual = async () => {
+    const value = `auth_${tgToken}`;
+    try {
+      // navigator.clipboard is undefined on insecure origins and can be denied,
+      // so fall back to the execCommand path rather than failing silently.
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = value;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopiedManual(true);
+      setTimeout(() => setCopiedManual(false), 2000);
+    } catch {
+      /* the code is on screen and selectable anyway */
+    }
+  };
+
   return (
     <div className="space-y-2 rounded-lg border p-3">
       <div className="flex items-center justify-between">
@@ -91,6 +117,26 @@ function TelegramBlock({
         </button>
       )}
       <p className="text-xs text-muted-foreground">{t.auth.tgHelp}</p>
+
+      {/* Manual path. The deep link only carries its payload when Telegram
+          itself opens the chat; pressing "START BOT" on the t.me web page —
+          what a desktop browser shows — often drops it, and registration then
+          dead-ends with no phone prompt. The bot accepts this same text as a
+          normal message, so the user can finish from their phone regardless. */}
+      {tgToken && !verified && (
+        <div className="rounded-md border border-dashed p-2 space-y-1.5">
+          <p className="text-[11px] leading-snug text-muted-foreground">{t.auth.manualTitle}</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-[11px]" data-testid="text-manual-auth">
+              auth_{tgToken}
+            </code>
+            <Button type="button" size="sm" variant="secondary" onClick={onCopyManual}>
+              {copiedManual ? t.auth.manualCopied : t.auth.manualCopy}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <Input
           placeholder={t.auth.tgCodePlaceholder}

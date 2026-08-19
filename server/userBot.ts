@@ -116,6 +116,17 @@ export function startUserBot() {
       if (state?.type === "auth_phone") {
         // Auth oqimi faqat shaxsiy chatda (qo'shimcha himoya — /start'dagi guard bilan bir xil sabab).
         if (msg.chat.type !== "private") return;
+
+        // A NEWER token pasted while an old attempt is still pending must win.
+        // Otherwise this branch swallows it with "press the phone button" and
+        // the user is stuck on a stale attempt until the row expires — which is
+        // what made retrying feel impossible without a page reload.
+        const restart = msg.text?.match(/\bauth_([a-f0-9]{32})\b/i) || msg.text?.match(/^([a-f0-9]{32})$/i);
+        if (restart) {
+          await handleAuthToken(chatId, restart[1].toLowerCase(), msg.from?.id);
+          return;
+        }
+
         if (msg.contact) {
           // Faqat O'ZINING kontakti qabul qilinadi. Forward qilingan begona kontakt
           // user_id=undefined yoki boshqa id bilan keladi — ikkalasi ham rad etiladi.
@@ -235,6 +246,21 @@ export function startUserBot() {
       // Xona kodini matndan tutib olishni KUCHAYTIRDIK
       if (msg.text && !msg.text.startsWith("/")) {
         const text = msg.text.trim();
+
+        // MANUAL AUTH FALLBACK.
+        // The deep link (t.me/bot?start=auth_<token>) only delivers its payload
+        // when Telegram itself opens the chat. Pressing "START BOT" on the
+        // t.me web page — which is what a desktop browser shows — frequently
+        // drops it, and then the phone prompt never appears and registration
+        // dead-ends. So the same token is accepted as a pasted message: the
+        // site shows it with a copy button, and the user can finish from any
+        // device, including their phone, without the link working at all.
+        const authMatch = text.match(/\bauth_([a-f0-9]{32})\b/i) || text.match(/^([a-f0-9]{32})$/i);
+        if (authMatch) {
+          await handleAuthToken(chatId, authMatch[1].toLowerCase(), msg.from?.id);
+          return;
+        }
+
         let extractedCode = "";
 
         const match = text.match(/Asl Xona Kodi:\s*([A-Za-z0-9]{4,10})/i);
