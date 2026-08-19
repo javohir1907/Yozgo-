@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Keyboard, Trophy, Users, Settings, User as UserIcon, LogOut, Globe, Moon, Sun, Menu, Shield, ListChecks, ShoppingBag, UserPlus } from "lucide-react";
@@ -7,6 +8,14 @@ import { useI18n, type UILanguage } from "@/lib/i18n";
 import { KeycapLogo } from "@/components/brand/keycap-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notification-bell";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { frameRingStyle } from "@/lib/frame";
 import {
   DropdownMenu,
@@ -19,6 +28,7 @@ import {
 
 export function NavHeader() {
   const [location] = useLocation();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
   const { t, uiLang, setUILang } = useI18n();
   const { resolvedTheme, setTheme } = useTheme();
@@ -222,7 +232,13 @@ export function NavHeader() {
                 )}
                 <DropdownMenuItem
                   className="text-destructive font-medium focus:text-destructive focus:bg-destructive/10 rounded-lg cursor-pointer mt-1"
-                  onClick={() => logout()}
+                  onSelect={(e) => {
+                    // Confirm first — logging out was a single click with no
+                    // way back. onSelect + preventDefault keeps the dropdown
+                    // from closing before the dialog mounts.
+                    e.preventDefault();
+                    setShowLogoutConfirm(true);
+                  }}
                   data-testid="button-logout"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -240,6 +256,27 @@ export function NavHeader() {
           )}
         </div>
       </div>
+
+      <Dialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">{t.nav.logoutConfirmTitle}</DialogTitle>
+            <DialogDescription>{t.nav.logoutConfirmBody}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowLogoutConfirm(false)}>
+              {t.nav.cancel}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => { setShowLogoutConfirm(false); logout(); }}
+              data-testid="button-logout-confirm"
+            >
+              {t.nav.logoutConfirmYes}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
 }

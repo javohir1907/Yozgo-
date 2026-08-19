@@ -459,6 +459,11 @@ export class BattleManager {
         settings: room.settings,
         startTime: room.startTime,
         endTime: room.endTime,
+        // serverNow lets the client anchor the countdown to its OWN clock.
+        // endTime is a server timestamp; a client whose clock runs ahead used to
+        // compute a negative remaining time, which silently disabled the
+        // "next attempt" button with no error shown.
+        serverNow: Date.now(),
         words: room.testWords,
       });
       this.broadcastRoomUpdate(room);
@@ -497,6 +502,11 @@ export class BattleManager {
         settings: room.settings,
         startTime: room.startTime,
         endTime: room.endTime,
+        // serverNow lets the client anchor the countdown to its OWN clock.
+        // endTime is a server timestamp; a client whose clock runs ahead used to
+        // compute a negative remaining time, which silently disabled the
+        // "next attempt" button with no error shown.
+        serverNow: Date.now(),
         words: room.testWords,
       });
     }
@@ -527,6 +537,7 @@ export class BattleManager {
       settings: room.settings,
       startTime: room.startTime,
       endTime: room.endTime,
+      serverNow: Date.now(),
       words: room.testWords,
     });
 

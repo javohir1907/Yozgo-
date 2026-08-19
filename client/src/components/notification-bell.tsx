@@ -31,7 +31,14 @@ export function NotificationBell() {
 
   const query = useQuery<{ items: NotificationItem[]; unreadCount: number }>({
     queryKey: ["/api/notifications"],
-    refetchInterval: 30000,
+    // The global defaults are refetchInterval:false + staleTime:Infinity, so
+    // without overriding BOTH of these the bell only ever updated on a full
+    // page reload — a battle invite could sit unseen indefinitely.
+    refetchInterval: 10000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   const markAllRead = useMutation({

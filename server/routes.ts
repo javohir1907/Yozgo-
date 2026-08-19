@@ -29,7 +29,7 @@ import { computeSoloXp, xpProgress, levelForXp } from "@shared/lib/xp";
 import { resolveRank } from "@shared/lib/rank";
 import { computeSoloCoins } from "@shared/lib/coins";
 import { cosmeticMeta } from "./gamification/cosmetic-defs";
-import { inviteFriendToBattle, notifyUser, getUserBot, mintRoomAccessCode } from "./userBot";
+import { notifyUser, getUserBot, mintRoomAccessCode } from "./userBot";
 
 // Shared Schemas & Models
 import crypto from "crypto";
@@ -469,6 +469,12 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       if (battle.status === "finished") {
         return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Bu jang allaqachon yakunlangan." });
       }
+      // Only the room's host may invite. Anyone in the room could previously
+      // pull in their own friends, which is not the host's intent when they
+      // open a room for a specific group.
+      if (battle.creatorId !== userId) {
+        return res.status(HTTP_STATUS.FORBIDDEN).json({ message: "Do'stlarni faqat xona egasi taklif qila oladi." });
+      }
 
       // One code, both channels. The notification carries it in the link so
       // clicking it drops the friend straight into the room — it used to point
@@ -478,10 +484,9 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
       const inviter = await storage.getUser(userId);
       const inviterName = inviter?.firstName || "Do'stingiz";
 
-      // Telegram is now optional: the in-app notification alone is enough.
-      if (friend.telegramId) {
-        void inviteFriendToBattle(Number(friend.telegramId), inviterName, accessCode);
-      }
+      // No Telegram DM and no code shown to the invitee: the in-app
+      // notification carries the code in its link, so accepting an invite is a
+      // single click. Codes are only for the manual @yozgo_bot flow.
 
       await storage.createNotification({
         userId: friendId,

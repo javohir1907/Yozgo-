@@ -409,6 +409,10 @@ export default function AuthPage() {
     return (
       <AuthCard title={t.auth.twoStepTitle} description={t.auth.twoStepDesc}>
         <form onSubmit={submitRegister} className="space-y-4">
+          <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+            {t.auth.stepVerifyOf}
+          </p>
+          <p className="text-xs text-muted-foreground">{t.auth.whyTelegram}</p>
           <div className="space-y-2 rounded-lg border p-3">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-1"><Mail className="w-4 h-4 text-primary" /> {t.auth.emailCodeLabel}</Label>
@@ -473,10 +477,18 @@ export default function AuthPage() {
   if (mode === "register") {
     return (
       <AuthCard title={t.auth.createTitle} description={t.auth.createDesc}>
-        <form onSubmit={submitRegisterForm} className="space-y-4">
-          <div className="space-y-2">
-            <Label>{t.auth.username}</Label>
+        <form onSubmit={submitRegisterForm} className="space-y-5">
+          {/* Every field below carries a one-line explanation. Users were
+              guessing what each input and button actually meant, and the
+              character rules only surfaced as an error after submitting. */}
+          <p className="text-[11px] font-mono uppercase tracking-widest text-muted-foreground">
+            {t.auth.stepOf}
+          </p>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="reg-username">{t.auth.username}</Label>
             <Input
+              id="reg-username"
               placeholder={t.auth.usernamePlaceholder}
               value={username}
               onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
@@ -484,25 +496,34 @@ export default function AuthPage() {
               maxLength={20}
               required
               aria-invalid={username && usernameFree === false ? true : undefined}
+              aria-describedby="reg-username-hint"
               className={username && usernameFree === true ? "border-success" : ""}
             />
             {username && !checkingUsername && usernameFree !== null && (
               <p className={`text-sm ${usernameFree ? "text-success" : "text-destructive"}`} role="status">{usernameFree ? t.auth.usernameFree : t.auth.usernameTaken}</p>
             )}
             {username && checkingUsername && <p className="text-sm text-warning">{t.auth.checking}</p>}
+            <p id="reg-username-hint" className="text-xs text-muted-foreground">{t.auth.usernameHint}</p>
           </div>
-          <div className="space-y-2">
-            <Label>{t.auth.email}</Label>
-            <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+
+          <div className="space-y-1.5">
+            <Label htmlFor="reg-email">{t.auth.email}</Label>
+            <Input id="reg-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required aria-describedby="reg-email-hint" />
+            <p id="reg-email-hint" className="text-xs text-muted-foreground">{t.auth.emailHint}</p>
           </div>
-          <PasswordField
-            label={t.auth.password}
-            value={password}
-            onChange={setPassword}
-            autoComplete="new-password"
-            minLength={6}
-            required
-          />
+
+          <div className="space-y-1.5">
+            <PasswordField
+              label={t.auth.password}
+              value={password}
+              onChange={setPassword}
+              autoComplete="new-password"
+              minLength={6}
+              required
+            />
+            <p className="text-xs text-muted-foreground">{t.auth.passwordHint}</p>
+          </div>
+
           <div className="space-y-2">
             <Label>{t.auth.genderLabel}</Label>
             <div className="grid grid-cols-2 gap-4">
@@ -533,9 +554,13 @@ export default function AuthPage() {
                 ♀ {t.auth.girl}
               </button>
             </div>
+            <p className="text-xs text-muted-foreground">{t.auth.genderHint}</p>
           </div>
           {errorLine}
-          <Button type="submit" className="w-full" disabled={busy}>{busy ? t.auth.sending : t.auth.continueBtn}</Button>
+          <div className="space-y-2">
+            <Button type="submit" className="w-full" disabled={busy}>{busy ? t.auth.sending : t.auth.continueBtn}</Button>
+            <p className="text-xs text-center text-muted-foreground">{t.auth.continueHint}</p>
+          </div>
           <div className="text-center text-sm text-muted-foreground">
             {t.auth.hasAccount}{" "}
             <button type="button" className="text-primary hover:underline font-medium" onClick={() => { setMode("login"); setError(""); }}>{t.auth.loginLink}</button>

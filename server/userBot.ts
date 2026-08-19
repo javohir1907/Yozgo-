@@ -412,25 +412,6 @@ export async function sendMessageToWinner(telegramId: number, text: string) {
   );
 }
 
-/**
- * Do'stni battle'ga taklif qilish (Feature 9) — mavjud generateAndSendRoomCode'ni
- * qayta ishlatib bir martalik kirish kodi + deep-link yuboradi. Telegram-only.
- */
-export async function inviteFriendToBattle(
-  friendTelegramId: number,
-  inviterName: string,
-  accessCode: string,
-) {
-  if (!userBot) return;
-  // The code is minted by the caller (which also puts it in the in-app
-  // notification), so both channels hand out the SAME one-time code — minting
-  // separately would burn one of them the moment the other was used.
-  await userBot.sendMessage(
-    friendTelegramId,
-    `🎮 ${inviterName} sizni YOZGO jangiga taklif qildi!\n\nKirish kodingiz:\n\n\`${accessCode}\`\n\nSaytdagi "Jang" bo'limiga kiritib qo'shiling. Kod bir martalik!`,
-    { parse_mode: "Markdown" },
-  );
-}
 
 /**
  * Har qanday muayyan foydalanuvchiga bitta erkin matnli xabar (best-effort) —

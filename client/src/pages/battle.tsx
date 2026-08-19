@@ -219,6 +219,8 @@ export default function BattlePage() {
   const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [attemptCount, setAttemptCount] = useState<number>(0);
+  // Leaving mid-battle throws away the current attempt, so it asks first.
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
   const correctCharsRef = useRef(0);
   const allKeystrokesRef = useRef(0);
@@ -274,15 +276,25 @@ export default function BattlePage() {
    * Jang boshlangandagi umumiy taymerni ishga tushirish.
    */
   useEffect(() => {
-    if (battleStart) {
-      const end = battleStart.endTime;
-      const tick = () => {
-        const remaining = Math.max(0, Math.floor((end - Date.now()) / 1000));
-        setTotalTimer(remaining);
-        if (remaining > 0) requestAnimationFrame(tick);
-      };
-      tick();
-    }
+    if (!battleStart) return;
+
+    // endTime is a SERVER timestamp. Comparing it against the client's Date.now()
+    // meant any clock skew went straight into the countdown: a device running a
+    // few minutes fast saw remaining <= 0 the instant it joined, which made
+    // startAttempt() bail out and left "next attempt" dead with no error at all.
+    // Anchor the deadline to this device's own clock instead, using the
+    // server's notion of "now" that came with the event.
+    const serverNow = battleStart.serverNow ?? battleStart.endTime;
+    const msLeftAtArrival = battleStart.endTime - serverNow;
+    const localEnd = Date.now() + msLeftAtArrival;
+
+    const tick = () => setTotalTimer(Math.max(0, Math.floor((localEnd - Date.now()) / 1000)));
+    tick();
+    // setInterval, not a self-scheduling requestAnimationFrame: the old loop had
+    // no cleanup (so a re-start left two loops running) and rAF is throttled to
+    // a stop in a background tab.
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
   }, [battleStart]);
 
   /**
@@ -351,8 +363,17 @@ export default function BattlePage() {
    * Yangi urinishni (Round) boshlash.
    */
   const startAttempt = () => {
-    if (!battleStart || (totalTimer !== null && totalTimer <= 0)) return;
-    
+    // Say why nothing happened instead of returning silently — a dead button
+    // with no feedback is what made the clock-skew bug so hard to place.
+    if (!battleStart) {
+      toast({ title: t.battle.error, description: t.battle.notStartedYet, variant: "destructive" });
+      return;
+    }
+    if (totalTimer !== null && totalTimer <= 0) {
+      toast({ title: t.battle.error, description: t.battle.timeIsUp, variant: "destructive" });
+      return;
+    }
+
     setIsAttemptActive(true);
     setAttemptTimer(battleStart.settings.testDuration);
     setAttemptStartTime(Date.now());
@@ -783,7 +804,14 @@ export default function BattlePage() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => setLocation("/")}>{t.battle.leaveRoom}</Button>
+          <Button
+            variant="ghost"
+            className="text-destructive hover:bg-destructive/10"
+            onClick={() => setShowLeaveConfirm(true)}
+            data-testid="button-leave-room"
+          >
+            {t.battle.leaveRoom}
+          </Button>
         </div>
       </div>
 
@@ -956,6 +984,27 @@ export default function BattlePage() {
           )}
         </div>
       </div>
+
+      <Dialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
+        <DialogContent className="max-w-md rounded-3xl border-2">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">{t.battle.leaveConfirmTitle}</DialogTitle>
+            <DialogDescription>{t.battle.leaveConfirmBody}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowLeaveConfirm(false)}>
+              {t.battle.cancel}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => { setShowLeaveConfirm(false); setLocation("/"); }}
+              data-testid="button-leave-confirm"
+            >
+              {t.battle.leaveConfirmYes}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
