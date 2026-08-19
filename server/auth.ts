@@ -529,6 +529,9 @@ export function setupAuth(app: Express): void {
       res.json({
         ...userSummary,
         themeMeta: cosmeticMeta(foundUser.equippedThemeKey ?? null),
+        // frameMeta was missing here while themeMeta was present, which is why
+        // the header avatar never showed a bought frame.
+        frameMeta: cosmeticMeta(foundUser.equippedFrameKey ?? null),
         token: req.sessionID,
       });
     } catch (error) {

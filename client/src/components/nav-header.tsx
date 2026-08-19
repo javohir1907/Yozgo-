@@ -7,6 +7,7 @@ import { useI18n, type UILanguage } from "@/lib/i18n";
 import { KeycapLogo } from "@/components/brand/keycap-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { NotificationBell } from "@/components/notification-bell";
+import { frameRingStyle } from "@/lib/frame";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -181,7 +182,10 @@ export function NavHeader() {
                   className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl border-2 border-transparent hover:border-primary transition-all bg-muted overflow-hidden p-0"
                   data-testid="button-user-menu"
                 >
-                  <Avatar className="h-full w-full rounded-md sm:rounded-lg">
+                  <Avatar
+                    className="h-full w-full rounded-md sm:rounded-lg"
+                    style={frameRingStyle((user as any)?.frameMeta, 2)}
+                  >
                     <AvatarImage
                       src={user?.profileImageUrl || undefined}
                       alt={user?.firstName || user?.email || "User"}

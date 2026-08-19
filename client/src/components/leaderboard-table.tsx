@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { frameRingStyle } from "@/lib/frame";
 import { useI18n } from "@/lib/i18n";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
@@ -70,7 +71,10 @@ export function LeaderboardTable({ entries, currentUserId, minSeconds = 1800 }: 
                   <Link href={`/profile/${entry.userId}`}>
                     <div className="flex flex-col gap-1.5 cursor-pointer group">
                       <div className="flex items-center gap-2">
-                        <Avatar className="h-8 w-8 group-hover:ring-2 group-hover:ring-primary/50 transition-all">
+                        <Avatar
+                          className="h-8 w-8 group-hover:ring-2 group-hover:ring-primary/50 transition-all"
+                          style={frameRingStyle(entry.frameMeta, 2)}
+                        >
                           {entry.avatarUrl && (
                             <AvatarImage src={entry.avatarUrl} alt={entry.username} />
                           )}

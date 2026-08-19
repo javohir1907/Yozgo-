@@ -1,6 +1,7 @@
 import { db } from "../db";
 import { testResults, users } from "@shared/schema";
 import { eq, sql, desc, and, gte, inArray } from "drizzle-orm";
+import { cosmeticMeta } from "../gamification/cosmetic-defs";
 
 export type LeaderboardPeriod = "weekly" | "monthly" | "all";
 
@@ -60,6 +61,7 @@ export class LeaderboardService {
         username: users.firstName,
         email: users.email,
         avatarUrl: users.profileImageUrl,
+        equippedFrameKey: users.equippedFrameKey,
         testCount: sql<number>`count(${testResults.id})::int`,
         bestWpm: sql<number>`max(${testResults.wpm})::int`,
         avgWpm: sql<number>`round(avg(${testResults.wpm}))::int`,
@@ -69,7 +71,14 @@ export class LeaderboardService {
       .from(testResults)
       .innerJoin(users, eq(testResults.userId, users.id))
       .where(and(...conds))
-      .groupBy(testResults.userId, users.id, users.firstName, users.email, users.profileImageUrl)
+      .groupBy(
+        testResults.userId,
+        users.id,
+        users.firstName,
+        users.email,
+        users.profileImageUrl,
+        users.equippedFrameKey,
+      )
       .orderBy(desc(sql`max(${testResults.wpm})`));
 
     return leaderboardData.map((user, index) => ({
@@ -77,6 +86,9 @@ export class LeaderboardService {
       userId: user.userId,
       username: user.username || user.email?.split("@")[0] || "Unknown",
       avatarUrl: user.avatarUrl,
+      // Cosmetic avatar frame — so a bought frame is visible to everyone here,
+      // not only on the owner's profile page.
+      frameMeta: cosmeticMeta(user.equippedFrameKey),
       avgWpm: user.avgWpm,
       bestWpm: user.bestWpm,
       accuracy: user.accuracy,

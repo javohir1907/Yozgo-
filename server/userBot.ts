@@ -179,6 +179,12 @@ export function startUserBot() {
           if (msg.contact?.phone_number || msg.text) {
             state.phone = msg.contact?.phone_number || msg.text;
             state.step = "location";
+            // The mutated object must be written back. Without this the stored
+            // state stayed on step "phone" forever, so this branch re-ran on
+            // every message and the `return` below swallowed everything the
+            // user sent afterwards — including room codes. Anyone who had ever
+            // been sent a winner message could never use the bot again.
+            await BotStateService.setState(chatId, state);
             userBot?.sendMessage(
               chatId,
               "📍 Endi manzilingizni yuboring (Location jo'nating yoki matn ko'rinishida yozing):",
@@ -197,6 +203,7 @@ export function startUserBot() {
               ? `${msg.location.latitude}, ${msg.location.longitude}`
               : msg.text;
             state.step = "photo";
+            await BotStateService.setState(chatId, state);
             userBot?.sendMessage(
               chatId,
               "🤳 Pasport yoki ID karta rasmini yuboring (Sovrin topshirilishi uchun majburiy):",
@@ -339,11 +346,20 @@ export async function generateAndSendRoomCode(
   telegramId: number,
   chatId: number
 ) {
-  const [firstUser] = await db.select().from(users).limit(1);
-  const dummyUserId = firstUser?.id;
+  // The code must belong to the Telegram user who asked for it. This used to
+  // take `db.select().from(users).limit(1)` — an arbitrary row — so every code
+  // was stamped with the same unrelated account and `telegramId` was ignored
+  // entirely. Map the Telegram id to the site account instead.
+  const [owner] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.telegramId, String(telegramId)));
 
-  if (!dummyUserId) {
-    userBot?.sendMessage(chatId, "❌ Tizimda asosiy foydalanuvchi topilmadi. Iltimos saytdan ro'yxatdan o'ting.");
+  if (!owner) {
+    await userBot?.sendMessage(
+      chatId,
+      "❌ Bu Telegram hisobi saytdagi akkauntga bog'lanmagan.\n\nAvval yozgo.uz'da ro'yxatdan o'ting yoki Telegram orqali kiring, so'ng kodni qayta yuboring.",
+    );
     return;
   }
 
@@ -351,13 +367,16 @@ export async function generateAndSendRoomCode(
     const code = crypto.randomBytes(4).toString("hex").toUpperCase(); // 8 characters
     await db.insert(roomAccessCodes).values({
       roomId: battleId,
-      userId: dummyUserId, // Buni ishlashi uchun schema.ts dagi UNIQUE o'chgan bo'lishi kerak
+      userId: owner.id,
       code: code,
     });
 
     const text = `🎉 Sizning kirish kodingiz:\n\n\`${code}\`\n\n👆 Yuqoridagi kod ustiga bir marta bossangiz avtomatik nusxalanadi.\nSaytdagi maydonga kiritib jangga qo'shiling. Kod bir martalik!`;
 
-    userBot?.sendMessage(chatId, text, {
+    // Awaited: an un-awaited send meant a blocked bot / Markdown error rejected
+    // outside this try, so the row was already written, the user got nothing,
+    // and the failure only surfaced in the unhandledRejection log.
+    await userBot?.sendMessage(chatId, text, {
       parse_mode: "Markdown",
       reply_markup: {
         inline_keyboard: [[{ text: "📲 Jangga kirish", web_app: { url: `${MINI_APP_URL}/battle` } }]],

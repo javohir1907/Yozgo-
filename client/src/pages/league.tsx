@@ -35,6 +35,7 @@ interface LeagueStanding {
     userId: string;
     username: string;
     avatarUrl: string | null;
+    frameMeta?: { ring?: string } | null;
     weeklyXp: number;
     rank: number;
   }[];
@@ -117,6 +118,7 @@ export default function LeaguePage() {
                               id: m.userId,
                               username: m.username,
                               avatarUrl: m.avatarUrl,
+                              frameMeta: m.frameMeta,
                             }}
                             size="sm"
                             highlight={isMe}

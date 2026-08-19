@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { frameRingStyle } from "@/lib/frame";
 
 interface ProfileData {
   user: {
@@ -252,11 +253,9 @@ export default function Profile() {
     /^\d{1,3} \d{1,3}% \d{1,3}%$/.test(user.themeMeta.accent)
       ? user.themeMeta.accent
       : null;
-  const ring =
-    typeof user.frameMeta?.ring === "string" &&
-    /^#[0-9a-fA-F]{3,8}$/.test(user.frameMeta.ring)
-      ? user.frameMeta.ring
-      : null;
+  // The ring validation/rendering moved to lib/frame so every avatar in the app
+  // draws the frame the same way; this page used to be the only one that did.
+  const ringStyle = frameRingStyle(user.frameMeta, 4);
 
   return (
     <PageShell
@@ -274,7 +273,7 @@ export default function Profile() {
       <div className="flex items-center gap-6 mb-8">
         <Avatar
           className="h-24 w-24 border-2 border-primary/20"
-          style={ring ? { boxShadow: `0 0 0 4px ${ring}` } : undefined}
+          style={ringStyle}
         >
           <AvatarImage src={user.avatarUrl} alt={user.username} />
           <AvatarFallback className="text-4xl bg-primary/10 text-primary">

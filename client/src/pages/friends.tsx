@@ -20,6 +20,7 @@ interface FriendUser {
   id: string;
   username: string;
   avatarUrl: string | null;
+  frameMeta?: { ring?: string } | null;
 }
 interface FriendsData {
   friends: FriendUser[];
@@ -66,6 +67,7 @@ export default function FriendsPage() {
     id: u.id,
     username: u.username,
     avatarUrl: u.avatarUrl,
+    frameMeta: u.frameMeta,
   });
 
   return (

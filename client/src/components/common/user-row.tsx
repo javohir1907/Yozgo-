@@ -2,11 +2,14 @@ import { Link } from "wouter";
 import type { ReactNode } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { frameRingStyle, type FrameMeta } from "@/lib/frame";
 
 export interface UserRowUser {
   id?: string | number;
   username: string;
   avatarUrl?: string | null;
+  /** Cosmetic frame bought in the shop — visible to everyone, not just the owner. */
+  frameMeta?: FrameMeta | null;
 }
 
 export interface UserRowProps {
@@ -56,7 +59,7 @@ export function UserRow({
         </span>
       )}
       <div className="relative shrink-0">
-        <Avatar className={avatarSize}>
+        <Avatar className={avatarSize} style={frameRingStyle(user.frameMeta, 2)}>
           <AvatarImage src={user.avatarUrl ?? undefined} alt={user.username} />
           <AvatarFallback className="bg-primary/10 text-xs text-primary">
             {initials}

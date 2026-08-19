@@ -12,6 +12,7 @@
 import { eq, desc, sql, and, gte } from "drizzle-orm";
 import { db, type DbExecutor } from "./db";
 import { levelForXp } from "@shared/lib/xp";
+import { cosmeticMeta } from "./gamification/cosmetic-defs";
 import { friendships } from "@shared/schema";
 import {
   User,
@@ -506,7 +507,8 @@ export class DatabaseStorage implements IStorage {
   async listFriendships(userId: string): Promise<any> {
     const res: any = await db.execute(sql`
       SELECT f.id, f.requester_id, f.addressee_id, f.status,
-             u.id AS other_id, u.first_name, u.email, u.profile_image_url
+             u.id AS other_id, u.first_name, u.email, u.profile_image_url,
+             u.equipped_frame_key
       FROM friendships f
       JOIN users u ON u.id = CASE WHEN f.requester_id = ${userId} THEN f.addressee_id ELSE f.requester_id END
       WHERE f.requester_id = ${userId} OR f.addressee_id = ${userId}
@@ -520,6 +522,7 @@ export class DatabaseStorage implements IStorage {
         id: r.other_id,
         username: r.first_name || r.email?.split("@")[0] || "Unknown",
         avatarUrl: r.profile_image_url ?? null,
+        frameMeta: cosmeticMeta(r.equipped_frame_key),
       };
       if (r.status === "accepted") friends.push(other);
       else if (r.addressee_id === userId) incoming.push(other);

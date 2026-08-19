@@ -797,6 +797,14 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         return res.status(HTTP_STATUS.NOT_FOUND).json({ message: "Xona yoki kirish kodi topilmadi." });
       }
 
+      // Rooms expire, so a code minted a minute ago can point at a battle that
+      // has since finished. Say so here, before /join consumes the one-time
+      // code — otherwise the code is burned on a dead room and the bot refuses
+      // to mint another one for it.
+      if (matchedBattle.status === "finished") {
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Bu jang allaqachon yakunlangan." });
+      }
+
       if (!isSpecificAccessCode && !creationCodeEntry) {
          // Kiritilgan kod to'g'ridan to'g'ri asl xona kodi (Native Battle Code) bo'lsa bloklaymiz
          if (matchedBattle.code === battleCode) {
@@ -833,17 +841,39 @@ export async function registerRoutes(httpServer: Server, app: Express): Promise<
         .where(eq(roomAccessCodes.code, battleCode));
 
       if (accessCodeEntry) {
-        if (accessCodeEntry.isUsed) {
-          // It's already used but maybe this is the same user clicking "Join" again after validating
-          // We'll let it pass for now if they are already a participant, but for safety:
-          console.log(`[BATTLE JOIN] Code ${battleCode} is already marked as used.`);
-        } else {
-          // Koddan foydalanildi deb belgilash
-          await db.update(roomAccessCodes).set({ isUsed: true }).where(eq(roomAccessCodes.id, accessCodeEntry.id));
-        }
-
         const [foundBattle] = await db.select().from(battles).where(eq(battles.id, accessCodeEntry.roomId));
         matchedBattle = foundBattle;
+
+        if (matchedBattle?.status === "finished") {
+          return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Bu jang allaqachon yakunlangan." });
+        }
+
+        // The code is individual: it is minted for one Telegram-linked account
+        // and only that account may redeem it. Without this the code was a
+        // bearer token — whoever pasted it first got in.
+        if (accessCodeEntry.userId !== userId) {
+          return res.status(HTTP_STATUS.FORBIDDEN).json({ message: "Bu kirish kodi boshqa foydalanuvchi uchun berilgan." });
+        }
+
+        if (accessCodeEntry.isUsed) {
+          // A used code is only honoured for someone already in the room — that
+          // is the legitimate "validated, then clicked Join again" case. For
+          // anyone else it is a replay and must be refused; previously this
+          // branch only logged and fell through to add them anyway.
+          const [already] = await db
+            .select({ id: battleParticipants.id })
+            .from(battleParticipants)
+            .where(and(eq(battleParticipants.battleId, accessCodeEntry.roomId), eq(battleParticipants.userId, userId)));
+          if (!already) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: "Bu kod allaqachon foydalanilgan." });
+          }
+        } else {
+          // Koddan foydalanildi deb belgilash
+          await db
+            .update(roomAccessCodes)
+            .set({ isUsed: true, usedAt: new Date() })
+            .where(eq(roomAccessCodes.id, accessCodeEntry.id));
+        }
       }
 
       // --- YANGI: Paid Creation Codes orqali qo'shilish ---

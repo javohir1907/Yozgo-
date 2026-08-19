@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../db";
 import { leagueMembers, users } from "@shared/schema";
+import { cosmeticMeta } from "../gamification/cosmetic-defs";
 import { logger } from "../utils/logger";
 
 export const COHORT_SIZE = 30;
@@ -95,6 +96,7 @@ export interface LeagueStanding {
     userId: string;
     username: string;
     avatarUrl: string | null;
+    frameMeta: Record<string, unknown> | null;
     weeklyXp: number;
     rank: number;
   }[];
@@ -111,6 +113,7 @@ export async function getStandingForUser(userId: string): Promise<LeagueStanding
       username: users.firstName,
       email: users.email,
       avatarUrl: users.profileImageUrl,
+      equippedFrameKey: users.equippedFrameKey,
     })
     .from(leagueMembers)
     .innerJoin(users, eq(leagueMembers.userId, users.id))
@@ -125,6 +128,7 @@ export async function getStandingForUser(userId: string): Promise<LeagueStanding
     userId: r.userId,
     username: r.username || r.email?.split("@")[0] || "Unknown",
     avatarUrl: r.avatarUrl ?? null,
+    frameMeta: cosmeticMeta(r.equippedFrameKey),
     weeklyXp: r.weeklyXp,
     rank: i + 1,
   }));

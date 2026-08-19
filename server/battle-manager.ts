@@ -21,6 +21,7 @@ import { type User } from "@shared/schema";
 import { computeBattleXp } from "@shared/lib/xp";
 import { computeBattleCoins } from "@shared/lib/coins";
 import { resolveRank } from "@shared/lib/rank";
+import { cosmeticMeta } from "./gamification/cosmetic-defs";
 import * as StreakService from "./services/streak.service";
 import { evaluateBadges } from "./gamification/badge-service";
 import * as QuestService from "./services/quest.service";
@@ -42,6 +43,8 @@ import {
 interface Player {
   socket: Socket;
   user: User;
+  /** Equipped cosmetic frame key, read from the DB at join (not from client). */
+  frameKey?: string | null;
   progress: number;
   wpm: number;
   rawWpm?: number;
@@ -187,18 +190,31 @@ export class BattleManager {
 
   private async closeExpiredBattles(): Promise<void> {
     try {
-      // Muddat = created_at + competition_length (daqiqa) + duration (oxirgi
-      // raund uchun, soniya) + 30s zaxira. Bazada saqlanadi — instance qayta
-      // ishga tushsa ham, xonada hech kim qolmasa ham baribir hisoblanadi.
+      // Two different clocks, because they answer different questions.
+      //
+      // 'playing': the battle is running, so its own length decides — created_at
+      // + competition_length + one round + 30s grace.
+      //
+      // 'waiting': nobody has started yet and the room is just a lobby. Timing
+      // it by competition_length closed lobbies ~11.5 minutes after creation
+      // even while people were still gathering, which is far too eager — a host
+      // who shares a code and waits for friends would find the room dead. An
+      // idle lobby gets a full hour, matching the in-memory cleanup rule.
       const result = await pool.query(
         `UPDATE battles
          SET status = 'finished'
-         WHERE status IN ('waiting', 'playing')
-           AND created_at
-             + (COALESCE(competition_length, 10) * interval '1 minute')
-             + (COALESCE(duration, 60) * interval '1 second')
-             + interval '30 seconds'
-             < now()
+         WHERE (
+                 status = 'playing'
+                 AND created_at
+                   + (COALESCE(competition_length, 10) * interval '1 minute')
+                   + (COALESCE(duration, 60) * interval '1 second')
+                   + interval '30 seconds'
+                   < now()
+               )
+            OR (
+                 status = 'waiting'
+                 AND created_at + interval '60 minutes' < now()
+               )
          RETURNING id, code`,
       );
       if (!result.rowCount) return;
@@ -453,6 +469,10 @@ export class BattleManager {
     room.players.set(user.id, {
       socket,
       user,
+      // Frame comes from the DB row, never from the client-supplied `user`:
+      // that object is whatever the browser sent on join-room, so trusting it
+      // would let anyone paint themselves a cosmetic they never bought.
+      frameKey: dbUser.equippedFrameKey ?? null,
       progress: existingPlayer ? existingPlayer.progress : 0,
       wpm: existingPlayer ? existingPlayer.wpm : 0,
       accuracy: existingPlayer ? existingPlayer.accuracy : 100,
@@ -867,6 +887,7 @@ export class BattleManager {
         id: p.user.id,
         username: p.user.firstName || p.user.email?.split("@")[0] || "Unknown",
         avatarUrl: p.user.profileImageUrl,
+        frameMeta: cosmeticMeta(p.frameKey ?? null), // kosmetika ramka (bazadan)
         gender: p.user.gender || "male", // UI uchun jins ni qo'shildi
         rank: resolveRank(p.bestWpm || 0).key, // Feature 7 — unvon (battle xonasi uchun)
         progress: p.progress,

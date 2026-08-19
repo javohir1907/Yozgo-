@@ -52,6 +52,7 @@ import { useWebsocket } from "@/hooks/use-websocket";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
+import { frameRingStyle } from "@/lib/frame";
 import SEO from "@/components/SEO";
 
 // ============ CONSTANTS ============
@@ -82,7 +83,10 @@ function PlayerListItem({ p, i, room, t }: { p: any; i: number; room: any; t: an
             <span className="text-sm font-black opacity-20 w-4">{i + 1}</span>
             <div className="relative">
               {p.id === room?.adminId && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-warning fill-current" />}
-              <div className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10 flex items-center justify-center overflow-hidden">
+              <div
+                className="w-8 h-8 rounded-full bg-primary/10 border-2 border-white/10 flex items-center justify-center overflow-hidden"
+                style={frameRingStyle(p.frameMeta, 2)}
+              >
                 {p.avatarUrl ? (
                   <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -104,7 +108,10 @@ function PlayerListItem({ p, i, room, t }: { p: any; i: number; room: any; t: an
       <DialogContent className="max-w-xl rounded-3xl border-2">
         <DialogHeader>
           <div className="flex items-center gap-4 mb-4">
-             <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center border-2 border-primary/20">
+             <div
+                className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center border-2 border-primary/20"
+                style={frameRingStyle(p.frameMeta, 3)}
+             >
                 {p.avatarUrl ? <img src={p.avatarUrl} className="w-full h-full object-cover rounded-3xl"/> : <Users className="w-8 h-8 opacity-40" />}
              </div>
              <div>
@@ -400,16 +407,25 @@ export default function BattlePage() {
           }
         }
         
-        allKeystrokesRef.current += 1; 
-        if (currentTyped === word) correctCharsRef.current += 1; 
+        allKeystrokesRef.current += 1;
 
-        setHistory((prev) => [...prev, currentTyped]);
-        setCurrentIndex(prev => {
-          const next = prev + 1;
-          currentIndexRef.current = next;
-          return next;
-        });
-        setUserInput("");
+        // Same rule as the solo test: space only moves to the next word once
+        // the current one is fully typed. Pressing it early used to skip the
+        // rest of the word — worse here than in solo, since a skipped word in a
+        // battle costs the round.
+        if (currentTyped.length < word.length) {
+          setUserInput(currentTyped);
+        } else {
+          if (currentTyped === word) correctCharsRef.current += 1;
+
+          setHistory((prev) => [...prev, currentTyped]);
+          setCurrentIndex(prev => {
+            const next = prev + 1;
+            currentIndexRef.current = next;
+            return next;
+          });
+          setUserInput("");
+        }
       } else {
         if (value.length > userInput.length) {
           allKeystrokesRef.current += (value.length - userInput.length);

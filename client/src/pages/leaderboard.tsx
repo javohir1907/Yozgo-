@@ -15,6 +15,7 @@ export interface LeaderboardEntry {
   userId: string;
   username: string;
   avatarUrl?: string;
+  frameMeta?: { ring?: string } | null;
   avgWpm: number;
   bestWpm: number;
   accuracy: number;
