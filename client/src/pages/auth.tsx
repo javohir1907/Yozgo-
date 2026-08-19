@@ -63,17 +63,32 @@ function TelegramBlock({
           <span className="text-xs text-success flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> {t.auth.connected}</span>
         ) : null}
       </div>
+      {/* Once the link exists, a real anchor IS the button. window.open() runs
+          after an await, so browsers treat it as a non-user-initiated popup and
+          block it — the bot then simply never opened and the only way out was a
+          small fallback link most people missed. */}
       {!verified && (
-        <Button type="button" variant="outline" className="w-full" onClick={onStart} disabled={busy}>
-          <Send className="w-4 h-4 mr-2" /> {tgToken ? t.auth.reopenBot : t.auth.openBot}
-        </Button>
+        tgDeepLink ? (
+          <Button asChild type="button" variant="outline" className="w-full" disabled={busy}>
+            <a href={tgDeepLink} target="_blank" rel="noreferrer" data-testid="link-open-bot">
+              <Send className="w-4 h-4 mr-2" /> {t.auth.openBot}
+            </a>
+          </Button>
+        ) : (
+          <Button type="button" variant="outline" className="w-full" onClick={onStart} disabled={busy}>
+            <Send className="w-4 h-4 mr-2" /> {t.auth.openBot}
+          </Button>
+        )
       )}
       {tgDeepLink && !verified && (
-        // window.open fetch'dan KEYIN chaqirilgani uchun Safari popup-blocker uni
-        // bloklashi mumkin — to'g'ridan-to'g'ri bosiladigan havola har doim ishlaydi.
-        <a href={tgDeepLink} target="_blank" rel="noreferrer" className="block text-center text-xs text-primary hover:underline">
-          {t.auth.botNotOpened}
-        </a>
+        <button
+          type="button"
+          onClick={onStart}
+          disabled={busy}
+          className="block w-full text-center text-xs text-muted-foreground hover:text-foreground hover:underline"
+        >
+          {t.auth.reopenBot}
+        </button>
       )}
       <p className="text-xs text-muted-foreground">{t.auth.tgHelp}</p>
       <div className="flex gap-2">
@@ -136,6 +151,8 @@ export default function AuthPage() {
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
+  // Resend gave no feedback at all, so it read as another dead button.
+  const [emailResent, setEmailResent] = useState(false);
 
   // Username availability (register form)
   useEffect(() => {
@@ -216,9 +233,9 @@ export default function AuthPage() {
       setTgBound(false);
       setTgVerified(false);
       setTgCode("");
-      // Safari'da fetch'dan keyingi window.open bloklanishi mumkin — UI'da anchor
-      // fallback havola ham ko'rsatiladi (TelegramBlock).
-      window.open(d.deepLink, "_blank");
+      // No window.open here: after the await it is a blocked popup in every
+      // modern browser. The UI turns the returned deepLink into a real anchor,
+      // which always works.
     } catch (e: any) {
       setError(e.message || t.auth.genericError);
     } finally {
@@ -269,6 +286,8 @@ export default function AuthPage() {
       setEmailVerified(false);
       setEmailCode("");
       setEmailToken("");
+      setEmailResent(true);
+      setTimeout(() => setEmailResent(false), 4000);
     } catch (e: any) {
       setError(e.message || t.auth.genericError);
     } finally {
@@ -435,9 +454,12 @@ export default function AuthPage() {
               </Button>
             </div>
             {!emailVerified && (
-              <button type="button" className="text-xs text-primary hover:underline" onClick={resendEmailCode} disabled={busy}>
-                {t.auth.resendCode}
-              </button>
+              <div className="flex items-center gap-2">
+                <button type="button" className="text-xs text-primary hover:underline disabled:opacity-50" onClick={resendEmailCode} disabled={busy}>
+                  {t.auth.resendCode}
+                </button>
+                {emailResent && <span className="text-xs text-success">{t.auth.codeResent}</span>}
+              </div>
             )}
           </div>
 

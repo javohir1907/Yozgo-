@@ -20,7 +20,7 @@ import crypto from "crypto";
 import { db, pool } from "./db";
 import { users } from "@shared/models/auth";
 import { verificationCodes } from "@shared/schema";
-import { sendEmail } from "./mailer";
+import { sendEmail, otpEmailHtml, resetEmailHtml } from "./mailer";
 import { sendAdminNotification } from "./utils/notifier";
 import rateLimit from "express-rate-limit";
 import { cosmeticMeta } from "./gamification/cosmetic-defs";
@@ -29,7 +29,11 @@ import { cosmeticMeta } from "./gamification/cosmetic-defs";
 const SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 kun
 const MIN_PASSWORD_LENGTH = 6;
 const NICKNAME_REGEX = /^[a-z0-9_]{4,20}$/;
-const CODE_TTL_MS = 5 * 60 * 1000; // tasdiqlash kodi 5 daqiqa amal qiladi
+// Registratsiya IKKI kanalni talab qiladi: email kodini olish, so'ng Telegram'ni
+// ochib Start bosish, telefon yuborish va u yerdan kelgan kodni kiritish. 5 daqiqa
+// bunga yetmasdi — foydalanuvchi ikkinchi kanal bilan ovora bo'lguncha birinchi kod
+// eskirib, "kod xato" chiqardi. 15 daqiqa real oqimga mos.
+const CODE_TTL_MS = 15 * 60 * 1000;
 // Kanal tasdiqlangach (verified=true) qatorga qo'shimcha umr — foydalanuvchi ikkinchi
 // kanalni tasdiqlab final submit qilguncha cleanup interval qatorni o'chirib yubormasin.
 const VERIFIED_TTL_MS = 30 * 60 * 1000;
@@ -117,22 +121,26 @@ export function setupAuth(app: Express): void {
     next();
   });
 
+  // NOTE on `message` objects: express-rate-limit sends a bare string as
+  // text/plain, so the client's res.json() rejected and the real reason ("you
+  // are rate limited") was swallowed and shown as a generic failure. Objects
+  // are sent as JSON, which the client already knows how to read.
   const otpLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
     max: 5,
-    message: "Juda ko'p so'rov yuborildi. Iltimos keyinroq urinib ko'ring.",
+    message: { message: "Juda ko'p kod so'raldi. Iltimos 5 daqiqadan so'ng qayta urinib ko'ring." },
   });
 
   const authAttemptLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
-    message: "Juda ko'p urinishlar qilindi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring.",
+    message: { message: "Juda ko'p urinishlar qilindi. Iltimos, 15 daqiqadan so'ng qayta urinib ko'ring." },
   });
 
   const forgotPasswordLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
     max: 3,
-    message: "Juda ko'p so'rov yuborildi. Iltimos 1 soatdan keyin urinib ko'ring.",
+    message: { message: "Juda ko'p so'rov yuborildi. Iltimos 1 soatdan keyin urinib ko'ring." },
   });
 
   // BITTA instance ikkala verify route'da — per-IP hisoblagich umumiy bo'lib
@@ -140,7 +148,7 @@ export function setupAuth(app: Express): void {
   const codeVerifyLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
     max: 10,
-    message: "Juda ko'p urinishlar. Iltimos keyinroq urinib ko'ring.",
+    message: { message: "Juda ko'p urinishlar. Iltimos keyinroq urinib ko'ring." },
   });
 
   // ============ USERNAME AVAILABILITY ============
@@ -184,7 +192,19 @@ export function setupAuth(app: Express): void {
       });
 
       // sendEmail throw qilsa -> catch -> 500. Sukut bilan "yuborildi" QAYTARMAYMIZ.
-      await sendEmail(emailStr, "YOZGO: Email tasdiqlash kodi", `Email tasdiqlash kodingiz: ${code}\nUshbu kod 5 daqiqa davomida amal qiladi.`);
+      const minutes = Math.round(CODE_TTL_MS / 60000);
+      await sendEmail(
+        emailStr,
+        "YOZGO: Email tasdiqlash kodi",
+        `Email tasdiqlash kodingiz: ${code}\nUshbu kod ${minutes} daqiqa davomida amal qiladi.`,
+        otpEmailHtml({
+          code,
+          title: "Email manzilingizni tasdiqlang",
+          intro: "YOZGO'da ro'yxatdan o'tishni yakunlash uchun quyidagi kodni saytdagi maydonga kiriting.",
+          expiryNote: `Kod ${minutes} daqiqa davomida amal qiladi.`,
+          ignoreNote: "Agar bu so'rovni siz yubormagan bo'lsangiz, ushbu xatni e'tiborsiz qoldiring. Hech kimga bu kodni aytmang.",
+        }),
+      );
       res.status(200).json({ message: "Email kodi yuborildi" });
     } catch (e) {
       console.error("[AUTH] email-otp:", e);
@@ -440,6 +460,7 @@ export function setupAuth(app: Express): void {
         userMatch.email,
         "YOZGO: Parolni Tiklash",
         `Parolni tiklash so'rovi.\n\n📧 Login: ${userMatch.email}\n🔗 Havola: ${resetLink}\n\nHavola muddati 15 daqiqa.`,
+        resetEmailHtml({ resetLink, email: userMatch.email }),
       );
 
       sendAdminNotification(`🔐 <b>Parol tiklash so'rovi:</b>\n👤 ${userMatch.email}`).catch(() => {});
