@@ -49,6 +49,16 @@ function escapeLike(s: string): string {
   return s.replace(/[\\%_]/g, (m) => "\\" + m);
 }
 
+// Bir IP'ni ko'p foydalanuvchi bo'lishishi mumkin (maktab Wi-Fi, mobil operator).
+// Auth limiti faqat IP bo'yicha bo'lsa, bitta odamning eski xato urinishlari
+// boshqasining to'g'ri OTP oqimini to'xtatadi. IP + aynan shu credential birga
+// foydalanuvchini ajratadi.
+function authIdentityKey(req: Request): string {
+  const body = req.body ?? {};
+  const credential = body.token ?? body.telegramToken ?? body.emailOrUsername ?? body.email ?? body.username ?? "anonymous";
+  return `${ipKeyGenerator(req.ip)}:${String(credential).trim().toLowerCase()}`;
+}
+
 // Telegram deep-link: user Start bosgach bot token orqali sessiyani bog'laydi.
 function botDeepLink(token: string): string {
   const bot = process.env.BOT_USERNAME || "yozgo_bot";
@@ -139,22 +149,33 @@ export function setupAuth(app: Express): void {
   });
 
   const telegramStartLimiter = rateLimit({
-    windowMs: 5 * 60 * 1000,
+    windowMs: 30 * 60 * 1000,
     max: 5,
     message: RATE_LIMITED,
   });
 
-  const authAttemptLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
+  // Keng IP limiti bot yoki skript hujumidan saqlaydi, lekin umumiy Wi-Fi'dagi
+  // odatiy foydalanuvchilar bir-birini bloklamaydi.
+  const authIpLimiter = rateLimit({
+    windowMs: 30 * 60 * 1000,
+    max: 50,
+    message: RATE_LIMITED,
+  });
+
+  // Bitta login/email/Telegram oqimi 30 daqiqada 5 marta urinishi mumkin.
+  // 30 daqiqa o'tgach express-rate-limit hisoblagichni avtomatik yangidan boshlaydi.
+  const authIdentityLimiter = rateLimit({
+    windowMs: 30 * 60 * 1000,
+    max: 5,
+    keyGenerator: authIdentityKey,
     message: RATE_LIMITED,
   });
 
   // Telegram kodi yangi token bilan yangilanadi. Eski token uchun xato urinishlar
   // yangi, haqiqiy kodni bloklamasligi kerak; start endpoint esa bitta IP uchun
-  // tokenlar sonini 5 daqiqada 5 tadan oshirmaydi.
+  // tokenlar sonini 30 daqiqada 5 tadan oshirmaydi.
   const telegramLoginLimiter = rateLimit({
-    windowMs: 5 * 60 * 1000,
+    windowMs: 30 * 60 * 1000,
     max: 5,
     message: RATE_LIMITED,
   });
@@ -335,7 +356,7 @@ export function setupAuth(app: Express): void {
   });
 
   // ============ REGISTER (email + Telegram — IKKALASI verify qilingan bo'lishi shart) ============
-  app.post("/api/auth/register", authAttemptLimiter, async (req: Request, res: Response) => {
+  app.post("/api/auth/register", authIpLimiter, authIdentityLimiter, async (req: Request, res: Response) => {
     try {
       const { username, email, password, gender, emailToken, telegramToken } = req.body;
       if (!username || !email || !password || !emailToken || !telegramToken) {
@@ -416,7 +437,7 @@ export function setupAuth(app: Express): void {
   });
 
   // ============ LOGIN (a): email/username + parol ============
-  app.post("/api/auth/login", authAttemptLimiter, async (req: Request, res: Response) => {
+  app.post("/api/auth/login", authIpLimiter, authIdentityLimiter, async (req: Request, res: Response) => {
     try {
       const { emailOrUsername, email, password } = req.body;
       const idRaw = emailOrUsername ?? email;
