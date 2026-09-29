@@ -284,7 +284,7 @@ export default function AuthPage() {
       const res = await fetch(normalizeUrl(`/api/auth/telegram/start`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ purpose }),
+        body: JSON.stringify({ purpose, previousToken: tgToken || undefined }),
       });
       const d = await res.json().catch(() => ({} as any));
       if (!res.ok) throw new Error(serverMsg(d, t.auth.tgConnectError));

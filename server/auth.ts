@@ -22,18 +22,17 @@ import { users } from "@shared/models/auth";
 import { verificationCodes } from "@shared/schema";
 import { sendEmail, otpEmailHtml, resetEmailHtml } from "./mailer";
 import { sendAdminNotification } from "./utils/notifier";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { cosmeticMeta } from "./gamification/cosmetic-defs";
 
 // ============ CONSTANTS ============
 const SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 kun
 const MIN_PASSWORD_LENGTH = 6;
 const NICKNAME_REGEX = /^[a-z0-9_]{4,20}$/;
-// Registratsiya IKKI kanalni talab qiladi: email kodini olish, so'ng Telegram'ni
-// ochib Start bosish, telefon yuborish va u yerdan kelgan kodni kiritish. 5 daqiqa
-// bunga yetmasdi — foydalanuvchi ikkinchi kanal bilan ovora bo'lguncha birinchi kod
-// eskirib, "kod xato" chiqardi. 15 daqiqa real oqimga mos.
-const CODE_TTL_MS = 15 * 60 * 1000;
+// Email va Telegram OTP faqat 5 daqiqa yashaydi. Yangi Telegram urinishida
+// oldingi token o'chiriladi, shuning uchun eskirgan kod hech qachon yangi
+// urinishni bloklamaydi.
+const CODE_TTL_MS = 5 * 60 * 1000;
 // Kanal tasdiqlangach (verified=true) qatorga qo'shimcha umr — foydalanuvchi ikkinchi
 // kanalni tasdiqlab final submit qilguncha cleanup interval qatorni o'chirib yubormasin.
 const VERIFIED_TTL_MS = 30 * 60 * 1000;
@@ -140,14 +139,23 @@ export function setupAuth(app: Express): void {
   });
 
   const telegramStartLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000,
-    max: 15,
+    windowMs: 5 * 60 * 1000,
+    max: 5,
     message: RATE_LIMITED,
   });
 
   const authAttemptLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
+    message: RATE_LIMITED,
+  });
+
+  // Telegram kodi yangi token bilan yangilanadi. Eski token uchun xato urinishlar
+  // yangi, haqiqiy kodni bloklamasligi kerak; start endpoint esa bitta IP uchun
+  // tokenlar sonini 5 daqiqada 5 tadan oshirmaydi.
+  const telegramLoginLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 5,
     message: RATE_LIMITED,
   });
 
@@ -230,12 +238,25 @@ export function setupAuth(app: Express): void {
   app.post("/api/auth/telegram/start", telegramStartLimiter, async (req: Request, res: Response) => {
     try {
       const purpose = req.body?.purpose === "login" ? "login" : "register";
+      const previousToken = typeof req.body?.previousToken === "string" ? req.body.previousToken : "";
+
+      // "Yangi kod" aniq ma'noga ega: brauzerdagi oldingi Telegram jarayoni
+      // darhol bekor bo'ladi. Shunda eski bot kodi yangi token bilan ishlamaydi.
+      if (/^[a-f0-9]{32}$/i.test(previousToken)) {
+        await db.delete(verificationCodes).where(and(
+          eq(verificationCodes.channel, "telegram"),
+          eq(verificationCodes.token, previousToken),
+        ));
+      }
       const token = crypto.randomBytes(16).toString("hex");
       const code = genCode();
       await db.insert(verificationCodes).values({
         channel: "telegram", identifier: token, token, code, purpose,
         telegramId: null, expiresAt: new Date(Date.now() + CODE_TTL_MS),
       });
+      // Yangi token eski noto'g'ri kod urinishlarining hisoblagichini ham
+      // almashtiradi. Bu faqat start limiterdan o'tgan foydalanuvchi uchun.
+      telegramLoginLimiter.resetKey(ipKeyGenerator(req.ip));
       res.status(200).json({ token, deepLink: botDeepLink(token) });
     } catch (e) {
       console.error("[AUTH] telegram/start:", e);
@@ -297,6 +318,7 @@ export function setupAuth(app: Express): void {
         eq(verificationCodes.channel, "telegram"),
         eq(verificationCodes.token, String(token)),
         eq(verificationCodes.code, String(code)),
+        eq(verificationCodes.purpose, "register"),
         gt(verificationCodes.expiresAt, new Date()),
       ));
       if (!row) return res.status(400).json({ message: "Telegram kodi xato yoki muddati o'tgan" });
@@ -420,7 +442,7 @@ export function setupAuth(app: Express): void {
   });
 
   // ============ LOGIN (b): Telegram (bitta usul yetadi) ============
-  app.post("/api/auth/login/telegram", authAttemptLimiter, async (req: Request, res: Response) => {
+  app.post("/api/auth/login/telegram", telegramLoginLimiter, async (req: Request, res: Response) => {
     try {
       const { token, code } = req.body;
       if (!token || !code) return res.status(400).json({ message: "Token va kod kiritilmadi" });
@@ -429,6 +451,7 @@ export function setupAuth(app: Express): void {
         eq(verificationCodes.channel, "telegram"),
         eq(verificationCodes.token, String(token)),
         eq(verificationCodes.code, String(code)),
+        eq(verificationCodes.purpose, "login"),
         gt(verificationCodes.expiresAt, now),
       ));
       if (!row) return res.status(400).json({ message: "Kod xato yoki muddati o'tgan" });
