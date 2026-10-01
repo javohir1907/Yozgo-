@@ -16,7 +16,7 @@ import { Server as SocketServer, Socket } from "socket.io";
 
 import { storage } from "./storage";
 import { pool } from "./db";
-import { words } from "../shared/words";
+import { createWordSequence } from "../shared/words";
 import { type User } from "@shared/schema";
 import { computeBattleXp } from "@shared/lib/xp";
 import { computeBattleCoins } from "@shared/lib/coins";
@@ -34,6 +34,8 @@ import {
   isVpnOrProxy, 
   resetPlayerSnapshots 
 } from "./utils/anti-cheat";
+
+const BATTLE_WORD_COUNT = 6000;
 
 // ============ TYPES & INTERFACES ============
 
@@ -357,7 +359,7 @@ export class BattleManager {
             maxParticipants: battleRecord.maxParticipants || 10, // DB dan yuklash
             genderRestriction: battleRecord.genderRestriction || "all", // DB dan yuklash
           },
-          testWords: this.generateTestWords(battleRecord.language, 3000),
+          testWords: this.generateTestWords(battleRecord.language, BATTLE_WORD_COUNT),
         };
         this.rooms.set(code, room);
       }
@@ -525,7 +527,7 @@ export class BattleManager {
     // client yuborgan sozlamalar orasida bo'lmasa ham saqlanib qolsin.
     room.settings = { ...room.settings, ...settings };
     room.language = settings.language || room.language;
-    room.testWords = this.generateTestWords(room.language, 3000);
+    room.testWords = this.generateTestWords(room.language, BATTLE_WORD_COUNT);
     room.status = "playing";
     room.startTime = Date.now();
     room.endTime = room.startTime + settings.totalTime * 60 * 1000;
@@ -929,7 +931,6 @@ export class BattleManager {
   }
 
   private generateTestWords(lang: string, count: number): string[] {
-    const list = (words as any)[lang] || words.en;
-    return Array.from({ length: count }, () => list[Math.floor(Math.random() * list.length)]);
+    return createWordSequence(lang, count);
   }
 }

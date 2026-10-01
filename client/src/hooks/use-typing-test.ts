@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { words as wordLists } from "@shared/words";
+import { createWordSequence } from "@shared/words";
 import type { Language } from "@/components/language-selector";
 import type { TimerMode } from "@/components/timer-mode-selector";
 
@@ -47,25 +47,9 @@ export function useTypingTest({ language, mode, onComplete }: UseTypingTestProps
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const generateWords = useCallback(() => {
-    const pool = wordLists[language];
-    const generated: string[] = [];
-
-    // 240 covers a 60s test at 240 WPM with headroom — the old 500 rendered
-    // ~3,000 span nodes for a test that reaches ~100 words.
-    while (generated.length < WORD_COUNT) {
-      const shuffled = [...pool].sort(() => Math.random() - 0.5);
-
-      // Ikkita ketma-ket bir xil so'z tushib qolmasligi uchun kichik tekshiruv (ikki blok orasida)
-      if (generated.length > 0 && shuffled[0] === generated[generated.length - 1]) {
-        const temp = shuffled[0];
-        shuffled[0] = shuffled[1];
-        shuffled[1] = temp;
-      }
-
-      generated.push(...shuffled);
-    }
-
-    setWords(generated.slice(0, WORD_COUNT));
+    // A shuffled unique cycle keeps the first screenful varied and prevents a
+    // word from repeating back-to-back when the source list cycles.
+    setWords(createWordSequence(language, WORD_COUNT));
     setHistory([]);
   }, [language]);
 

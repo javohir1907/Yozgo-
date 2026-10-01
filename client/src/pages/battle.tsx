@@ -62,6 +62,7 @@ const GAME_DEFAULTS = {
   MAX_ATTEMPTS: 5,
   LANGUAGE: "uz",
 };
+const WORDS_PER_ATTEMPT = 600;
 
 // Rules are now moved to i18n
 
@@ -301,10 +302,11 @@ export default function BattlePage() {
    * Urinish (Attempt) taymerini va Jonli statistika (Live Stats) boshqarish.
    */
   const currentWords = useMemo(() => {
-    // We have 3000 words from backend. We slice 300 words for each attempt.
-    // If they do more than 10 attempts, it wraps around seamlessly.
-    const startIdx = (attemptCount * 300) % (battleStart?.words?.length || 1);
-    return battleStart?.words?.slice(startIdx, startIdx + 300) || [];
+    // 600 words supports a full two-minute attempt even for fast typists. The
+    // server sequence is shuffled in unique cycles, so each round gets a fresh
+    // part of the text instead of visibly repeating the same few words.
+    const startIdx = (Math.max(0, attemptCount - 1) * WORDS_PER_ATTEMPT) % (battleStart?.words?.length || 1);
+    return battleStart?.words?.slice(startIdx, startIdx + WORDS_PER_ATTEMPT) || [];
   }, [battleStart?.words, attemptCount]);
 
   useEffect(() => {
@@ -815,9 +817,9 @@ export default function BattlePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6">
         {/* Main Content Area */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="lg:col-span-9 space-y-5">
           <AnimatePresence mode="wait">
             {battleEnd ? (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex flex-col items-center py-20 bg-card/60 rounded-3xl border-2 border-primary shadow-2xl">
@@ -885,18 +887,20 @@ export default function BattlePage() {
                 )}
               </motion.div>
             ) : (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
                 {/* Visual Stats */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="bg-primary/5 p-6 rounded-3xl border-2 border-primary/10 text-center">
-                    <span className="text-sm font-bold opacity-50 block mb-1">{t.battle.timeLeft}</span>
-                    <span className="text-4xl font-black font-mono flex justify-center items-center gap-2">
-                       <Timer className="text-primary" /> {totalTimer !== null ? `${Math.floor(totalTimer/60)}:${(totalTimer%60).toString().padStart(2, '0')}` : "--:--"}
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="bg-primary/5 px-4 py-3 sm:px-5 sm:py-4 rounded-2xl border border-primary/10 text-center">
+                    <span className="text-[11px] sm:text-xs font-bold opacity-50 block mb-0.5">{t.battle.timeLeft}</span>
+                    <span className="text-2xl sm:text-3xl font-black font-mono flex justify-center items-center gap-1.5">
+                       <Timer className="w-5 h-5 sm:w-6 sm:h-6 text-primary" /> {totalTimer !== null ? `${Math.floor(totalTimer/60)}:${(totalTimer%60).toString().padStart(2, '0')}` : "--:--"}
                     </span>
                   </div>
-                  <div className={`p-6 rounded-3xl border transition-all text-center shadow-sm ${isAttemptActive ? "bg-primary/10 border-primary/30" : "bg-secondary/50 border-dashed"}`}>
-                    <span className="text-sm font-bold opacity-50 block mb-1">{t.battle.testTime}</span>
-                    <span className="text-4xl font-black font-mono text-primary">{attemptTimer}s</span>
+                  <div className={`px-4 py-3 sm:px-5 sm:py-4 rounded-2xl border transition-all text-center ${isAttemptActive ? "bg-primary/10 border-primary/30" : "bg-secondary/50 border-dashed"}`}>
+                    <span className="text-[11px] sm:text-xs font-bold opacity-50 block mb-0.5">{t.battle.testTime}</span>
+                    <span className="text-2xl sm:text-3xl font-black font-mono text-primary">
+                      {attemptTimer !== null ? `${attemptTimer}s` : "--"}
+                    </span>
                   </div>
                 </div>
 
@@ -910,13 +914,13 @@ export default function BattlePage() {
                     </div>
                   )}
                   <div className={!isAttemptActive ? "blur-md pointer-events-none opacity-40" : ""}>
-          <div className="flex justify-center gap-4 sm:gap-12 mb-6 sm:mb-10 flex-wrap">
+          <div className="flex justify-center gap-4 sm:gap-12 mb-4 sm:mb-6 flex-wrap">
                         <div className="text-center">
-                          <div className="text-5xl sm:text-7xl font-light text-primary leading-none transition-all duration-500">{wpm || 0}</div>
-                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-2 uppercase tracking-widest">{t.battle.wpmSpeed}</div>
+                          <div className="text-6xl sm:text-8xl font-light text-primary leading-none transition-all duration-500">{wpm || 0}</div>
+                          <div className="text-[10px] sm:text-xs font-bold text-muted-foreground mt-1.5 uppercase tracking-widest">{t.battle.wpmSpeed}</div>
                         </div>
                      </div>
-                     <div className="min-h-[220px]">
+                     <div className="min-h-[300px]">
                       <TypingArea 
                         words={currentWords} 
                         isActive={isAttemptActive} 
@@ -936,7 +940,7 @@ export default function BattlePage() {
         </div>
 
         {/* Right Column: Leaderboard */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
+        <div className="lg:col-span-3 flex flex-col gap-4">
           {room?.settings?.genderRestriction === "all" ? (
             <>
               {/* Qizlar (Chapda -> Birinchi) */}

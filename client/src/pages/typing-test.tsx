@@ -207,14 +207,6 @@ export default function TypingTestPage() {
             history={history}
           />
 
-          {/* FIX: "Boshlash uchun yozing" matni faqat isActive=false da ko'rinadi */}
-          <div
-            className={`mt-8 transition-all duration-300 ${
-              isActive ? "opacity-0 pointer-events-none" : "opacity-100"
-            }`}
-          >
-            <p className="text-muted-foreground font-mono animate-pulse">{t.typing.typeToStart}</p>
-          </div>
         </>
       ) : (
         <div className="w-full animate-in zoom-in-95 duration-300">

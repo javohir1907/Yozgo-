@@ -259,13 +259,12 @@ export function TypingArea({
 
   const focusInput = useCallback(() => inputRef.current?.focus(), []);
 
-  // Three-line viewport, sized in em so it tracks the clamp() font size and the
-  // user's S/M/L scale — the old fixed h-[15rem] clipped the 3rd line when
-  // narrow screens wrapped more.
-  const viewportHeight = "calc(3 * 1.55em + 2 * 0.6em)";
+  // Four lines leave enough upcoming text in view to keep the typist oriented,
+  // while staying tied to the selected font scale on narrow screens.
+  const viewportHeight = "calc(4 * 1.55em + 3 * 0.6em)";
   // Prompt whenever the surface is unfocused, not only mid-test: the most common
   // confusion was on a fresh page, where nothing explained that the words are
-  // the click target. Touch gets its own tap prompt below.
+  // the click target. Touch gets its own tap prompt below the word area.
   const showRecovery = !isFocused && !isTouch;
   const currentWord = words[currentIndex] ?? "";
 
@@ -361,16 +360,17 @@ export function TypingArea({
           </button>
         )}
 
-        {isTouch && !isActive && (
-          <button
-            type="button"
-            onClick={focusInput}
-            className="absolute inset-0 z-30 flex items-center justify-center text-sm font-medium text-muted-foreground"
-          >
-            {t.typing.tapToType ?? "Tap to start typing"}
-          </button>
-        )}
       </label>
+
+      {isTouch && !isActive && (
+        <button
+          type="button"
+          onClick={focusInput}
+          className="mx-auto mt-3 block text-center text-sm font-medium text-muted-foreground"
+        >
+          {t.typing.tapToType ?? "Tap the text to start typing"}
+        </button>
+      )}
 
       {restartArmed && (
         <p
