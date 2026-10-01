@@ -16,7 +16,7 @@ import { Server as SocketServer, Socket } from "socket.io";
 
 import { storage } from "./storage";
 import { pool } from "./db";
-import { createWordSequence } from "../shared/words";
+import { createBattleWordSequence } from "../shared/words";
 import { type User } from "@shared/schema";
 import { computeBattleXp } from "@shared/lib/xp";
 import { computeBattleCoins } from "@shared/lib/coins";
@@ -36,6 +36,8 @@ import {
 } from "./utils/anti-cheat";
 
 const BATTLE_WORD_COUNT = 6000;
+const MIN_WORDS_PER_ATTEMPT = 50;
+const MAX_WORDS_PER_ATTEMPT = 600;
 
 // ============ TYPES & INTERFACES ============
 
@@ -92,6 +94,7 @@ interface Room {
   endTime?: number;
   settings: RoomSettings;
   testWords: string[];
+  wordsPerAttempt: number;
 }
 
 // ============ MAIN CLASS ============
@@ -359,7 +362,7 @@ export class BattleManager {
             maxParticipants: battleRecord.maxParticipants || 10, // DB dan yuklash
             genderRestriction: battleRecord.genderRestriction || "all", // DB dan yuklash
           },
-          testWords: this.generateTestWords(battleRecord.language, BATTLE_WORD_COUNT),
+          ...this.createBattleText(battleRecord.language, { testDuration: 30, totalTime: 5 }),
         };
         this.rooms.set(code, room);
       }
@@ -467,6 +470,7 @@ export class BattleManager {
         // "next attempt" button with no error shown.
         serverNow: Date.now(),
         words: room.testWords,
+        wordsPerAttempt: room.wordsPerAttempt,
       });
       this.broadcastRoomUpdate(room);
       return;
@@ -510,6 +514,7 @@ export class BattleManager {
         // "next attempt" button with no error shown.
         serverNow: Date.now(),
         words: room.testWords,
+        wordsPerAttempt: room.wordsPerAttempt,
       });
     }
 
@@ -527,7 +532,7 @@ export class BattleManager {
     // client yuborgan sozlamalar orasida bo'lmasa ham saqlanib qolsin.
     room.settings = { ...room.settings, ...settings };
     room.language = settings.language || room.language;
-    room.testWords = this.generateTestWords(room.language, BATTLE_WORD_COUNT);
+    Object.assign(room, this.createBattleText(room.language, room.settings));
     room.status = "playing";
     room.startTime = Date.now();
     room.endTime = room.startTime + settings.totalTime * 60 * 1000;
@@ -541,6 +546,7 @@ export class BattleManager {
       endTime: room.endTime,
       serverNow: Date.now(),
       words: room.testWords,
+      wordsPerAttempt: room.wordsPerAttempt,
     });
 
     // Avtomatik yakunlash taymeri
@@ -930,7 +936,18 @@ export class BattleManager {
     return players.reduce((prev, curr) => (prev.bestWpm > curr.bestWpm ? prev : curr)).user.id;
   }
 
-  private generateTestWords(lang: string, count: number): string[] {
-    return createWordSequence(lang, count);
+  private createBattleText(lang: string, settings: Pick<RoomSettings, "testDuration" | "totalTime">): Pick<Room, "testWords" | "wordsPerAttempt"> {
+    const testDuration = Math.max(1, Number(settings.testDuration) || 30);
+    const totalSeconds = Math.max(testDuration, (Number(settings.totalTime) || 5) * 60);
+    const roundCount = Math.max(1, Math.ceil(totalSeconds / testDuration));
+    const wordsPerAttempt = Math.min(
+      MAX_WORDS_PER_ATTEMPT,
+      Math.max(MIN_WORDS_PER_ATTEMPT, Math.ceil(BATTLE_WORD_COUNT / roundCount)),
+    );
+
+    return {
+      testWords: createBattleWordSequence(lang, roundCount, wordsPerAttempt),
+      wordsPerAttempt,
+    };
   }
 }

@@ -302,12 +302,12 @@ export default function BattlePage() {
    * Urinish (Attempt) taymerini va Jonli statistika (Live Stats) boshqarish.
    */
   const currentWords = useMemo(() => {
-    // 600 words supports a full two-minute attempt even for fast typists. The
-    // server sequence is shuffled in unique cycles, so each round gets a fresh
-    // part of the text instead of visibly repeating the same few words.
-    const startIdx = (Math.max(0, attemptCount - 1) * WORDS_PER_ATTEMPT) % (battleStart?.words?.length || 1);
-    return battleStart?.words?.slice(startIdx, startIdx + WORDS_PER_ATTEMPT) || [];
-  }, [battleStart?.words, attemptCount]);
+    // The server makes each attempt as a separately shuffled round. Never wrap
+    // to index zero: wrapping is what replayed the opening text later in a room.
+    const wordsPerAttempt = battleStart?.wordsPerAttempt ?? WORDS_PER_ATTEMPT;
+    const startIdx = Math.max(0, attemptCount - 1) * wordsPerAttempt;
+    return battleStart?.words?.slice(startIdx, startIdx + wordsPerAttempt) || [];
+  }, [battleStart?.words, battleStart?.wordsPerAttempt, attemptCount]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -373,6 +373,10 @@ export default function BattlePage() {
     }
     if (totalTimer !== null && totalTimer <= 0) {
       toast({ title: t.battle.error, description: t.battle.timeIsUp, variant: "destructive" });
+      return;
+    }
+    if (currentWords.length === 0) {
+      toast({ title: t.battle.error, description: "Barcha testlar tugadi.", variant: "destructive" });
       return;
     }
 
