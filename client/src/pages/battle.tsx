@@ -9,7 +9,7 @@
  */
 
 // ============ IMPORTS ============
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -49,6 +49,7 @@ import {
 import { TypingArea } from "@/components/typing-area";
 import { useAuth } from "@/hooks/use-auth";
 import { useWebsocket } from "@/hooks/use-websocket";
+import { useBattleAttempt } from "@/hooks/use-battle-attempt";
 import { useToast } from "@/hooks/use-toast";
 import { useI18n } from "@/lib/i18n";
 import { apiRequest } from "@/lib/queryClient";
@@ -59,10 +60,8 @@ import SEO from "@/components/SEO";
 const GAME_DEFAULTS = {
   TEST_DURATION: 30,
   TOTAL_TIME: 5,
-  MAX_ATTEMPTS: 5,
   LANGUAGE: "uz",
 };
-const WORDS_PER_ATTEMPT = 600;
 
 // Rules are now moved to i18n
 
@@ -214,12 +213,8 @@ export default function BattlePage() {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [wpm, setWpm] = useState<number>(0);
   const [accuracy, setAccuracy] = useState<number>(100);
-  const [isAttemptActive, setIsAttemptActive] = useState<boolean>(false);
-  const [attemptTimer, setAttemptTimer] = useState<number | null>(null);
   const [totalTimer, setTotalTimer] = useState<number | null>(null);
-  const [attemptStartTime, setAttemptStartTime] = useState<number | null>(null);
   const [history, setHistory] = useState<string[]>([]);
-  const [attemptCount, setAttemptCount] = useState<number>(0);
   // Leaving mid-battle throws away the current attempt, so it asks first.
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
 
@@ -255,7 +250,24 @@ export default function BattlePage() {
     startBattle,
     submitResult,
     sendProgress,
+    requestAttempt,
+    requestAttemptWords,
   } = useWebsocket(battleCode, user as any);
+
+  const battleKey = battleStart ? `${battleCode}:${battleStart.startTime}` : null;
+  const { attempt, remainingSeconds: attemptTimer, isPending: isAttemptPending, startNext } = useBattleAttempt({
+    battleKey,
+    snapshot: battleStart?.attempt,
+    snapshotIndex: battleStart?.attemptIndex,
+    currentWordIndex: currentIndex,
+    requestAttempt,
+    requestWords: requestAttemptWords,
+    onError: (message) => toast({ title: t.battle.error, description: message, variant: "destructive" }),
+  });
+  const currentWords = attempt?.words ?? [];
+  const attemptStartTime = attempt?.localStartTime ?? null;
+  const isAttemptActive = !!attempt && attemptTimer !== null && attemptTimer > 0 && Date.now() < attempt.localEndTime;
+  const finalizedAttemptRef = useRef<string | null>(null);
 
   const isAdmin = room?.adminId === user?.id;
 
@@ -298,26 +310,22 @@ export default function BattlePage() {
     return () => clearInterval(id);
   }, [battleStart]);
 
-  /**
-   * Urinish (Attempt) taymerini va Jonli statistika (Live Stats) boshqarish.
-   */
-  const currentWords = useMemo(() => {
-    // The server makes each attempt as a separately shuffled round. Never wrap
-    // to index zero: wrapping is what replayed the opening text later in a room.
-    const wordsPerAttempt = battleStart?.wordsPerAttempt ?? WORDS_PER_ATTEMPT;
-    const startIdx = Math.max(0, attemptCount - 1) * wordsPerAttempt;
-    return battleStart?.words?.slice(startIdx, startIdx + wordsPerAttempt) || [];
-  }, [battleStart?.words, battleStart?.wordsPerAttempt, attemptCount]);
-
+  // A new server-acknowledged round resets typing; appended words and reconnect
+  // snapshots for the same round retain the text already typed.
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isAttemptActive && attemptTimer !== null && attemptTimer > 0) {
-      interval = setTimeout(() => setAttemptTimer(prev => (prev !== null ? prev - 1 : 0)), 1000);
-    } else if (isAttemptActive && attemptTimer === 0) {
-      finalizeAttempt();
-    }
-    return () => clearTimeout(interval);
-  }, [isAttemptActive, attemptTimer]);
+    setUserInput("");
+    setCurrentIndex(0);
+    currentIndexRef.current = 0;
+    setWpm(0);
+    setAccuracy(100);
+    setHistory([]);
+    correctCharsRef.current = 0;
+    allKeystrokesRef.current = 0;
+    keystrokeIntervalsRef.current = [];
+    lastKeystrokeTimeRef.current = null;
+    setRawWpm(0);
+    setConsistency(100);
+  }, [battleKey, attempt?.index]);
 
   useEffect(() => {
     let statsInterval: NodeJS.Timeout;
@@ -348,7 +356,8 @@ export default function BattlePage() {
         setAccuracy(currentAcc);
         setConsistency(currentConsistency);
 
-        const prog = currentWords.length > 0 ? Math.min(100, Math.round((currentIndexRef.current / currentWords.length) * 100)) : 0;
+        const durationMs = attempt ? attempt.localEndTime - attempt.localStartTime : 0;
+        const prog = durationMs > 0 ? Math.min(100, Math.round((Date.now() - attemptStartTime) / durationMs * 100)) : 0;
         sendProgress(prog, currentWpm, { rawWpm: currentRawWpm, consistency: currentConsistency, accuracy: currentAcc });
       }
     };
@@ -357,7 +366,7 @@ export default function BattlePage() {
       statsInterval = setInterval(updateLiveStats, 200);
     }
     return () => clearInterval(statsInterval);
-  }, [isAttemptActive, attemptStartTime, currentWords.length, sendProgress]);
+  }, [isAttemptActive, attemptStartTime, attempt?.localEndTime, sendProgress]);
 
   // ============ ACTIONS ============
 
@@ -375,40 +384,26 @@ export default function BattlePage() {
       toast({ title: t.battle.error, description: t.battle.timeIsUp, variant: "destructive" });
       return;
     }
-    if (currentWords.length === 0) {
-      toast({ title: t.battle.error, description: "Barcha testlar tugadi.", variant: "destructive" });
-      return;
-    }
-
-    setIsAttemptActive(true);
-    setAttemptTimer(battleStart.settings.testDuration);
-    setAttemptStartTime(Date.now());
-    setUserInput("");
-    setCurrentIndex(0);
-    currentIndexRef.current = 0;
-    setWpm(0);
-    setAccuracy(100);
-    setHistory([]);
-    correctCharsRef.current = 0;
-    allKeystrokesRef.current = 0;
-    keystrokeIntervalsRef.current = [];
-    lastKeystrokeTimeRef.current = null;
-    setRawWpm(0);
-    setConsistency(100);
-    setAttemptCount(prev => prev + 1);
+    void startNext();
   };
 
   /**
    * Urinishni yakunlash va natijani serverga yuborish.
    */
   const finalizeAttempt = () => {
-    setIsAttemptActive(false);
-    setAttemptTimer(null);
-    if (wpm > 0) {
+    if (wpm > 0 && allKeystrokesRef.current > 0) {
       submitResult(wpm, accuracy, 100, { rawWpm, consistency });
       toast({ title: t.battle.readyStatus, description: `${wpm} WPM | ${accuracy}% ACC | ${consistency}% CNS` });
     }
   };
+
+  useEffect(() => {
+    if (!battleKey || !attempt || attemptTimer !== 0) return;
+    const key = `${battleKey}:${attempt.index}`;
+    if (finalizedAttemptRef.current === key) return;
+    finalizedAttemptRef.current = key;
+    finalizeAttempt();
+  }, [battleKey, attempt?.index, attemptTimer]);
 
   /**
    * Klaviaturadan kelayotgan yozuvlarni qabul qilish va progressni hisoblash
@@ -885,7 +880,7 @@ export default function BattlePage() {
                   </div>
                 )}
                 {isAdmin && (
-                  <Button onClick={() => startBattle({ testDuration, totalTime, maxAttempts: 5, language, adminParticipates, winMode })} size="lg" className="px-16 font-black h-14 text-xl rounded-full shadow-lg hover:scale-105 transition-transform">
+                  <Button onClick={() => startBattle({ testDuration, totalTime, language, adminParticipates, winMode })} size="lg" className="px-16 font-black h-14 text-xl rounded-full shadow-lg hover:scale-105 transition-transform">
                     {t.battle.startBattleBtn} <Play className="ml-2 fill-current" />
                   </Button>
                 )}
@@ -912,8 +907,8 @@ export default function BattlePage() {
                 <div className="relative">
                   {!isAttemptActive && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-[6px] rounded-3xl border-2 border-dashed">
-                      <Button onClick={startAttempt} size="lg" className="font-black text-2xl h-16 px-12 rounded-full shadow-2xl skew-x-[-4deg]">
-                        {t.battle.nextAttempt} <Flame className="ml-2" />
+                      <Button onClick={startAttempt} disabled={isAttemptPending || !isConnected} size="lg" className="font-black text-2xl h-16 px-12 rounded-full shadow-2xl skew-x-[-4deg]">
+                        {t.battle.nextAttempt} {isAttemptPending ? <Loader2 className="ml-2 animate-spin" /> : <Flame className="ml-2" />}
                       </Button>
                     </div>
                   )}

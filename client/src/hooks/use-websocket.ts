@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { type User } from "@shared/schema";
 import { io, Socket } from "socket.io-client";
+import type { BattleAttemptResponse, BattleWordsResponse } from "@shared/battle-attempt";
 
 export function useWebsocket(code: string | null, user: User | null) {
   const [room, setRoom] = useState<any>(null);
@@ -12,6 +13,11 @@ export function useWebsocket(code: string | null, user: User | null) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
+    setRoom(null);
+    setBattleStart(null);
+    setBattleEnd(null);
+    setError(null);
+    setIsConnected(false);
     if (!code || !user) return;
 
     const socketUrl = import.meta.env.VITE_API_URL || undefined;
@@ -62,9 +68,11 @@ export function useWebsocket(code: string | null, user: User | null) {
     });
 
     return () => {
+      if (socketRef.current === socket) socketRef.current = null;
       socket.disconnect();
     };
-  }, [code, user]);
+  // Profile query refreshes must not tear down an active attempt's connection.
+  }, [code, user?.id]);
 
   const startBattle = useCallback((settings: any) => {
     socketRef.current?.emit("start-battle", { settings });
@@ -78,6 +86,29 @@ export function useWebsocket(code: string | null, user: User | null) {
     socketRef.current?.emit("typing-progress", { progress, wpm, ...extraData });
   }, []);
 
+  const requestWithAck = useCallback(<T,>(event: string, payload: object): Promise<T> => {
+    const socket = socketRef.current;
+    if (!socket?.connected) return Promise.reject(new Error("Server bilan aloqa uzilgan. Qayta ulanishni kuting."));
+
+    return new Promise((resolve, reject) => {
+      socket.timeout(10000).emit(event, payload, (timeoutError: Error | null, response: T) => {
+        if (socketRef.current !== socket || !socket.connected) {
+          reject(new Error("Server bilan aloqa uzilgan. Qayta ulanishni kuting."));
+        } else if (timeoutError) {
+          reject(new Error("Server javob bermadi. Qayta urinib ko‘ring."));
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  }, []);
+
+  const requestAttempt = useCallback((previousIndex: number) =>
+    requestWithAck<BattleAttemptResponse>("request-attempt", { previousIndex }), [requestWithAck]);
+
+  const requestAttemptWords = useCallback((index: number, offset: number) =>
+    requestWithAck<BattleWordsResponse>("request-attempt-words", { index, offset }), [requestWithAck]);
+
   return {
     room,
     battleStart,
@@ -88,5 +119,7 @@ export function useWebsocket(code: string | null, user: User | null) {
     startBattle,
     submitResult,
     sendProgress,
+    requestAttempt,
+    requestAttemptWords,
   };
 }

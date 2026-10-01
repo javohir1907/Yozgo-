@@ -16,7 +16,8 @@ import { Server as SocketServer, Socket } from "socket.io";
 
 import { storage } from "./storage";
 import { pool } from "./db";
-import { createBattleWordSequence } from "../shared/words";
+import { BattleWordSource } from "./utils/battle-word-source";
+import type { BattleAttemptData, BattleAttemptResponse, BattleWordsResponse } from "@shared/battle-attempt";
 import { type User } from "@shared/schema";
 import { computeBattleXp } from "@shared/lib/xp";
 import { computeBattleCoins } from "@shared/lib/coins";
@@ -35,9 +36,8 @@ import {
   resetPlayerSnapshots 
 } from "./utils/anti-cheat";
 
-const BATTLE_WORD_COUNT = 6000;
-const MIN_WORDS_PER_ATTEMPT = 50;
-const MAX_WORDS_PER_ATTEMPT = 600;
+// A transport buffer, not a test length limit. More words are appended on demand.
+const BATTLE_WORD_BATCH_SIZE = 1000;
 
 // ============ TYPES & INTERFACES ============
 
@@ -59,6 +59,10 @@ interface Player {
   bestRawWpm?: number;
   bestConsistency?: number;
   attempts: number;
+  currentAttemptIndex: number;
+  attemptStartTime?: number;
+  attemptEndTime?: number;
+  loadedWordCount: number;
   attemptHistory: { wpm: number; accuracy: number; rawWpm?: number; consistency?: number }[]; // <-- YANGI QO 'SHILDI
   isReady: boolean;
   isFinished: boolean;
@@ -71,7 +75,6 @@ interface Player {
 interface RoomSettings {
   testDuration: number; // soniyalarda (e.g. 30)
   totalTime: number; // daqiqalarda (e.g. 5)
-  maxAttempts: number;
   language?: string;
   adminParticipates?: boolean;
   maxParticipants?: number; // Xona sig'imi (DB dan yuklanadi)
@@ -93,8 +96,7 @@ interface Room {
   startTime?: number;
   endTime?: number;
   settings: RoomSettings;
-  testWords: string[];
-  wordsPerAttempt: number;
+  wordSource: BattleWordSource;
 }
 
 // ============ MAIN CLASS ============
@@ -294,6 +296,24 @@ export class BattleManager {
         }
       });
 
+      socket.on("request-attempt", (data: { previousIndex: number }, reply: (response: BattleAttemptResponse) => void) => {
+        if (typeof reply !== "function") return;
+        if (!currentRoomCode || !currentUserId) {
+          reply({ error: "Avval jang xonasiga qo'shiling." });
+          return;
+        }
+        reply(this.handleAttemptRequest(socket, currentRoomCode, currentUserId, data?.previousIndex));
+      });
+
+      socket.on("request-attempt-words", (data: { index: number; offset: number }, reply: (response: BattleWordsResponse) => void) => {
+        if (typeof reply !== "function") return;
+        if (!currentRoomCode || !currentUserId) {
+          reply({ error: "Avval jang xonasiga qo'shiling." });
+          return;
+        }
+        reply(this.handleWordsRequest(socket, currentRoomCode, currentUserId, data?.index, data?.offset));
+      });
+
       // Natijani yuborish (har bir urinish oxirida)
       socket.on("submit-result", (data: { wpm: number; accuracy: number; progress: number }) => {
         if (currentRoomCode && currentUserId) {
@@ -358,11 +378,10 @@ export class BattleManager {
           settings: {
             testDuration: 30,
             totalTime: 5,
-            maxAttempts: 10,
             maxParticipants: battleRecord.maxParticipants || 10, // DB dan yuklash
             genderRestriction: battleRecord.genderRestriction || "all", // DB dan yuklash
           },
-          ...this.createBattleText(battleRecord.language, { testDuration: 30, totalTime: 5 }),
+          wordSource: new BattleWordSource(battleRecord.language),
         };
         this.rooms.set(code, room);
       }
@@ -460,18 +479,7 @@ export class BattleManager {
       existingPlayer.isDisconnected = false;
       
       socket.join(code);
-      socket.emit("battle-start", {
-        settings: room.settings,
-        startTime: room.startTime,
-        endTime: room.endTime,
-        // serverNow lets the client anchor the countdown to its OWN clock.
-        // endTime is a server timestamp; a client whose clock runs ahead used to
-        // compute a negative remaining time, which silently disabled the
-        // "next attempt" button with no error shown.
-        serverNow: Date.now(),
-        words: room.testWords,
-        wordsPerAttempt: room.wordsPerAttempt,
-      });
+      socket.emit("battle-start", this.getBattleStartData(room, existingPlayer));
       this.broadcastRoomUpdate(room);
       return;
     }
@@ -490,6 +498,10 @@ export class BattleManager {
       bestWpm: existingPlayer ? existingPlayer.bestWpm : 0,
       bestAccuracy: existingPlayer ? existingPlayer.bestAccuracy : 100,
       attempts: existingPlayer ? existingPlayer.attempts : 0,
+      currentAttemptIndex: existingPlayer?.currentAttemptIndex ?? -1,
+      attemptStartTime: existingPlayer?.attemptStartTime,
+      attemptEndTime: existingPlayer?.attemptEndTime,
+      loadedWordCount: existingPlayer?.loadedWordCount ?? 0,
       attemptHistory: existingPlayer ? existingPlayer.attemptHistory : [], // <-- SHU QATORNI QO'SHING
       isReady: existingPlayer ? existingPlayer.isReady : false,
       isFinished: existingPlayer ? existingPlayer.isFinished : false,
@@ -504,18 +516,7 @@ export class BattleManager {
     // FIX (#4): jang allaqachon boshlangan bo'lsa (kech qo'shilgan yangi o'yinchi),
     // unga ham darhol battle-start yuboramiz — aks holda kutish ekranida qotib qoladi.
     if (room.status === "playing") {
-      socket.emit("battle-start", {
-        settings: room.settings,
-        startTime: room.startTime,
-        endTime: room.endTime,
-        // serverNow lets the client anchor the countdown to its OWN clock.
-        // endTime is a server timestamp; a client whose clock runs ahead used to
-        // compute a negative remaining time, which silently disabled the
-        // "next attempt" button with no error shown.
-        serverNow: Date.now(),
-        words: room.testWords,
-        wordsPerAttempt: room.wordsPerAttempt,
-      });
+      socket.emit("battle-start", this.getBattleStartData(room, room.players.get(user.id)));
     }
 
     this.broadcastRoomUpdate(room);
@@ -532,7 +533,13 @@ export class BattleManager {
     // client yuborgan sozlamalar orasida bo'lmasa ham saqlanib qolsin.
     room.settings = { ...room.settings, ...settings };
     room.language = settings.language || room.language;
-    Object.assign(room, this.createBattleText(room.language, room.settings));
+    room.wordSource = new BattleWordSource(room.language);
+    for (const player of room.players.values()) {
+      player.currentAttemptIndex = -1;
+      player.attemptStartTime = undefined;
+      player.attemptEndTime = undefined;
+      player.loadedWordCount = 0;
+    }
     room.status = "playing";
     room.startTime = Date.now();
     room.endTime = room.startTime + settings.totalTime * 60 * 1000;
@@ -540,14 +547,7 @@ export class BattleManager {
     await storage.updateBattleStatus(room.id, "playing");
 
     // Barcha o'yinchilarga Start hodisasini yuborish
-    this.io.to(code).emit("battle-start", {
-      settings: room.settings,
-      startTime: room.startTime,
-      endTime: room.endTime,
-      serverNow: Date.now(),
-      words: room.testWords,
-      wordsPerAttempt: room.wordsPerAttempt,
-    });
+    this.io.to(code).emit("battle-start", this.getBattleStartData(room));
 
     // Avtomatik yakunlash taymeri
     setTimeout(() => this.finishBattle(code), settings.totalTime * 60 * 1000);
@@ -878,7 +878,7 @@ export class BattleManager {
 
     const activePlayersCount = Array.from(room.players.values()).filter(p => !p.isDisconnected).length;
 
-    if (room.players.size === 0 || activePlayersCount === 0) {
+    if (room.status !== "playing" && (room.players.size === 0 || activePlayersCount === 0)) {
       this.rooms.delete(code);
     } else {
       // FIX: Admin xonadan uzilganda (masalan qisqa network drop) adminlikni 
@@ -936,18 +936,69 @@ export class BattleManager {
     return players.reduce((prev, curr) => (prev.bestWpm > curr.bestWpm ? prev : curr)).user.id;
   }
 
-  private createBattleText(lang: string, settings: Pick<RoomSettings, "testDuration" | "totalTime">): Pick<Room, "testWords" | "wordsPerAttempt"> {
-    const testDuration = Math.max(1, Number(settings.testDuration) || 30);
-    const totalSeconds = Math.max(testDuration, (Number(settings.totalTime) || 5) * 60);
-    const roundCount = Math.max(1, Math.ceil(totalSeconds / testDuration));
-    const wordsPerAttempt = Math.min(
-      MAX_WORDS_PER_ATTEMPT,
-      Math.max(MIN_WORDS_PER_ATTEMPT, Math.ceil(BATTLE_WORD_COUNT / roundCount)),
-    );
-
+  private getBattleStartData(room: Room, player?: Player) {
     return {
-      testWords: createBattleWordSequence(lang, roundCount, wordsPerAttempt),
-      wordsPerAttempt,
+      settings: room.settings,
+      startTime: room.startTime,
+      endTime: room.endTime,
+      serverNow: Date.now(),
+      attemptIndex: player?.currentAttemptIndex ?? -1,
+      attempt: player && player.currentAttemptIndex >= 0 ? this.getAttemptData(room, player) : undefined,
     };
+  }
+
+  private getAttemptData(room: Room, player: Player): BattleAttemptData {
+    return {
+      index: player.currentAttemptIndex,
+      words: room.wordSource.getWords(player.currentAttemptIndex, 0, player.loadedWordCount),
+      startTime: player.attemptStartTime!,
+      endTime: player.attemptEndTime!,
+      serverNow: Date.now(),
+    };
+  }
+
+  private handleAttemptRequest(socket: Socket, code: string, userId: string, previousIndex: number): BattleAttemptResponse {
+    const room = this.rooms.get(code);
+    const player = room?.players.get(userId);
+    const now = Date.now();
+    if (!room || !player || player.socket.id !== socket.id || room.status !== "playing") {
+      return { error: "Jang hali boshlanmagan yoki xona yopilgan." };
+    }
+    if (!room.endTime || now >= room.endTime) return { error: "Xona vaqti tugadi." };
+    if (!Number.isSafeInteger(previousIndex) || previousIndex < -1 || previousIndex > player.currentAttemptIndex) {
+      return { error: "Urinish raqami noto'g'ri. Xonaga qayta ulaning." };
+    }
+
+    // A repeated request after a lost acknowledgement resumes the accepted
+    // attempt. It must not advance the cursor a second time.
+    if (previousIndex === player.currentAttemptIndex) {
+      const nextIndex = player.currentAttemptIndex + 1;
+      room.wordSource.getWords(nextIndex, 0, BATTLE_WORD_BATCH_SIZE);
+      player.currentAttemptIndex = nextIndex;
+      player.loadedWordCount = BATTLE_WORD_BATCH_SIZE;
+      player.attemptStartTime = now;
+      player.attemptEndTime = Math.min(room.endTime, now + Math.max(1, room.settings.testDuration) * 1000);
+      player.progress = 0;
+      player.wpm = 0;
+      resetPlayerSnapshots(userId);
+    }
+    return { attempt: this.getAttemptData(room, player) };
+  }
+
+  private handleWordsRequest(socket: Socket, code: string, userId: string, index: number, offset: number): BattleWordsResponse {
+    const room = this.rooms.get(code);
+    const player = room?.players.get(userId);
+    if (!room || !player || player.socket.id !== socket.id || room.status !== "playing") {
+      return { error: "Jang hali boshlanmagan yoki xona yopilgan." };
+    }
+    if (!room.endTime || Date.now() >= room.endTime || !player.attemptEndTime || Date.now() >= player.attemptEndTime) {
+      return { error: "Test vaqti tugadi." };
+    }
+    if (index !== player.currentAttemptIndex || !Number.isSafeInteger(offset) || offset < 0 || offset > player.loadedWordCount) {
+      return { error: "Matn holati o'zgargan. Testni qayta boshlang." };
+    }
+    const words = room.wordSource.getWords(index, offset, BATTLE_WORD_BATCH_SIZE);
+    player.loadedWordCount = Math.max(player.loadedWordCount, offset + words.length);
+    return { index, offset, words };
   }
 }
